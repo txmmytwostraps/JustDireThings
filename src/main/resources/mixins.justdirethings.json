@@ -4,13 +4,24 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "mixins.justdirethings.refmap.json",
   "mixins": [
+    "BlockMixin",
+    "CampfireBlockMixin",
+    "CollisionMixin",
+    "DamageEnchantmentMixin",
+    "DigDurabilityEnchantmentMixin",
     "EntityMixin",
+    "InventoryMixin",
     "ItemEntityMixin",
-    "BlockStateBaseMixin",
-    "PlayerMovementMixin"
+    "ServerPlayerGameModeFlightMixin",
+    "ServerPlayerGameModeMixin"
   ],
   "client": [
-    "LocalPlayerMixin"
+    "EntityFluidOnEyesMixin",
+    "GameRendererMixin",
+    "ItemRendererMixin",
+    "LivingEntityMixin",
+    "MultiPlayerGameModeMixin",
+    "ScreenEffectRendererMixin"
   ],
   "minVersion": "0.8"
 }

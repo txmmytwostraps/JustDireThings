@@ -21,9 +21,20 @@ build
 # other
 eclipse
 run
-runs
 run-data
+mcmodsrepo
+runs
 extra-mods
 extra-api
-
 repo
+logs
+crash-reports
+*.log
+.vscode
+
+# Files from Forge MDK
+forge*changelog.txt
+
+# os
+.DS_Store
+Thumbs.db
