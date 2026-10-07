@@ -1,5 +1,6 @@
 package com.direwolf20.justdirethings.common.events;
 
+import com.direwolf20.justdirethings.common.fluids.unstableportalfluid.UnstablePortalFluidAttributes;
 import com.direwolf20.justdirethings.common.items.tools.basetools.BaseBow;
 import com.direwolf20.justdirethings.datagen.recipes.FluidDropRecipe;
 import com.direwolf20.justdirethings.setup.Registration;
@@ -14,17 +15,15 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.FluidState;
+import net.minecraftforge.client.event.RecipesUpdatedEvent;
 import net.minecraftforge.event.AddReloadListenerEvent;
 import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.FluidType;
-import org.jetbrains.annotations.Nullable;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class EntityEvents {
@@ -35,32 +34,31 @@ public class EntityEvents {
 
 	@SubscribeEvent
 	public static void livingUseItem(LivingEntityUseItemEvent.Start event) {
-		if (event.getEntity() instanceof Player && event.getItem().getItem() instanceof BaseBow baseBow) {
+		if (event.getEntityLiving() instanceof Player && event.getItem().getItem() instanceof BaseBow baseBow) {
 			event.setDuration(event.getDuration() - (20 - (int) baseBow.getMaxDraw()));
 		}
 	}
 
+	/**
+	 * Called from ItemEntityMixin each tick, on both sides.
+	 */
 	public static void handleFluidDrop(ItemEntity itemEntity) {
-		Level level = itemEntity.level();
-		if (level.isClientSide() || itemEntity.isRemoved())
-			return;
+		Level level = itemEntity.level;
 		BlockState blockState = itemEntity.getFeetBlockState();
-		if (!(blockState.getBlock() instanceof LiquidBlock))
-			return;
+		if (!(blockState.getBlock() instanceof LiquidBlock)) return;
 		BlockState fluidDropOutput = findRecipe(blockState, itemEntity);
-		if (fluidDropOutput == null || fluidDropOutput.isAir())
-			return;
-		BlockPos blockPos = itemEntity.blockPosition();
-		if (level.setBlockAndUpdate(blockPos, fluidDropOutput)) {
-			itemEntity.getItem().shrink(1);
-			FluidState fluidState = level.getFluidState(blockPos);
-			FluidStack fluidStack = new FluidStack(fluidState.getType(), 1000);
-			FluidType fluidType = fluidState.getType().getFluidType();
-			if (!fluidState.isEmpty() && fluidType.isVaporizedOnPlacement(level, blockPos, fluidStack)) {
-				level.setBlockAndUpdate(blockPos, Blocks.AIR.defaultBlockState());
-				fluidType.onVaporize(null, level, blockPos, fluidStack);
-			} else {
-				level.playSound(null, blockPos, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 1.0F, 1.0F);
+		if (fluidDropOutput != null && !fluidDropOutput.isAir()) {
+			BlockPos blockPos = itemEntity.blockPosition();
+			if (level.setBlockAndUpdate(blockPos, fluidDropOutput)) {
+				itemEntity.getItem().shrink(1);
+				FluidStack fluidStack = new FluidStack(level.getFluidState(blockPos).getType(), 1000);
+				if (UnstablePortalFluidAttributes.vaporizesOnPlacement(level, blockPos, fluidStack)) {
+					level.setBlockAndUpdate(blockPos, Blocks.AIR.defaultBlockState());
+					fluidStack.getFluid().getAttributes().vaporize(null, level, blockPos, fluidStack);
+				} else {
+					if (!level.isClientSide)
+						level.playSound(null, blockPos, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 1.0F, 1.0F);
+				}
 			}
 		}
 	}
@@ -70,11 +68,11 @@ public class EntityEvents {
 		FluidInputs fluidInputs = new FluidInputs(blockState, entity.getItem().getItem());
 		if (fluidCraftCache.containsKey(fluidInputs))
 			return fluidCraftCache.get(fluidInputs);
-		RecipeManager recipeManager = entity.level().getRecipeManager();
-		List<FluidDropRecipe> recipes = recipeManager.getAllRecipesFor(Registration.FLUID_DROP_RECIPE_TYPE.get());
-		for (FluidDropRecipe recipe : recipes) {
-			if (recipe.matches(blockState, entity.getItem())) {
-				fluidCraftCache.put(fluidInputs, recipe.getOutput());
+		RecipeManager recipeManager = entity.level.getRecipeManager();
+
+		for (FluidDropRecipe fluidDropRecipe : recipeManager.getAllRecipesFor(Registration.FLUID_DROP_RECIPE_TYPE.get())) {
+			if (fluidDropRecipe.matches(blockState, entity.getItem())) {
+				fluidCraftCache.put(fluidInputs, fluidDropRecipe.getOutput());
 				break;
 			}
 		}
@@ -94,6 +92,11 @@ public class EntityEvents {
 
 	@SubscribeEvent
 	public static void onReloadServerResources(AddReloadListenerEvent e) {
+		clearCache();
+	}
+
+	@SubscribeEvent
+	public static void onClientRecipesUpdated(RecipesUpdatedEvent e) {
 		clearCache();
 	}
 }

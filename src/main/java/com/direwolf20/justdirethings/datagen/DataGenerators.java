@@ -1,47 +1,30 @@
 package com.direwolf20.justdirethings.datagen;
 
 import com.direwolf20.justdirethings.JustDireThings;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.data.DataGenerator;
-import net.minecraft.data.PackOutput;
-import net.minecraft.data.loot.LootTableProvider;
-import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.data.event.GatherDataEvent;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import net.minecraftforge.forge.event.lifecycle.GatherDataEvent;
 
 @Mod.EventBusSubscriber(modid = JustDireThings.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class DataGenerators {
 	@SubscribeEvent
 	public static void gatherData(GatherDataEvent event) {
 		DataGenerator generator = event.getGenerator();
-		PackOutput packOutput = generator.getPackOutput();
-		CompletableFuture<HolderLookup.Provider> lookupProvider = event.getLookupProvider();
-
-		generator.addProvider(event.includeServer(), new JustDireRecipes(packOutput));
-		generator.addProvider(event.includeServer(), new LootTableProvider(packOutput, Collections.emptySet(),
-				List.of(new LootTableProvider.SubProviderEntry(JustDireLootTables::new, LootContextParamSets.BLOCK))));
-		JustDireBlockTags blockTags = new JustDireBlockTags(packOutput, lookupProvider, event.getExistingFileHelper());
-		generator.addProvider(event.includeServer(), blockTags);
-		JustDireItemTags itemTags = new JustDireItemTags(packOutput, lookupProvider, blockTags,
-				event.getExistingFileHelper());
-		generator.addProvider(event.includeServer(), itemTags);
-		JustDireEntityTags entityTags = new JustDireEntityTags(packOutput, lookupProvider,
-				event.getExistingFileHelper());
-		generator.addProvider(event.includeServer(), entityTags);
-		JustDireFluidTags fluidTags = new JustDireFluidTags(packOutput, lookupProvider, event.getExistingFileHelper());
-		generator.addProvider(event.includeServer(), fluidTags);
-		JustDireBiomeTags biomeTags = new JustDireBiomeTags(packOutput, lookupProvider, event.getExistingFileHelper());
-		generator.addProvider(event.includeServer(), biomeTags);
-
-		generator.addProvider(event.includeClient(),
-				new JustDireBlockStates(packOutput, event.getExistingFileHelper()));
-		generator.addProvider(event.includeClient(), new JustDireItemModels(packOutput, event.getExistingFileHelper()));
-		generator.addProvider(event.includeClient(), new JustDireLanguageProvider(packOutput, "en_us"));
-
+		if (event.includeServer()) {
+			generator.addProvider(new JustDireRecipes(generator));
+			generator.addProvider(new JustDireLootTables(generator));
+			JustDireBlockTags blockTags = new JustDireBlockTags(generator, event.getExistingFileHelper());
+			generator.addProvider(blockTags);
+			generator.addProvider(new JustDireItemTags(generator, blockTags, event.getExistingFileHelper()));
+			generator.addProvider(new JustDireEntityTags(generator, event.getExistingFileHelper()));
+			generator.addProvider(new JustDireFluidTags(generator, event.getExistingFileHelper()));
+			generator.addProvider(new JustDireBiomeTags(generator, event.getExistingFileHelper()));
+		}
+		if (event.includeClient()) {
+			generator.addProvider(new JustDireBlockStates(generator, event.getExistingFileHelper()));
+			generator.addProvider(new JustDireItemModels(generator, event.getExistingFileHelper()));
+			generator.addProvider(new JustDireLanguageProvider(generator, "en_us"));
+		}
 	}
 }

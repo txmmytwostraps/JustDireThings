@@ -5,6 +5,7 @@ import com.direwolf20.justdirethings.common.items.tools.basetools.BaseHoe;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -13,6 +14,7 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.ToolActions;
 
 import java.util.ArrayList;
@@ -33,12 +35,11 @@ public class MiningCollect {
 		}
 
 		public Component getTooltip() {
-			return Component.translatable(JustDireThings.MODID + ".tooltip.screen.sizemode." + baseName);
+			return new TranslatableComponent(JustDireThings.MODID + ".tooltip.screen.sizemode." + baseName);
 		}
 	}
 
-	public static List<BlockPos> collect(LivingEntity player, BlockPos startBlock, Direction side, Level world,
-			int range, SizeMode sizeMode, ItemStack tool) {
+	public static List<BlockPos> collect(LivingEntity player, BlockPos startBlock, Direction side, Level world, int range, SizeMode sizeMode, ItemStack tool) {
 		List<BlockPos> coordinates = new ArrayList<>();
 		if (world.getBlockState(startBlock).getDestroySpeed(world, startBlock) == 0)
 			return coordinates; // Don't Operate on things like torches, plants, etc
@@ -93,14 +94,14 @@ public class MiningCollect {
 			return false;
 		if (tool.getItem() instanceof BaseHoe && player instanceof Player player1) {
 			UseOnContext useOnContext = new UseOnContext(level, player1, InteractionHand.MAIN_HAND, tool,
-					new BlockHitResult(pos.getCenter(), side, pos, false));
-			BlockState toolModifiedState = blockState.getBlock().getToolModifiedState(blockState, useOnContext,
-					ToolActions.HOE_TILL, true);
+					new BlockHitResult(Vec3.atCenterOf(pos), side, pos, false));
+			BlockState toolModifiedState = blockState.getToolModifiedState(useOnContext, ToolActions.HOE_TILL, true);
 			if (toolModifiedState != null)
 				return true;
 		}
 		if (!tool.isCorrectToolForDrops(blockState))
 			return false;
+		if (blockState.getDestroySpeed(level, pos) < 0) return false;
 		return true;
 	}
 }

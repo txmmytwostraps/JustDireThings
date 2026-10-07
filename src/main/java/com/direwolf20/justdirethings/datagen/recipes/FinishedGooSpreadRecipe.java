@@ -9,10 +9,9 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.block.state.BlockState;
 
-import javax.annotation.Nullable;
-
 public class FinishedGooSpreadRecipe implements FinishedRecipe {
 	private final ResourceLocation id;
+	private final ResourceLocation recipeId;
 	private final BlockState input;
 	private final BlockState output;
 	private final int tierRequirement;
@@ -20,20 +19,21 @@ public class FinishedGooSpreadRecipe implements FinishedRecipe {
 	private final Advancement.Builder advancement;
 	private final ResourceLocation advancementId;
 
-	public FinishedGooSpreadRecipe(ResourceLocation id, BlockState input, BlockState output, int tierRequirement,
-			int craftingDuration) {
+	public FinishedGooSpreadRecipe(ResourceLocation id, ResourceLocation recipeId, BlockState input, BlockState output,
+			int tierRequirement, int craftingDuration, Advancement.Builder advancement, ResourceLocation advancementId) {
 		this.id = id;
+		this.recipeId = recipeId;
 		this.input = input;
 		this.output = output;
 		this.tierRequirement = tierRequirement;
 		this.craftingDuration = craftingDuration;
-		this.advancement = null;
-		this.advancementId = null;
+		this.advancement = advancement;
+		this.advancementId = advancementId;
 	}
 
 	@Override
 	public void serializeRecipeData(JsonObject json) {
-		json.addProperty("id", id.toString());
+		json.addProperty("id", recipeId.toString());
 		json.add("input", BlockState.CODEC.encodeStart(JsonOps.INSTANCE, input).getOrThrow(false, e -> {
 		}));
 		json.add("output", BlockState.CODEC.encodeStart(JsonOps.INSTANCE, output).getOrThrow(false, e -> {
@@ -52,13 +52,11 @@ public class FinishedGooSpreadRecipe implements FinishedRecipe {
 		return Registration.GOO_SPREAD_RECIPE_SERIALIZER.get();
 	}
 
-	@Nullable
 	@Override
 	public JsonObject serializeAdvancement() {
-		return null;
+		return advancement.serializeToJson();
 	}
 
-	@Nullable
 	@Override
 	public ResourceLocation getAdvancementId() {
 		return advancementId;

@@ -2,23 +2,25 @@ package com.direwolf20.justdirethings.datagen.recipes;
 
 import com.direwolf20.justdirethings.setup.Registration;
 import com.google.gson.JsonObject;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.GsonHelper;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeSerializer;
-import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.ShapedRecipe;
-import net.minecraft.world.item.crafting.SmithingRecipe;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.common.ForgeHooks;
+import net.minecraftforge.registries.ForgeRegistryEntry;
 
-import javax.annotation.Nullable;
 import java.util.stream.Stream;
 
-public class TierUpgradeRecipe implements SmithingRecipe {
+/**
+ * Keeps upgrades, enchantments and damage on the next tier.
+ */
+public class TierUpgradeRecipe implements DireSmithingRecipe {
 	private final ResourceLocation id;
 	private final Ingredient template;
 	private final Ingredient base;
@@ -40,17 +42,12 @@ public class TierUpgradeRecipe implements SmithingRecipe {
 	}
 
 	@Override
-	public RecipeType<?> getType() {
-		return RecipeType.SMITHING;
-	}
-
-	@Override
 	public boolean matches(Container inv, Level level) {
 		return template.test(inv.getItem(0)) && base.test(inv.getItem(1)) && addition.test(inv.getItem(2));
 	}
 
 	@Override
-	public ItemStack assemble(Container inv, RegistryAccess registryAccess) {
+	public ItemStack assemble(Container inv) {
 		ItemStack result = this.result.copy();
 		CompoundTag baseTag = inv.getItem(1).getTag();
 		if (baseTag != null) {
@@ -60,7 +57,7 @@ public class TierUpgradeRecipe implements SmithingRecipe {
 	}
 
 	@Override
-	public ItemStack getResultItem(RegistryAccess registryAccess) {
+	public ItemStack getResultItem() {
 		return this.result;
 	}
 
@@ -81,7 +78,7 @@ public class TierUpgradeRecipe implements SmithingRecipe {
 
 	@Override
 	public boolean isIncomplete() {
-		return Stream.of(template, base, addition).anyMatch(Ingredient::isEmpty);
+		return Stream.of(template, base, addition).anyMatch(ForgeHooks::hasNoElements);
 	}
 
 	@Override
@@ -106,18 +103,17 @@ public class TierUpgradeRecipe implements SmithingRecipe {
 		return addition;
 	}
 
-	public static class Serializer implements RecipeSerializer<TierUpgradeRecipe> {
+	public static class Serializer extends ForgeRegistryEntry<RecipeSerializer<?>> implements RecipeSerializer<TierUpgradeRecipe> {
 		@Override
 		public TierUpgradeRecipe fromJson(ResourceLocation recipeId, JsonObject json) {
 			Ingredient template = Ingredient.fromJson(json.get("template"));
 			Ingredient base = Ingredient.fromJson(json.get("base"));
 			Ingredient addition = Ingredient.fromJson(json.get("addition"));
-			ItemStack result = ShapedRecipe.itemStackFromJson(json.getAsJsonObject("result"));
+			ItemStack result = ShapedRecipe.itemStackFromJson(GsonHelper.getAsJsonObject(json, "result"));
 			return new TierUpgradeRecipe(recipeId, template, base, addition, result);
 		}
 
 		@Override
-		@Nullable
 		public TierUpgradeRecipe fromNetwork(ResourceLocation recipeId, FriendlyByteBuf buffer) {
 			Ingredient template = Ingredient.fromNetwork(buffer);
 			Ingredient base = Ingredient.fromNetwork(buffer);

@@ -1,44 +1,69 @@
 package com.direwolf20.justdirethings.common.capabilities;
 
+import com.direwolf20.justdirethings.common.items.interfaces.PoweredItem;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.energy.EnergyStorage;
+import net.minecraftforge.energy.IEnergyStorage;
 
 /**
- * An EnergyStorage implementation that reads/writes its value directly to the
- * ItemStack's NBT. This ensures energy survives serialization/deserialization
- * and is compatible with other mods that use the standard "Energy" NBT key
- * (e.g. filling via pipes/chargers).
+ * Energy and capacity are read from the stack on every call.
  */
-public class EnergyStorageItemstack extends EnergyStorage {
-	private final ItemStack stack;
+public class EnergyStorageItemstack implements IEnergyStorage {
 	private static final String NBT_KEY = "Energy";
+	protected final ItemStack itemStack;
+	private final PoweredItem poweredItem;
 
-	public EnergyStorageItemstack(ItemStack stack, int capacity) {
-		super(capacity);
-		this.stack = stack;
-		// Load current energy from the item's NBT tag
-		if (stack.hasTag() && stack.getTag().contains(NBT_KEY)) {
-			energy = Math.min(stack.getTag().getInt(NBT_KEY), capacity);
-		}
+	public EnergyStorageItemstack(ItemStack itemStack, PoweredItem poweredItem) {
+		this.itemStack = itemStack;
+		this.poweredItem = poweredItem;
+	}
+
+	protected void setEnergy(int energy) {
+		itemStack.getOrCreateTag().putInt(NBT_KEY, energy);
 	}
 
 	@Override
 	public int receiveEnergy(int maxReceive, boolean simulate) {
-		int result = super.receiveEnergy(maxReceive, simulate);
-		if (!simulate && result > 0)
-			save();
-		return result;
+		if (!canReceive())
+			return 0;
+
+		int energy = getEnergyStored();
+		int energyReceived = Math.min(getMaxEnergyStored() - energy, Math.min(getMaxEnergyStored(), maxReceive));
+		if (!simulate)
+			setEnergy(energy + energyReceived);
+		return energyReceived;
 	}
 
 	@Override
 	public int extractEnergy(int maxExtract, boolean simulate) {
-		int result = super.extractEnergy(maxExtract, simulate);
-		if (!simulate && result > 0)
-			save();
-		return result;
+		if (!canExtract())
+			return 0;
+
+		int energy = getEnergyStored();
+		int energyExtracted = Math.min(energy, maxExtract);
+		if (!simulate)
+			setEnergy(energy - energyExtracted);
+		return energyExtracted;
 	}
 
-	protected void save() {
-		stack.getOrCreateTag().putInt(NBT_KEY, energy);
+	@Override
+	public int getEnergyStored() {
+		CompoundTag tag = itemStack.getTag();
+		return tag == null ? 0 : Math.min(tag.getInt(NBT_KEY), getMaxEnergyStored());
+	}
+
+	@Override
+	public int getMaxEnergyStored() {
+		return poweredItem.getMaxEnergy();
+	}
+
+	@Override
+	public boolean canExtract() {
+		return getMaxEnergyStored() > 0;
+	}
+
+	@Override
+	public boolean canReceive() {
+		return getMaxEnergyStored() > 0;
 	}
 }

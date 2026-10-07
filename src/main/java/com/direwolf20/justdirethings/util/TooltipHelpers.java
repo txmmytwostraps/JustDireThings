@@ -1,6 +1,7 @@
 package com.direwolf20.justdirethings.util;
 
 import com.direwolf20.justdirethings.client.KeyBindings;
+import com.direwolf20.justdirethings.common.capabilities.ItemStackItemHandler;
 import com.direwolf20.justdirethings.common.items.interfaces.Ability;
 import com.direwolf20.justdirethings.common.items.interfaces.PoweredItem;
 import com.direwolf20.justdirethings.common.items.interfaces.ToggleableItem;
@@ -10,13 +11,15 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.TextComponent;
+import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.items.ItemStackHandler;
+import net.minecraftforge.energy.CapabilityEnergy;
 
 import java.util.List;
 
 import static com.direwolf20.justdirethings.common.items.PocketGenerator.COUNTER;
+import static com.direwolf20.justdirethings.common.items.PocketGenerator.FUEL_INVENTORY;
 import static com.direwolf20.justdirethings.common.items.PocketGenerator.MAXBURN;
 
 public class TooltipHelpers {
@@ -25,20 +28,18 @@ public class TooltipHelpers {
 		if (!(stack.getItem() instanceof PoweredItem poweredItem))
 			return;
 
-		var energy = stack.getCapability(ForgeCapabilities.ENERGY).orElse(null);
+		var energy = stack.getCapability(CapabilityEnergy.ENERGY).orElse(null);
 		if (energy == null) {
 			return;
 		}
 		if (Screen.hasShiftDown())
 			tooltip.add(
-					Component
-							.translatable("justdirethings.festored", MagicHelpers.formatted(energy.getEnergyStored()),
+					new TranslatableComponent("justdirethings.festored", MagicHelpers.formatted(energy.getEnergyStored()),
 									MagicHelpers.formatted(energy.getMaxEnergyStored()))
 							.withStyle(ChatFormatting.GREEN));
 		else
 			tooltip.add(
-					Component
-							.translatable("justdirethings.festored", MagicHelpers.tidyValue(energy.getEnergyStored()),
+					new TranslatableComponent("justdirethings.festored", MagicHelpers.tidyValue(energy.getEnergyStored()),
 									MagicHelpers.tidyValue(energy.getMaxEnergyStored()))
 							.withStyle(ChatFormatting.GREEN));
 	}
@@ -47,26 +48,20 @@ public class TooltipHelpers {
 		if (stack.getItem() instanceof ToggleableItem toggleableItem) {
 			if (toggleableItem.getEnabled(stack))
 				tooltip.add(
-						Component
-								.translatable("justdirethings.enabled").withStyle(
+						new TranslatableComponent("justdirethings.enabled").withStyle(
 										ChatFormatting.GREEN)
-								.append(Component
-										.literal(
+								.append(new TextComponent(
 												" ")
-										.append(Component
-												.translatable("justdirethings.presshotkey",
+										.append(new TranslatableComponent("justdirethings.presshotkey",
 														KeyBindings.toggleTool.getKey().getDisplayName())
 												.withStyle(ChatFormatting.DARK_GRAY))));
 			else
 				tooltip.add(
-						Component
-								.translatable("justdirethings.disabled").withStyle(
+						new TranslatableComponent("justdirethings.disabled").withStyle(
 										ChatFormatting.DARK_RED)
-								.append(Component
-										.literal(
+								.append(new TextComponent(
 												" ")
-										.append(Component
-												.translatable("justdirethings.presshotkey",
+										.append(new TranslatableComponent("justdirethings.presshotkey",
 														KeyBindings.toggleTool.getKey().getDisplayName())
 												.withStyle(ChatFormatting.DARK_GRAY))));
 		}
@@ -79,23 +74,22 @@ public class TooltipHelpers {
 				boolean active = ToggleableTool.getSetting(stack, ability.getName());
 				ChatFormatting chatFormatting = ChatFormatting.GRAY;
 				if (!ToggleableTool.hasUpgrade(stack, ability)) {
-					tooltip.add(Component.translatable(ability.getLocalization())
-							.append(Component.translatable("justdirethings.missingupgrade")).withStyle(chatFormatting));
+					tooltip.add(new TranslatableComponent(ability.getLocalization())
+							.append(new TranslatableComponent("justdirethings.missingupgrade")).withStyle(chatFormatting));
 				} else {
 					chatFormatting = active ? ChatFormatting.GREEN : ChatFormatting.DARK_RED;
-					tooltip.add(Component.translatable(ability.getLocalization()).withStyle(chatFormatting));
+					tooltip.add(new TranslatableComponent(ability.getLocalization()).withStyle(chatFormatting));
 					if (ability.equals(Ability.DROPTELEPORT)) {
 						chatFormatting = ChatFormatting.DARK_PURPLE;
 						String dimString;
 						if (boundInventory == null) {
 							dimString = I18n.get("justdirethings.unbound");
-							tooltip.add(Component.literal(dimString).withStyle(chatFormatting));
+							tooltip.add(new TextComponent(dimString).withStyle(chatFormatting));
 						} else {
-							dimString = " -" + I18n.get(boundInventory.globalPos().dimension().location().getPath())
-									+ ": [" + boundInventory.globalPos().pos().toShortString() + "]";
-							tooltip.add(Component.literal(dimString).withStyle(chatFormatting));
-							tooltip.add(Component.literal("").append(Component.translatable("justdirethings.boundside"))
-									.append(Component.translatable(
+							dimString = " -" + I18n.get(boundInventory.globalPos().dimension().location().getPath()) + ": [" + boundInventory.globalPos().pos().toShortString() + "]";
+							tooltip.add(new TextComponent(dimString).withStyle(chatFormatting));
+							tooltip.add(new TextComponent("").append(new TranslatableComponent("justdirethings.boundside"))
+									.append(new TranslatableComponent(
 											"justdirethings.screen.direction-" + boundInventory.direction().getName()))
 									.withStyle(chatFormatting));
 						}
@@ -106,51 +100,45 @@ public class TooltipHelpers {
 	}
 
 	public static void appendShiftForInfo(ItemStack stack, List<Component> tooltip) {
-		tooltip.add(Component.translatable("justdirethings.shiftmoreinfo").withStyle(ChatFormatting.GRAY));
+		tooltip.add(new TranslatableComponent("justdirethings.shiftmoreinfo").withStyle(ChatFormatting.GRAY));
 	}
 
 	public static void appendUpgradeDetails(ItemStack stack, List<Component> tooltip) {
 		Ability ability = Ability.getAbilityFromUpgradeItem(stack.getItem());
-		if (ability == null)
-			return;
+		if (ability == null) return;
 
 		String detailTextKey = "justdirethings." + ability.getName() + ".detailtext";
 		String flavorTextKey = "justdirethings." + ability.getName() + ".flavortext";
 
-		MutableComponent detailTextComponent = Component.translatable(detailTextKey);
+		MutableComponent detailTextComponent = new TranslatableComponent(detailTextKey);
 		if (!detailTextComponent.getString().equals(detailTextKey)) {
 			tooltip.add(detailTextComponent.withStyle(ChatFormatting.GREEN));
 		}
 
-		MutableComponent flavorTextComponent = Component.translatable(flavorTextKey);
+		MutableComponent flavorTextComponent = new TranslatableComponent(flavorTextKey);
 		if (!flavorTextComponent.getString().equals(flavorTextKey)) {
 			tooltip.add(flavorTextComponent.withStyle(ChatFormatting.GRAY).withStyle(ChatFormatting.ITALIC));
 		}
 	}
 
 	public static void appendGeneratorDetails(ItemStack stack, List<Component> tooltip) {
-		ItemStackHandler itemStackHandler = new ItemStackHandler(1);
-		if (stack.hasTag() && stack.getTag().contains("FuelInventory")) {
-			itemStackHandler.deserializeNBT(stack.getTag().getCompound("FuelInventory"));
-		}
-
-		ItemStack fuelStack = itemStackHandler.getStackInSlot(0);
+		ItemStackItemHandler handler = new ItemStackItemHandler(stack, FUEL_INVENTORY, 1);
+		ItemStack fuelStack = handler.getStackInSlot(0);
 		if (Screen.hasShiftDown()) {
 			tooltip.add(
-					Component
-							.translatable("justdirethings.pocketgeneratorburntime",
+					new TranslatableComponent("justdirethings.pocketgeneratorburntime",
 									NBTHelpers.getIntValue(stack, COUNTER), NBTHelpers.getIntValue(stack, MAXBURN))
 							.withStyle(ChatFormatting.DARK_RED));
 			if (fuelStack.isEmpty())
 				tooltip.add(
-						Component.translatable("justdirethings.pocketgeneratornofuel").withStyle(ChatFormatting.RED));
+						new TranslatableComponent("justdirethings.pocketgeneratornofuel").withStyle(ChatFormatting.RED));
 			else
-				tooltip.add(Component.translatable("justdirethings.pocketgeneratorfuelstack", fuelStack.getCount(),
+				tooltip.add(new TranslatableComponent("justdirethings.pocketgeneratorfuelstack", fuelStack.getCount(),
 						fuelStack.getItem().getName(fuelStack)).withStyle(ChatFormatting.DARK_AQUA));
 		} else {
 			if (fuelStack.isEmpty())
 				tooltip.add(
-						Component.translatable("justdirethings.pocketgeneratornofuel").withStyle(ChatFormatting.RED));
+						new TranslatableComponent("justdirethings.pocketgeneratornofuel").withStyle(ChatFormatting.RED));
 		}
 	}
 }

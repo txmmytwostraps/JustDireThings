@@ -4,8 +4,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.energy.CapabilityEnergy;
 import net.minecraftforge.energy.IEnergyStorage;
 
 import javax.annotation.Nullable;
@@ -14,27 +14,7 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Forge 1.20.1 equivalent of NeoForge's {@code BlockCapabilityCache}.
- *
- * <p>
- * Caches {@link LazyOptional}{@code <IEnergyStorage>} lookups from neighboring
- * block entities. When the cached optional is invalidated by the neighbor (e.g.
- * the block entity is removed or replaced), the entry is automatically evicted
- * so the next call transparently re-queries — saving redundant
- * {@link BlockEntity#getCapability} calls every tick.
- *
- * <p>
- * Usage:
- *
- * <pre>{@code
- * private final BlockEnergyCache energyCache = new BlockEnergyCache();
- *
- * // In your tick method:
- * IEnergyStorage storage = energyCache.get(level, neighborPos, queryDirection);
- *
- * // In invalidateCaps():
- * energyCache.invalidateAll();
- * }</pre>
+ * Saves machines a capability lookup every tick. Entries drop out when their {@link LazyOptional} is invalidated.
  */
 public class BlockEnergyCache {
 
@@ -78,7 +58,7 @@ public class BlockEnergyCache {
 			return null;
 		}
 
-		LazyOptional<IEnergyStorage> cap = be.getCapability(ForgeCapabilities.ENERGY, side);
+		LazyOptional<IEnergyStorage> cap = be.getCapability(CapabilityEnergy.ENERGY, side);
 		cache.remove(key); // evict any stale entry
 		if (cap.isPresent()) {
 			cache.put(key, cap);
@@ -96,13 +76,5 @@ public class BlockEnergyCache {
 	public void invalidatePos(BlockPos pos) {
 		BlockPos immPos = pos.immutable();
 		cache.entrySet().removeIf(e -> Objects.equals(e.getKey().pos(), immPos));
-	}
-
-	/**
-	 * Clear the entire cache. Call from {@code invalidateCaps()} or when the
-	 * tracked area is rescanned.
-	 */
-	public void invalidateAll() {
-		cache.clear();
 	}
 }

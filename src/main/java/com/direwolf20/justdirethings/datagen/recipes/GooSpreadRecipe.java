@@ -1,41 +1,32 @@
 package com.direwolf20.justdirethings.datagen.recipes;
 
-import com.direwolf20.justdirethings.JustDireThings;
 import com.direwolf20.justdirethings.common.blockentities.basebe.GooBlockBE_Base;
 import com.direwolf20.justdirethings.setup.Registration;
 import com.google.gson.JsonElement;
-import com.mojang.serialization.Codec;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonSyntaxException;
 import com.mojang.serialization.JsonOps;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.GsonHelper;
 import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.CraftingBookCategory;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraftforge.registries.ForgeRegistryEntry;
 
-@SuppressWarnings("removal")
 public class GooSpreadRecipe implements CraftingRecipe {
 	private final ResourceLocation id;
-
-	@Override
-	public ResourceLocation getId() {
-		return id;
-	}
 	protected final BlockState input;
 	protected final BlockState output;
 	protected int tierRequirement;
 	protected int craftingDuration;
 
-	public GooSpreadRecipe(ResourceLocation id, BlockState input, BlockState output, int tierRequirement,
-			int craftingDuration) {
+	public GooSpreadRecipe(ResourceLocation id, BlockState input, BlockState output, int tierRequirement, int craftingDuration) {
 		this.id = id;
 		this.input = input;
 		this.output = output;
@@ -44,11 +35,16 @@ public class GooSpreadRecipe implements CraftingRecipe {
 	}
 
 	@Override
+	public ResourceLocation getId() {
+		return id;
+	}
+
+	@Override
 	public RecipeType<?> getType() {
 		return Registration.GOO_SPREAD_RECIPE_TYPE.get();
 	}
 
-	public boolean matches(Level level, BlockPos blockPos, GooBlockBE_Base gooBlockBE_base, BlockState sourceState) {
+	public boolean matches(GooBlockBE_Base gooBlockBE_base, BlockState sourceState) {
 		return sourceState.equals(input) && gooBlockBE_base.getTier() >= tierRequirement;
 	}
 
@@ -69,12 +65,7 @@ public class GooSpreadRecipe implements CraftingRecipe {
 	}
 
 	@Override
-	public CraftingBookCategory category() {
-		return CraftingBookCategory.MISC;
-	}
-
-	@Override
-	public ItemStack getResultItem(RegistryAccess pRegistryAccess) {
+	public ItemStack getResultItem() {
 		return ItemStack.EMPTY;
 	}
 
@@ -83,11 +74,13 @@ public class GooSpreadRecipe implements CraftingRecipe {
 		return true;
 	}
 
+	@Override
 	public boolean matches(CraftingContainer pInv, Level pLevel) {
 		return false;
 	}
 
-	public ItemStack assemble(CraftingContainer pContainer, RegistryAccess pRegistryAccess) {
+	@Override
+	public ItemStack assemble(CraftingContainer pContainer) {
 		return ItemStack.EMPTY;
 	}
 
@@ -104,50 +97,33 @@ public class GooSpreadRecipe implements CraftingRecipe {
 		return Registration.GOO_SPREAD_RECIPE_SERIALIZER.get();
 	}
 
-	public static class Serializer implements RecipeSerializer<GooSpreadRecipe> {
-		private static final net.minecraft.resources.ResourceLocation NAME = new net.minecraft.resources.ResourceLocation(
-				JustDireThings.MODID, "goospread");
-		private static final Codec<GooSpreadRecipe> CODEC = RecordCodecBuilder
-				.create(p_311734_ -> p_311734_
-						.group(ResourceLocation.CODEC.fieldOf("id").forGetter(p_301134_ -> p_301134_.id),
-								BlockState.CODEC.fieldOf("input").forGetter(p_301135_ -> p_301135_.input),
-								BlockState.CODEC.fieldOf("output").forGetter(p_301136_ -> p_301136_.output),
-								Codec.INT.fieldOf("tierRequirement").forGetter(p_301137_ -> p_301137_.tierRequirement),
-								Codec.INT.fieldOf("craftingDuration")
-										.forGetter(p_301138_ -> p_301138_.craftingDuration))
-						.apply(p_311734_, GooSpreadRecipe::new));
+	static BlockState parseBlockState(JsonElement json) {
+		return BlockState.CODEC.parse(JsonOps.INSTANCE, json).result()
+				.orElseThrow(() -> new JsonSyntaxException("Invalid block state: " + json));
+	}
 
-		public Codec<GooSpreadRecipe> codec() {
-			return CODEC;
-		}
-
+	public static class Serializer extends ForgeRegistryEntry<RecipeSerializer<?>> implements RecipeSerializer<GooSpreadRecipe> {
 		@Override
-		public GooSpreadRecipe fromJson(ResourceLocation id, com.google.gson.JsonObject json) {
-			BlockState inputState = parseBlockState(json.get("input"));
-			BlockState outputState = parseBlockState(json.get("output"));
-			int tierRequirement = json.get("tierRequirement").getAsInt();
-			int craftingDuration = json.get("craftingDuration").getAsInt();
+		public GooSpreadRecipe fromJson(ResourceLocation id, JsonObject json) {
+			BlockState inputState = parseBlockState(GsonHelper.getAsJsonObject(json, "input"));
+			BlockState outputState = parseBlockState(GsonHelper.getAsJsonObject(json, "output"));
+			int tierRequirement = GsonHelper.getAsInt(json, "tierRequirement");
+			int craftingDuration = GsonHelper.getAsInt(json, "craftingDuration");
 			return new GooSpreadRecipe(id, inputState, outputState, tierRequirement, craftingDuration);
-		}
-
-		private static BlockState parseBlockState(JsonElement el) {
-			return BlockState.CODEC.parse(JsonOps.INSTANCE, el).resultOrPartial(e -> {
-			}).orElse(net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
 		}
 
 		@Override
 		public GooSpreadRecipe fromNetwork(ResourceLocation id, FriendlyByteBuf pBuffer) {
-			ResourceLocation resourceLocation = pBuffer.readResourceLocation();
 			BlockState inputState = Block.stateById(pBuffer.readInt());
 			BlockState outputState = Block.stateById(pBuffer.readInt());
 			int tierRequirement = pBuffer.readInt();
 			int craftingDuration = pBuffer.readInt();
 
-			return new GooSpreadRecipe(resourceLocation, inputState, outputState, tierRequirement, craftingDuration);
+			return new GooSpreadRecipe(id, inputState, outputState, tierRequirement, craftingDuration);
 		}
 
+		@Override
 		public void toNetwork(FriendlyByteBuf pBuffer, GooSpreadRecipe pRecipe) {
-			pBuffer.writeResourceLocation(pRecipe.id);
 			pBuffer.writeInt(Block.getId(pRecipe.input));
 			pBuffer.writeInt(Block.getId(pRecipe.output));
 			pBuffer.writeInt(pRecipe.tierRequirement);

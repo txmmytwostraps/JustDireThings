@@ -1,37 +1,25 @@
 package com.direwolf20.justdirethings.datagen.recipes;
 
-import com.direwolf20.justdirethings.JustDireThings;
 import com.direwolf20.justdirethings.common.blockentities.basebe.GooBlockBE_Base;
 import com.direwolf20.justdirethings.setup.Registration;
-import com.google.gson.JsonElement;
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.JsonOps;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.registries.Registries;
+import com.google.gson.JsonObject;
+import net.minecraft.core.Registry;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
+import net.minecraft.util.GsonHelper;
 import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.CraftingBookCategory;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraftforge.registries.ForgeRegistryEntry;
 
-@SuppressWarnings("removal")
 public class GooSpreadRecipeTag implements CraftingRecipe {
 	private final ResourceLocation id;
-
-	@Override
-	public ResourceLocation getId() {
-		return id;
-	}
-
 	protected final TagKey<Block> input;
 	protected final BlockState output;
 	protected int tierRequirement;
@@ -47,11 +35,16 @@ public class GooSpreadRecipeTag implements CraftingRecipe {
 	}
 
 	@Override
+	public ResourceLocation getId() {
+		return id;
+	}
+
+	@Override
 	public RecipeType<?> getType() {
 		return Registration.GOO_SPREAD_RECIPE_TYPE_TAG.get();
 	}
 
-	public boolean matches(Level level, BlockPos blockPos, GooBlockBE_Base gooBlockBE_base, BlockState sourceState) {
+	public boolean matches(GooBlockBE_Base gooBlockBE_base, BlockState sourceState) {
 		return sourceState.is(input) && gooBlockBE_base.getTier() >= tierRequirement;
 	}
 
@@ -72,12 +65,7 @@ public class GooSpreadRecipeTag implements CraftingRecipe {
 	}
 
 	@Override
-	public CraftingBookCategory category() {
-		return CraftingBookCategory.MISC;
-	}
-
-	@Override
-	public ItemStack getResultItem(RegistryAccess pRegistryAccess) {
+	public ItemStack getResultItem() {
 		return ItemStack.EMPTY;
 	}
 
@@ -86,11 +74,13 @@ public class GooSpreadRecipeTag implements CraftingRecipe {
 		return true;
 	}
 
+	@Override
 	public boolean matches(CraftingContainer pInv, Level pLevel) {
 		return false;
 	}
 
-	public ItemStack assemble(CraftingContainer pContainer, RegistryAccess pRegistryAccess) {
+	@Override
+	public ItemStack assemble(CraftingContainer pContainer) {
 		return ItemStack.EMPTY;
 	}
 
@@ -107,48 +97,29 @@ public class GooSpreadRecipeTag implements CraftingRecipe {
 		return Registration.GOO_SPREAD_RECIPE_SERIALIZER_TAG.get();
 	}
 
-	public static class Serializer implements RecipeSerializer<GooSpreadRecipeTag> {
-		private static final ResourceLocation NAME = new ResourceLocation(JustDireThings.MODID, "goospread_tag");
-		private static final Codec<GooSpreadRecipeTag> CODEC = RecordCodecBuilder.create(instance -> instance
-				.group(ResourceLocation.CODEC.fieldOf("id").forGetter(recipe -> recipe.id),
-						TagKey.codec(Registries.BLOCK).fieldOf("input").forGetter(recipe -> recipe.input),
-						BlockState.CODEC.fieldOf("output").forGetter(recipe -> recipe.output),
-						Codec.INT.fieldOf("tierRequirement").forGetter(recipe -> recipe.tierRequirement),
-						Codec.INT.fieldOf("craftingDuration").forGetter(recipe -> recipe.craftingDuration))
-				.apply(instance, GooSpreadRecipeTag::new));
-
-		public Codec<GooSpreadRecipeTag> codec() {
-			return CODEC;
-		}
-
+	public static class Serializer extends ForgeRegistryEntry<RecipeSerializer<?>> implements RecipeSerializer<GooSpreadRecipeTag> {
 		@Override
-		public GooSpreadRecipeTag fromJson(ResourceLocation id, com.google.gson.JsonObject json) {
-			TagKey<Block> input = TagKey.create(Registries.BLOCK,
-					new ResourceLocation(json.get("input").getAsString()));
-			BlockState outputState = parseBlockState(json.get("output"));
-			int tierRequirement = json.get("tierRequirement").getAsInt();
-			int craftingDuration = json.get("craftingDuration").getAsInt();
+		public GooSpreadRecipeTag fromJson(ResourceLocation id, JsonObject json) {
+			TagKey<Block> input = TagKey.create(Registry.BLOCK_REGISTRY,
+					ResourceLocation.parse(GsonHelper.getAsString(GsonHelper.getAsJsonObject(json, "input"), "tag")));
+			BlockState outputState = GooSpreadRecipe.parseBlockState(GsonHelper.getAsJsonObject(json, "output"));
+			int tierRequirement = GsonHelper.getAsInt(json, "tierRequirement");
+			int craftingDuration = GsonHelper.getAsInt(json, "craftingDuration");
 			return new GooSpreadRecipeTag(id, input, outputState, tierRequirement, craftingDuration);
-		}
-
-		private static BlockState parseBlockState(JsonElement el) {
-			return BlockState.CODEC.parse(JsonOps.INSTANCE, el).resultOrPartial(e -> {
-			}).orElse(net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
 		}
 
 		@Override
 		public GooSpreadRecipeTag fromNetwork(ResourceLocation id, FriendlyByteBuf pBuffer) {
-			ResourceLocation resourceLocation = pBuffer.readResourceLocation();
-			TagKey<Block> input = TagKey.create(Registries.BLOCK, pBuffer.readResourceLocation());
+			TagKey<Block> input = TagKey.create(Registry.BLOCK_REGISTRY, pBuffer.readResourceLocation());
 			BlockState outputState = Block.stateById(pBuffer.readInt());
 			int tierRequirement = pBuffer.readInt();
 			int craftingDuration = pBuffer.readInt();
 
-			return new GooSpreadRecipeTag(resourceLocation, input, outputState, tierRequirement, craftingDuration);
+			return new GooSpreadRecipeTag(id, input, outputState, tierRequirement, craftingDuration);
 		}
 
+		@Override
 		public void toNetwork(FriendlyByteBuf pBuffer, GooSpreadRecipeTag pRecipe) {
-			pBuffer.writeResourceLocation(pRecipe.id);
 			pBuffer.writeResourceLocation(pRecipe.input.location());
 			pBuffer.writeInt(Block.getId(pRecipe.output));
 			pBuffer.writeInt(pRecipe.tierRequirement);

@@ -2,55 +2,51 @@ package com.direwolf20.justdirethings.datagen;
 
 import com.direwolf20.justdirethings.JustDireThings;
 import com.direwolf20.justdirethings.setup.Registration;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.data.PackOutput;
+import net.minecraft.data.DataGenerator;
+import net.minecraft.data.tags.BlockTagsProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.common.Tags;
-import net.minecraftforge.common.data.BlockTagsProvider;
 import net.minecraftforge.common.data.ExistingFileHelper;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.concurrent.CompletableFuture;
 
-@SuppressWarnings("removal")
 public class JustDireBlockTags extends BlockTagsProvider {
 
-	public JustDireBlockTags(PackOutput output, CompletableFuture<HolderLookup.Provider> lookupProvider,
-			@Nullable ExistingFileHelper existingFileHelper) {
-		super(output, lookupProvider, JustDireThings.MODID, existingFileHelper);
+	public JustDireBlockTags(DataGenerator generator, @Nullable ExistingFileHelper existingFileHelper) {
+		super(generator, JustDireThings.MODID, existingFileHelper);
 	}
 
 	public static final TagKey<Block> LAWNMOWERABLE = BlockTags
-			.create(new ResourceLocation(JustDireThings.MODID, "lawnmowerable"));
+			.create(ResourceLocation.fromNamespaceAndPath(JustDireThings.MODID, "lawnmowerable"));
 	public static final TagKey<Block> NO_AUTO_CLICK = BlockTags
-			.create(new ResourceLocation(JustDireThings.MODID, "noautoclick"));
+			.create(ResourceLocation.fromNamespaceAndPath(JustDireThings.MODID, "noautoclick"));
 	public static final TagKey<Block> PARADOX_ALLOW = BlockTags
-			.create(new ResourceLocation(JustDireThings.MODID, "paradox_allow"));
-	public static final TagKey<Block> PARADOX_DENY = BlockTags
-			.create(new ResourceLocation(JustDireThings.MODID, "paradox_deny"));
+			.create(ResourceLocation.fromNamespaceAndPath(JustDireThings.MODID, "paradox_allow"));
 	public static final TagKey<Block> PARADOX_ABSORB_DENY = BlockTags
-			.create(new ResourceLocation(JustDireThings.MODID, "paradox_absorb_deny"));
+			.create(ResourceLocation.fromNamespaceAndPath(JustDireThings.MODID, "paradox_absorb_deny"));
 	public static final TagKey<Block> SWAPPERDENY = BlockTags
-			.create(new ResourceLocation(JustDireThings.MODID, "swapper_deny"));
+			.create(ResourceLocation.fromNamespaceAndPath(JustDireThings.MODID, "swapper_deny"));
 	public static final TagKey<Block> ECLISEGATEDENY = BlockTags
-			.create(new ResourceLocation(JustDireThings.MODID, "eclipsegate_deny"));
+			.create(ResourceLocation.fromNamespaceAndPath(JustDireThings.MODID, "eclipsegate_deny"));
 	public static final TagKey<Block> NO_MOVE = BlockTags
-			.create(new ResourceLocation("forge", "relocation_not_supported"));
+			.create(ResourceLocation.fromNamespaceAndPath("forge", "relocation_not_supported"));
 	public static final TagKey<Block> TICK_SPEED_DENY = BlockTags
-			.create(new ResourceLocation(JustDireThings.MODID, "tick_speed_deny"));
+			.create(ResourceLocation.fromNamespaceAndPath(JustDireThings.MODID, "tick_speed_deny"));
 	public static final TagKey<Block> PHASEDENY = BlockTags
-			.create(new ResourceLocation(JustDireThings.MODID, "phase_deny"));
+			.create(ResourceLocation.fromNamespaceAndPath(JustDireThings.MODID, "phase_deny"));
 	public static final TagKey<Block> BUDDING_BLOCKS = BlockTags
-			.create(new ResourceLocation("forge", "budding_blocks"));
-	public static final TagKey<Block> BUDS = BlockTags.create(new ResourceLocation("forge", "buds"));
-	public static final TagKey<Block> CLUSTERS = BlockTags.create(new ResourceLocation("forge", "clusters"));
+			.create(ResourceLocation.fromNamespaceAndPath("forge", "budding_blocks"));
+	public static final TagKey<Block> BUDS = BlockTags.create(ResourceLocation.fromNamespaceAndPath("forge", "buds"));
+	public static final TagKey<Block> CLUSTERS = BlockTags.create(ResourceLocation.fromNamespaceAndPath("forge", "clusters"));
+	public static final TagKey<Block> CHARCOAL = BlockTags
+			.create(ResourceLocation.fromNamespaceAndPath("forge", "storage_blocks/charcoal"));
 
 	@Override
-	protected void addTags(HolderLookup.Provider provider) {
+	protected void addTags() {
 		tag(BlockTags.MINEABLE_WITH_SHOVEL).add(Registration.GooBlock_Tier1.get())
 				.add(Registration.GooBlock_Tier2.get()).add(Registration.GooBlock_Tier3.get())
 				.add(Registration.GooBlock_Tier4.get()).add(Registration.GooSoil_Tier1.get())
@@ -76,31 +72,37 @@ public class JustDireBlockTags extends BlockTagsProvider {
 				.add(Registration.FluidPlacerT1.get()).add(Registration.FluidPlacerT2.get())
 				.add(Registration.GeneratorFluidT1.get()).add(Registration.InventoryHolder.get())
 				.add(Registration.ParadoxMachine.get()).add(Registration.TimeCrystalCluster.get())
-				.add(Registration.TimeCrystalBlock.get()).add(Registration.CharcoalBlock.get());
+				.add(Registration.TimeCrystalBlock.get()).add(Registration.CharcoalBlock.get())
+				.add(Registration.DireSmithingTable.get());
 		tag(LAWNMOWERABLE).addTag(BlockTags.FLOWERS).add(Blocks.TALL_GRASS).add(Blocks.GRASS).add(Blocks.DEAD_BUSH)
 				.add(Blocks.SWEET_BERRY_BUSH).add(Blocks.FERN).add(Blocks.LARGE_FERN);
 		tag(Tags.Blocks.ORES).add(Registration.RawFerricoreOre.get()).add(Registration.RawBlazegoldOre.get())
-				.add(Registration.RawCelestigemOre.get()).add(Registration.RawEclipseAlloyOre.get());
+				.add(Registration.RawCelestigemOre.get()).add(Registration.RawEclipseAlloyOre.get())
+				.add(Registration.RawCoal_T1.get()).add(Registration.RawCoal_T2.get()).add(Registration.RawCoal_T3.get())
+				.add(Registration.RawCoal_T4.get());
+		tag(Tags.Blocks.STORAGE_BLOCKS).add(Registration.FerricoreBlock.get()).add(Registration.BlazeGoldBlock.get())
+				.add(Registration.CelestigemBlock.get()).add(Registration.EclipseAlloyBlock.get())
+				.add(Registration.CoalBlock_T1.get()).add(Registration.CoalBlock_T2.get()).add(Registration.CoalBlock_T3.get())
+				.add(Registration.CoalBlock_T4.get());
 		tag(BlockTags.BAMBOO_PLANTABLE_ON).add(Registration.GooSoil_Tier1.get()).add(Registration.GooSoil_Tier2.get())
 				.add(Registration.GooSoil_Tier3.get()).add(Registration.GooSoil_Tier4.get());
 		tag(PARADOX_ALLOW).addTag(Tags.Blocks.ORES);
-		tag(PARADOX_ABSORB_DENY).add(Blocks.BEDROCK).add(Blocks.END_PORTAL_FRAME).add(Blocks.END_PORTAL)
-				.add(Blocks.NETHER_PORTAL).addTag(BlockTags.PORTALS);
-		tag(PARADOX_DENY).add(Blocks.BEDROCK).add(Blocks.END_PORTAL_FRAME).add(Blocks.END_PORTAL)
-				.add(Blocks.NETHER_PORTAL).addTag(BlockTags.PORTALS);
+		tag(PARADOX_ABSORB_DENY).add(Blocks.BEDROCK);
 		tag(NO_AUTO_CLICK);
 		tag(SWAPPERDENY).add(Blocks.PISTON_HEAD).add(Blocks.MOVING_PISTON).add(Blocks.BEDROCK)
 				.add(Blocks.END_PORTAL_FRAME).add(Blocks.CANDLE_CAKE).addTag(BlockTags.BEDS).addTag(BlockTags.PORTALS)
 				.addTag(BlockTags.DOORS);
-		tag(ECLISEGATEDENY).addTag(BlockTags.PORTALS);
-		tag(TICK_SPEED_DENY).addTag(BlockTags.PORTALS).add(Registration.TimeCrystalBuddingBlock.get())
-				.add(Registration.GeneratorT1.get()).add(Registration.GeneratorFluidT1.get());
+		tag(ECLISEGATEDENY).addTag(BlockTags.PORTALS).addTag(BlockTags.DOORS)
+				.addOptionalTag(ResourceLocation.fromNamespaceAndPath("powah", "player_transmitters"));
+		tag(TICK_SPEED_DENY);
 		tag(PHASEDENY).addTag(BlockTags.PORTALS).add(Blocks.BARRIER).add(Blocks.BEDROCK).add(Blocks.END_PORTAL)
 				.add(Blocks.END_PORTAL_FRAME).add(Blocks.END_GATEWAY).add(Blocks.STRUCTURE_BLOCK).add(Blocks.JIGSAW);
 		tag(BUDDING_BLOCKS).add(Registration.TimeCrystalBuddingBlock.get());
 		tag(BUDS).add(Registration.TimeCrystalCluster_Small.get()).add(Registration.TimeCrystalCluster_Medium.get())
 				.add(Registration.TimeCrystalCluster_Large.get());
-		tag(CLUSTERS).add(Registration.TimeCrystalCluster.get());
+		// Forge doesn't tag amethyst clusters, and the Ore Miner needs them here
+		tag(CLUSTERS).add(Registration.TimeCrystalCluster.get()).add(Blocks.AMETHYST_CLUSTER);
+		tag(CHARCOAL).add(Registration.CharcoalBlock.get());
 	}
 
 	@Override

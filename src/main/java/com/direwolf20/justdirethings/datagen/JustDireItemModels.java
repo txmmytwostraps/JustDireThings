@@ -2,16 +2,21 @@ package com.direwolf20.justdirethings.datagen;
 
 import com.direwolf20.justdirethings.JustDireThings;
 import com.direwolf20.justdirethings.setup.Registration;
-import net.minecraft.data.PackOutput;
+import net.minecraft.client.renderer.block.model.ItemTransforms;
+import net.minecraft.data.DataGenerator;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.BucketItem;
+import net.minecraft.world.level.ItemLike;
+import net.minecraftforge.client.model.generators.ItemModelBuilder;
 import net.minecraftforge.client.model.generators.ItemModelProvider;
 import net.minecraftforge.client.model.generators.ModelFile;
+import net.minecraftforge.client.model.generators.loaders.DynamicBucketModelBuilder;
 import net.minecraftforge.common.data.ExistingFileHelper;
+import net.minecraftforge.registries.ForgeRegistries;
 
-@SuppressWarnings("removal")
 public class JustDireItemModels extends ItemModelProvider {
-	public JustDireItemModels(PackOutput output, ExistingFileHelper existingFileHelper) {
-		super(output, JustDireThings.MODID, existingFileHelper);
+	public JustDireItemModels(DataGenerator generator, ExistingFileHelper existingFileHelper) {
+		super(generator, JustDireThings.MODID, existingFileHelper);
 	}
 
 	@Override
@@ -32,8 +37,7 @@ public class JustDireItemModels extends ItemModelProvider {
 		withExistingParent(Registration.CelestigemBlock_ITEM.getId().getPath(), modLoc("block/celestigem_block"));
 		withExistingParent(Registration.RawCelestigemOre_ITEM.getId().getPath(), modLoc("block/raw_celestigem_ore"));
 		withExistingParent(Registration.EclipseAlloyBlock_ITEM.getId().getPath(), modLoc("block/eclipsealloy_block"));
-		withExistingParent(Registration.RawEclipseAlloyOre_ITEM.getId().getPath(),
-				modLoc("block/raw_eclipsealloy_ore"));
+		withExistingParent(Registration.RawEclipseAlloyOre_ITEM.getId().getPath(), modLoc("block/raw_eclipsealloy_ore"));
 		withExistingParent(Registration.ItemCollector_ITEM.getId().getPath(), modLoc("block/itemcollector"));
 		withExistingParent(Registration.BlockBreakerT1_ITEM.getId().getPath(), modLoc("block/blockbreakert1"));
 		withExistingParent(Registration.BlockPlacerT1_ITEM.getId().getPath(), modLoc("block/blockplacert1"));
@@ -46,7 +50,9 @@ public class JustDireItemModels extends ItemModelProvider {
 		withExistingParent(Registration.DropperT1_ITEM.getId().getPath(), modLoc("block/droppert1"));
 		withExistingParent(Registration.DropperT2_ITEM.getId().getPath(), modLoc("block/droppert2"));
 		withExistingParent(Registration.GeneratorT1_ITEM.getId().getPath(), modLoc("block/generatort1"));
+		withExistingParent(Registration.GeneratorFluidT1_ITEM.getId().getPath(), modLoc("block/generatorfluidt1"));
 		withExistingParent(Registration.EnergyTransmitter_ITEM.getId().getPath(), modLoc("block/energytransmitter"));
+		withExistingParent(Registration.CharcoalBlock_ITEM.getId().getPath(), modLoc("block/charcoal"));
 		withExistingParent(Registration.RawCoal_T1_ITEM.getId().getPath(), modLoc("block/raw_coal_t1_ore"));
 		withExistingParent(Registration.RawCoal_T2_ITEM.getId().getPath(), modLoc("block/raw_coal_t2_ore"));
 		withExistingParent(Registration.RawCoal_T3_ITEM.getId().getPath(), modLoc("block/raw_coal_t3_ore"));
@@ -58,185 +64,145 @@ public class JustDireItemModels extends ItemModelProvider {
 		withExistingParent(Registration.BlockSwapperT1_ITEM.getId().getPath(), modLoc("block/blockswappert1"));
 		withExistingParent(Registration.BlockSwapperT2_ITEM.getId().getPath(), modLoc("block/blockswappert2"));
 		withExistingParent(Registration.PlayerAccessor.getId().getPath(), modLoc("block/playeraccessor"));
-		withExistingParent(Registration.ExperienceHolder_ITEM.getId().getPath(), modLoc("block/experienceholder"));
-		withExistingParent(Registration.FluidCollectorT1_ITEM.getId().getPath(), modLoc("block/fluidcollectort1"));
-		withExistingParent(Registration.FluidCollectorT2_ITEM.getId().getPath(), modLoc("block/fluidcollectort2"));
 		withExistingParent(Registration.FluidPlacerT1_ITEM.getId().getPath(), modLoc("block/fluidplacert1"));
 		withExistingParent(Registration.FluidPlacerT2_ITEM.getId().getPath(), modLoc("block/fluidplacert2"));
-		withExistingParent(Registration.GeneratorFluidT1_ITEM.getId().getPath(), modLoc("block/generatorfluidt1"));
-		withExistingParent(Registration.InventoryHolder_ITEM.getId().getPath(), modLoc("block/inventoryholder"));
-		withExistingParent(Registration.ParadoxMachine_ITEM.getId().getPath(), modLoc("block/paradoxmachine"));
-		withExistingParent(Registration.TimeCrystalBlock_ITEM.getId().getPath(), modLoc("block/time_crystal_block"));
-		withExistingParent(Registration.TimeCrystalBuddingBlock_ITEM.getId().getPath(),
-				modLoc("block/time_crystal_budding_block"));
-		withExistingParent(Registration.TimeCrystalCluster_ITEM.getId().getPath(),
-				modLoc("block/time_crystal_cluster"));
-		withExistingParent(Registration.TimeCrystalCluster_Small_ITEM.getId().getPath(),
-				modLoc("block/time_crystal_cluster_small"));
-		withExistingParent(Registration.TimeCrystalCluster_Medium_ITEM.getId().getPath(),
-				modLoc("block/time_crystal_cluster_medium"));
-		withExistingParent(Registration.TimeCrystalCluster_Large_ITEM.getId().getPath(),
-				modLoc("block/time_crystal_cluster_large"));
-		withExistingParent(Registration.CharcoalBlock_ITEM.getId().getPath(), modLoc("block/charcoal"));
+		withExistingParent(Registration.FluidCollectorT1_ITEM.getId().getPath(), modLoc("block/fluidcollectort1"));
+		withExistingParent(Registration.FluidCollectorT2_ITEM.getId().getPath(), modLoc("block/fluidcollectort2"));
+		withExistingParent(Registration.TimeCrystalBlock.getId().getPath(), modLoc("block/time_crystal_block"));
+		withExistingParent(Registration.TimeCrystalBuddingBlock.getId().getPath(), modLoc("block/time_crystal_budding_block_state_0"));
+		withExistingParent(Registration.TimeCrystalCluster.getId().getPath(), modLoc("block/time_crystal_cluster"));
+		withExistingParent(Registration.TimeCrystalCluster_Small_ITEM.getId().getPath(), modLoc("block/time_crystal_cluster_small"));
+		withExistingParent(Registration.TimeCrystalCluster_Medium_ITEM.getId().getPath(), modLoc("block/time_crystal_cluster_medium"));
+		withExistingParent(Registration.TimeCrystalCluster_Large_ITEM.getId().getPath(), modLoc("block/time_crystal_cluster_large"));
+		withExistingParent(Registration.ParadoxMachine.getId().getPath(), modLoc("block/paradoxmachine"));
+		withExistingParent(Registration.InventoryHolder.getId().getPath(), modLoc("block/inventory_holder"));
+		withExistingParent(Registration.ExperienceHolder_ITEM.getId().getPath(), modLoc("block/experienceholder"));
+		withExistingParent(Registration.DireSmithingTable_ITEM.getId().getPath(), modLoc("block/dire_smithing_table"));
 
 		// Item items
-		singleTexture(Registration.Fuel_Canister.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/fuel_canister"));
-		// singleTexture(Registration.Pocket_Generator.getId().getPath(),
-		// mcLoc("item/generated"), "layer0", modLoc("item/pocketgenerator"));
-		// singleTexture(Registration.Pocket_GeneratorT2.getId().getPath(),
-		// mcLoc("item/generated"), "layer0", modLoc("item/pocketgenerator_t2"));
-		// singleTexture(Registration.Pocket_GeneratorT3.getId().getPath(),
-		// mcLoc("item/generated"), "layer0", modLoc("item/pocketgenerator_t3"));
-		// singleTexture(Registration.Pocket_GeneratorT4.getId().getPath(),
-		// mcLoc("item/generated"), "layer0", modLoc("item/pocketgenerator_t4"));
-		singleTexture(Registration.RawFerricore.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/raw_ferricore"));
-		singleTexture(Registration.FerricoreIngot.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/ferricore_ingot"));
-		singleTexture(Registration.RawBlazegold.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/raw_blazegold"));
-		singleTexture(Registration.BlazegoldIngot.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/blazegold_ingot"));
-		singleTexture(Registration.Celestigem.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/celestigem"));
-		singleTexture(Registration.RawBlazegold.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/raw_blazegold"));
-		singleTexture(Registration.BlazegoldIngot.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/blazegold_ingot"));
-		singleTexture(Registration.RawEclipseAlloy.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/raw_eclipsealloy"));
-		singleTexture(Registration.EclipseAlloyIngot.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/eclipsealloy_ingot"));
-		singleTexture(Registration.Coal_T1.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/coal_t1"));
-		singleTexture(Registration.Coal_T2.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/coal_t2"));
-		singleTexture(Registration.Coal_T3.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/coal_t3"));
-		singleTexture(Registration.Coal_T4.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/coal_t4"));
-		singleTexture(Registration.TimeCrystal.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/time_crystal_shard"));
-
-		singleTexture(Registration.FluidCanister.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/fluid_canister"));
-		singleTexture(Registration.PotionCanister.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/potion_canister"));
-		singleTexture(Registration.PolymorphicCatalyst.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/polymorphic_catalyst"));
-		singleTexture(Registration.PortalFluidCatalyst.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/portal_fluid_catalyst"));
-		singleTexture(Registration.MachineSettingsCopier.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/machine_settings_copier"));
-
-		singleTexture(Registration.TimeWand.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/time_wand"));
-		withExistingParent(Registration.PortalGunV2.getId().getPath(), modLoc("item/portalgun_v2"));
-		// portal_gun and polymorphic_wand_v2 models are static in src/main/resources
-		// (textures pending)
-
-		singleTexture(Registration.FerricoreWrench.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/ferricore_wrench"));
-		singleTexture(Registration.TotemOfDeathRecall.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/totem_of_death_recall"));
-		singleTexture(Registration.BlazejetWand.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/blazejet_wand"));
-		singleTexture(Registration.VoidshiftWand.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/voidshift_wand"));
-		singleTexture(Registration.EclipsegateWand.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/eclipsegate_wand"));
-		singleTexture(Registration.CreatureCatcher.getId().getPath() + "_base", mcLoc("item/generated"), "layer0",
-				modLoc("item/creaturecatcher"));
+		singleTexture(Registration.Fuel_Canister.getId().getPath(), mcLoc("item/generated"), "layer0", modLoc("item/fuel_canister"));
+		singleTexture(Registration.RawFerricore.getId().getPath(), mcLoc("item/generated"), "layer0", modLoc("item/raw_ferricore"));
+		singleTexture(Registration.FerricoreIngot.getId().getPath(), mcLoc("item/generated"), "layer0", modLoc("item/ferricore_ingot"));
+		singleTexture(Registration.RawBlazegold.getId().getPath(), mcLoc("item/generated"), "layer0", modLoc("item/raw_blazegold"));
+		singleTexture(Registration.BlazegoldIngot.getId().getPath(), mcLoc("item/generated"), "layer0", modLoc("item/blazegold_ingot"));
+		singleTexture(Registration.Celestigem.getId().getPath(), mcLoc("item/generated"), "layer0", modLoc("item/celestigem"));
+		singleTexture(Registration.RawEclipseAlloy.getId().getPath(), mcLoc("item/generated"), "layer0", modLoc("item/raw_eclipsealloy"));
+		singleTexture(Registration.EclipseAlloyIngot.getId().getPath(), mcLoc("item/generated"), "layer0", modLoc("item/eclipsealloy_ingot"));
+		singleTexture(Registration.Coal_T1.getId().getPath(), mcLoc("item/generated"), "layer0", modLoc("item/coal_t1"));
+		singleTexture(Registration.Coal_T2.getId().getPath(), mcLoc("item/generated"), "layer0", modLoc("item/coal_t2"));
+		singleTexture(Registration.Coal_T3.getId().getPath(), mcLoc("item/generated"), "layer0", modLoc("item/coal_t3"));
+		singleTexture(Registration.Coal_T4.getId().getPath(), mcLoc("item/generated"), "layer0", modLoc("item/coal_t4"));
+		singleTexture(Registration.PolymorphicCatalyst.getId().getPath(), mcLoc("item/generated"), "layer0", modLoc("item/polymorphic_catalyst"));
+		singleTexture(Registration.PortalFluidCatalyst.getId().getPath(), mcLoc("item/generated"), "layer0", modLoc("item/portal_fluid_catalyst"));
+		singleTexture(Registration.TimeCrystal.getId().getPath(), mcLoc("item/generated"), "layer0", modLoc("item/time_crystal_shard"));
+		singleTexture(Registration.FerricoreWrench.getId().getPath(), mcLoc("item/handheld"), "layer0", modLoc("item/ferricore_wrench"));
+		singleTexture(Registration.TotemOfDeathRecall.getId().getPath(), mcLoc("item/generated"), "layer0", modLoc("item/totem_of_death_recall"));
+		singleTexture(Registration.BlazejetWand.getId().getPath(), mcLoc("item/handheld"), "layer0", modLoc("item/blazejet_wand"));
+		singleTexture(Registration.VoidshiftWand.getId().getPath(), mcLoc("item/handheld"), "layer0", modLoc("item/voidshift_wand"));
+		singleTexture(Registration.EclipsegateWand.getId().getPath(), mcLoc("item/handheld"), "layer0", modLoc("item/eclipsegate_wand"));
 		getBuilder(Registration.CreatureCatcher.getId().getPath())
 				.parent(new ModelFile.UncheckedModelFile("builtin/entity"));
-		// .texture("layer0", modLoc("item/creaturecatcher"));
-		// withExistingParent(Registration.CreatureCatcher.getId().getPath(),
-		// mcLoc("builtin/entity"));
-
+		singleTexture(Registration.MachineSettingsCopier.getId().getPath(), mcLoc("item/generated"), "layer0", modLoc("item/machine_settings_copier"));
+		singleTexture(Registration.TEMPLATE_FERRICORE.getId().getPath(), mcLoc("item/generated"), "layer0", modLoc("item/template_ferricore"));
+		singleTexture(Registration.TEMPLATE_BLAZEGOLD.getId().getPath(), mcLoc("item/generated"), "layer0", modLoc("item/template_blazegold"));
+		singleTexture(Registration.TEMPLATE_CELESTIGEM.getId().getPath(), mcLoc("item/generated"), "layer0", modLoc("item/template_celestigem"));
+		singleTexture(Registration.TEMPLATE_ECLIPSEALLOY.getId().getPath(), mcLoc("item/generated"), "layer0", modLoc("item/template_eclipsealloy"));
+		singleTexture(Registration.TimeWand.getId().getPath(), mcLoc("item/handheld"), "layer0", modLoc("item/time_wand"));
+		singleTexture(Registration.PolymorphicWand.getId().getPath(), mcLoc("item/handheld"), "layer0", modLoc("item/polymorphic_wand"));
+		singleTexture(Registration.PolymorphicWandV2.getId().getPath(), mcLoc("item/handheld"), "layer0", modLoc("item/polymorphic_wand_v2"));
+		registerBowModels();
 		// Tool Items
 		registerTools();
 		registerArmors();
-		registerBowModels();
-
+		buckets();
+		registerUpgrades();
 		// Generators
 		registerEnabledTextureItem(Registration.Pocket_Generator.getId().getPath());
-
-		// Upgrade Templates
-		singleTexture(Registration.TEMPLATE_FERRICORE.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/template_ferricore"));
-		singleTexture(Registration.TEMPLATE_BLAZEGOLD.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/template_blazegold"));
-		singleTexture(Registration.TEMPLATE_CELESTIGEM.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/template_celestigem"));
-		singleTexture(Registration.TEMPLATE_ECLIPSEALLOY.getId().getPath(), mcLoc("item/generated"), "layer0",
-				modLoc("item/template_eclipsealloy"));
-
-		// Upgrades
-		registerUpgrades();
 	}
 
-	public void registerUpgrades() {
-		for (var upgrade : Registration.UPGRADES.getEntries()) {
-			String registryName = upgrade.getId().getPath();
-			String textureName = registryName.substring("upgrade_".length());
-			singleTexture(registryName, mcLoc("item/generated"), "layer0",
-					modLoc("item/abilityupgrades/" + textureName));
+	public void buckets() {
+		for (var bucket : Registration.BUCKET_ITEMS.getEntries()) {
+			withExistingParent(bucket.getId().getPath(), ResourceLocation.fromNamespaceAndPath("forge", "item/bucket"))
+					.customLoader(DynamicBucketModelBuilder::begin)
+					.fluid(((BucketItem) bucket.get()).getFluid());
 		}
 	}
 
 	public void registerTools() {
 		for (var tool : Registration.TOOLS.getEntries()) {
-			String path = tool.getId().getPath();
-			// Skip items whose textures aren't available yet; their models are static in
-			// src/main/resources
-			if (path.equals("polymorphic_wand_v2"))
-				continue;
-			if (path.equals("polymorphic_wand")) {
-				registerEnabledTextureItem(path, path);
-				continue;
-			}
-			registerEnabledTextureItem(path);
+			registerEnabledTextureItem(tool.getId().getPath());
+		}
+	}
+
+	public void registerUpgrades() {
+		for (var upgrade : Registration.UPGRADES.getEntries()) {
+			String name = upgrade.getId().getPath().substring(upgrade.getId().getPath().indexOf("_") + 1);
+			singleTexture(upgrade.getId().getPath(), mcLoc("item/generated"), "layer0", modLoc("item/abilityupgrades/" + name));
 		}
 	}
 
 	public void registerArmors() {
 		for (var armor : Registration.ARMORS.getEntries()) {
-			singleTexture(armor.getId().getPath(), mcLoc("item/generated"), "layer0",
-					modLoc("item/" + armor.getId().getPath()));
+			generated(armor.get(), modLoc("item/" + armor.getId().getPath()));
 		}
 	}
 
-	public void registerBowModels() {
-		for (var bow : Registration.BOWS.getEntries()) {
-			String bowName = bow.getId().getPath();
-			// Create the 3 pulling-state models
-			var pulling0 = singleTexture(bowName + "_pulling_0", mcLoc("item/bow_pulling_0"), "layer0",
-					modLoc("item/bows/" + bowName + "_pulling_0"));
-			var pulling1 = singleTexture(bowName + "_pulling_1", mcLoc("item/bow_pulling_1"), "layer0",
-					modLoc("item/bows/" + bowName + "_pulling_1"));
-			var pulling2 = singleTexture(bowName + "_pulling_2", mcLoc("item/bow_pulling_2"), "layer0",
-					modLoc("item/bows/" + bowName + "_pulling_2"));
-			// Base model with overrides
-			getBuilder(bowName).parent(getExistingFile(mcLoc("item/bow")))
-					.texture("layer0", modLoc("item/bows/" + bowName)).override()
-					.predicate(new ResourceLocation("pulling"), 1.0F).model(pulling0).end().override()
-					.predicate(new ResourceLocation("pulling"), 1.0F).predicate(new ResourceLocation("pull"), 0.65F)
-					.model(pulling1).end().override().predicate(new ResourceLocation("pulling"), 1.0F)
-					.predicate(new ResourceLocation("pull"), 0.9F).model(pulling2).end();
-		}
+	protected ItemModelBuilder generated(ItemLike itemLike, ResourceLocation texture) {
+		return withExistingParent(ForgeRegistries.ITEMS.getKey(itemLike.asItem()).getPath(), "item/generated")
+				.texture("layer0", texture);
 	}
 
 	public void registerEnabledTextureItem(String path) {
-		registerEnabledTextureItem(path, path + "_active");
+		ResourceLocation enabledModelPath = modLoc("item/" + path + "_active");
+		ResourceLocation defaultModelPath = modLoc("item/" + path);
+		getBuilder(path)
+				.parent(getExistingFile(mcLoc("item/handheld")))
+				.texture("layer0", defaultModelPath)
+				.override()
+				.predicate(ResourceLocation.fromNamespaceAndPath(JustDireThings.MODID, "enabled"), 1.0F)
+				.model(singleTexture(path + "_active", mcLoc("item/handheld"), "layer0", enabledModelPath))
+				.end();
 	}
 
-	public void registerEnabledTextureItem(String path, String activeTexturePath) {
-		ResourceLocation enabledModelPath = modLoc("item/" + activeTexturePath);
-		ResourceLocation defaultModelPath = modLoc("item/" + path);
+	private ItemModelBuilder forBows(ItemModelBuilder builder) {
+		return builder
+				.transforms()
+				.transform(ItemTransforms.TransformType.THIRD_PERSON_RIGHT_HAND)
+				.rotation(-80, 260, -40)
+				.translation(-1.0f, -2.0f, 2.5f)
+				.scale(0.9f, 0.9f, 0.9f)
+				.end()
+				.transform(ItemTransforms.TransformType.THIRD_PERSON_LEFT_HAND)
+				.rotation(-80, -280, 40)
+				.translation(-1.0f, -2.0f, 2.5f)
+				.scale(0.9f, 0.9f, 0.9f)
+				.end()
+				.transform(ItemTransforms.TransformType.FIRST_PERSON_RIGHT_HAND)
+				.rotation(0, -90, 25)
+				.translation(1.13f, 3.2f, 1.13f)
+				.scale(0.68f, 0.68f, 0.68f)
+				.end()
+				.transform(ItemTransforms.TransformType.FIRST_PERSON_LEFT_HAND)
+				.rotation(0, 90, -25)
+				.translation(1.13f, 3.2f, 1.13f)
+				.scale(0.68f, 0.68f, 0.68f)
+				.end()
+				.end();
+	}
 
-		getBuilder(path).parent(getExistingFile(mcLoc("item/handheld"))).texture("layer0", defaultModelPath).override()
-				.predicate(new ResourceLocation("justdirethings", "enabled"), 1.0F)
-				.model(singleTexture(path + "_active", mcLoc("item/handheld"), "layer0", enabledModelPath)).end();
+	private void registerBowModels() {
+		for (var bow : Registration.BOWS.getEntries()) {
+			String bowName = bow.getId().getPath();
+			forBows(singleTexture(bowName, mcLoc("item/generated"), "layer0", modLoc("item/bows/" + bowName)));
+			for (int i = 0; i < 3; i++) {
+				forBows(getBuilder(bowName + "_pulling_" + i)
+						.parent(getExistingFile(mcLoc("item/generated")))
+						.texture("layer0", modLoc("item/bows/" + bowName + "_pulling_" + i)));
+			}
+			getBuilder(bowName)
+					.override().predicate(modLoc("pulling"), 1).model(getExistingFile(modLoc("item/" + bowName + "_pulling_0"))).end()
+					.override().predicate(modLoc("pulling"), 1).predicate(modLoc("pull"), 0.45f).model(getExistingFile(modLoc("item/" + bowName + "_pulling_1"))).end()
+					.override().predicate(modLoc("pulling"), 1).predicate(modLoc("pull"), 0.9f).model(getExistingFile(modLoc("item/" + bowName + "_pulling_2"))).end();
+		}
 	}
 }

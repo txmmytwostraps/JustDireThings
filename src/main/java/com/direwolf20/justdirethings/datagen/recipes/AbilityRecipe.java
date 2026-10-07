@@ -3,24 +3,22 @@ package com.direwolf20.justdirethings.datagen.recipes;
 import com.direwolf20.justdirethings.common.items.abilityupgrades.Upgrade;
 import com.direwolf20.justdirethings.common.items.interfaces.Ability;
 import com.direwolf20.justdirethings.common.items.interfaces.ToggleableTool;
+import com.direwolf20.justdirethings.setup.Config;
 import com.direwolf20.justdirethings.setup.Registration;
 import com.google.gson.JsonObject;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeSerializer;
-import net.minecraft.world.item.crafting.RecipeType;
-import net.minecraft.world.item.crafting.SmithingRecipe;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.common.ForgeHooks;
+import net.minecraftforge.registries.ForgeRegistryEntry;
 
-import javax.annotation.Nullable;
 import java.util.stream.Stream;
 
-public class AbilityRecipe implements SmithingRecipe {
+public class AbilityRecipe implements DireSmithingRecipe {
 	private final ResourceLocation id;
 	private final Ingredient template;
 	private final Ingredient base;
@@ -39,26 +37,21 @@ public class AbilityRecipe implements SmithingRecipe {
 	}
 
 	@Override
-	public RecipeType<?> getType() {
-		return RecipeType.SMITHING;
-	}
-
-	@Override
 	public boolean matches(Container inv, Level level) {
 		return template.test(inv.getItem(0)) && base.test(inv.getItem(1)) && addition.test(inv.getItem(2));
 	}
 
 	@Override
-	public ItemStack assemble(Container inv, RegistryAccess registryAccess) {
+	public ItemStack assemble(Container inv) {
 		ItemStack baseStack = inv.getItem(1);
 		ItemStack upgradeStack = inv.getItem(2);
 		if (isBaseIngredient(baseStack) && baseStack.getItem() instanceof ToggleableTool toggleableTool) {
 			Ability ability = Ability.getAbilityFromUpgradeItem(upgradeStack.getItem());
-			if (ability != null && toggleableTool.hasAbility(ability)
-					&& !ToggleableTool.hasUpgrade(baseStack, ability)) {
-				ItemStack result = baseStack.copyWithCount(1);
-				CompoundTag tag = result.getOrCreateTag();
-				tag.putBoolean("upgrade_" + ability.getName(), true);
+			if (ability != null && toggleableTool.hasAbility(ability) && !ToggleableTool.hasUpgrade(baseStack, ability)
+					&& Config.AVAILABLE_ABILITY_MAP.get(ability).get()) {
+				ItemStack result = baseStack.copy();
+				result.setCount(1);
+				result.getOrCreateTag().putBoolean("upgrade_" + ability.getName(), true);
 				return result;
 			}
 		}
@@ -66,19 +59,18 @@ public class AbilityRecipe implements SmithingRecipe {
 	}
 
 	@Override
-	public ItemStack getResultItem(RegistryAccess registryAccess) {
+	public ItemStack getResultItem() {
 		ItemStack[] baseItems = base.getItems();
-		if (baseItems.length == 0)
-			return ItemStack.EMPTY;
-		ItemStack itemstack = new ItemStack(baseItems[0].getItem());
 		ItemStack[] additionItems = addition.getItems();
-		if (additionItems.length == 0)
+		if (baseItems.length == 0 || additionItems.length == 0)
 			return ItemStack.EMPTY;
 		Ability ability = Ability.getAbilityFromUpgradeItem(additionItems[0].getItem());
 		if (ability == null)
 			return ItemStack.EMPTY;
-		CompoundTag tag = itemstack.getOrCreateTag();
-		tag.putBoolean("upgrade_" + ability.getName(), true);
+		if (Config.SERVER_CONFIG.isLoaded() && !Config.AVAILABLE_ABILITY_MAP.get(ability).get())
+			return ItemStack.EMPTY;
+		ItemStack itemstack = new ItemStack(baseItems[0].getItem());
+		itemstack.getOrCreateTag().putBoolean("upgrade_" + ability.getName(), true);
 		return itemstack;
 	}
 
@@ -99,9 +91,7 @@ public class AbilityRecipe implements SmithingRecipe {
 
 	@Override
 	public boolean isIncomplete() {
-		// Template is intentionally empty for ability upgrades — only check base and
-		// addition
-		return Stream.of(base, addition).anyMatch(Ingredient::isEmpty);
+		return Stream.of(template, base, addition).anyMatch(ForgeHooks::hasNoElements);
 	}
 
 	@Override
@@ -126,9 +116,10 @@ public class AbilityRecipe implements SmithingRecipe {
 		return addition;
 	}
 
-	public static class Serializer implements RecipeSerializer<AbilityRecipe> {
+	public static class Serializer extends ForgeRegistryEntry<RecipeSerializer<?>> implements RecipeSerializer<AbilityRecipe> {
 		@Override
 		public AbilityRecipe fromJson(ResourceLocation recipeId, JsonObject json) {
+			// Ingredient.fromJson rejects the empty template array
 			Ingredient template;
 			if (!json.has("template")
 					|| (json.get("template").isJsonArray() && json.getAsJsonArray("template").size() == 0)) {
@@ -142,7 +133,6 @@ public class AbilityRecipe implements SmithingRecipe {
 		}
 
 		@Override
-		@Nullable
 		public AbilityRecipe fromNetwork(ResourceLocation recipeId, FriendlyByteBuf buffer) {
 			Ingredient template = Ingredient.fromNetwork(buffer);
 			Ingredient base = Ingredient.fromNetwork(buffer);

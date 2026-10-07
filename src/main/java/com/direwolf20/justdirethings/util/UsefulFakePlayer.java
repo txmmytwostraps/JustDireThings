@@ -25,7 +25,7 @@ public class UsefulFakePlayer extends FakePlayer {
 
 	public UsefulFakePlayer(Level world, GameProfile name) {
 		super((ServerLevel) world, name);
-		setReach(getAttributeValue(ForgeMod.BLOCK_REACH.get()));
+		setReach(getAttributeValue(ForgeMod.REACH_DISTANCE.get()));
 	}
 
 	@Override

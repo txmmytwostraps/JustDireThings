@@ -25,7 +25,6 @@ public class TransmitterEnergyStorage extends MachineEnergyStorage {
 		int energyReceived = Math.min(getMaxEnergyStored() - getEnergyStored(), Math.min(this.maxReceive, maxReceive));
 		if (!simulate) {
 			energyTransmitterBE.distributeEnergy(energyReceived);
-			// energy += energyReceived;
 		}
 		return energyReceived;
 	}
@@ -97,8 +96,7 @@ public class TransmitterEnergyStorage extends MachineEnergyStorage {
 	@Override
 	public void deserializeNBT(Tag nbt) {
 		if (!(nbt instanceof IntTag intNbt))
-			throw new IllegalArgumentException(
-					"Can not deserialize to an instance that isn't the default implementation");
+			throw new IllegalArgumentException("Can not deserialize to an instance that isn't the default implementation");
 		this.energy = intNbt.getAsInt();
 	}
 }

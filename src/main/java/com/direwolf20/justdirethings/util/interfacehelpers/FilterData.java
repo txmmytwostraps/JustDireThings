@@ -2,9 +2,11 @@ package com.direwolf20.justdirethings.util.interfacehelpers;
 
 import com.direwolf20.justdirethings.util.ItemStackKey;
 import it.unimi.dsi.fastutil.objects.Object2BooleanOpenHashMap;
+import net.minecraft.world.entity.Entity;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.WeakHashMap;
 
 public class FilterData {
 	public boolean allowlist = false, compareNBT = false;
@@ -12,6 +14,7 @@ public class FilterData {
 
 	// This is not saved in NBT, and is recreated as needed on demand
 	public final Map<ItemStackKey, Boolean> filterCache = new Object2BooleanOpenHashMap<>();
+	public final WeakHashMap<Entity, Boolean> entityCache = new WeakHashMap<>();
 
 	public FilterData() {
 
@@ -30,10 +33,8 @@ public class FilterData {
 
 	@Override
 	public boolean equals(Object o) {
-		if (this == o)
-			return true;
-		if (o == null || getClass() != o.getClass())
-			return false;
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
 		FilterData that = (FilterData) o;
 		return allowlist == that.allowlist && compareNBT == that.compareNBT && blockItemFilter == that.blockItemFilter;
 	}

@@ -1,7 +1,7 @@
 package com.direwolf20.justdirethings.common.fluids.portalfluid;
 
+import com.direwolf20.justdirethings.common.fluids.JustDireFluidAttributes;
 import com.direwolf20.justdirethings.setup.Registration;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
@@ -10,19 +10,16 @@ import net.minecraftforge.fluids.ForgeFlowingFluid;
 public abstract class PortalFluid extends ForgeFlowingFluid {
 
 	private static ForgeFlowingFluid.Properties makeProperties() {
-		return new ForgeFlowingFluid.Properties(() -> Registration.PORTAL_FLUID_TYPE.get(),
-				() -> Registration.PORTAL_FLUID_SOURCE.get(), () -> Registration.PORTAL_FLUID_FLOWING.get())
+		return new ForgeFlowingFluid.Properties(() -> Registration.PORTAL_FLUID_SOURCE.get(),
+				() -> Registration.PORTAL_FLUID_FLOWING.get(),
+				JustDireFluidAttributes.builder(0xFF00DD00).translationKey("fluid_type.justdirethings.portal_fluid_type")
+						.density(1000).viscosity(1000).temperature(300))
 				.bucket(() -> Registration.PORTAL_FLUID_BUCKET.get())
 				.block(() -> Registration.PORTAL_FLUID_BLOCK.get());
 	}
 
 	protected PortalFluid() {
 		super(makeProperties());
-	}
-
-	@Override
-	protected boolean canConvertToSource(Level level) {
-		return false;
 	}
 
 	public static class Source extends PortalFluid {

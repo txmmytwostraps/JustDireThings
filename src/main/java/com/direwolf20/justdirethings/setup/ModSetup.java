@@ -1,21 +1,17 @@
 package com.direwolf20.justdirethings.setup;
 
+import com.direwolf20.justdirethings.common.blockentities.basebe.BaseMachineBE;
 import com.direwolf20.justdirethings.common.events.BlockEvents;
 import com.direwolf20.justdirethings.common.events.CapabilityEvents;
 import com.direwolf20.justdirethings.common.events.EntityEvents;
 import com.direwolf20.justdirethings.common.events.LivingEntityEvents;
 import com.direwolf20.justdirethings.common.events.PlayerEvents;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
-import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.event.furnace.FurnaceFuelBurnTimeEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.registries.RegistryObject;
-import net.minecraftforge.registries.DeferredRegister;
 
 import static com.direwolf20.justdirethings.JustDireThings.MODID;
 
@@ -27,6 +23,7 @@ public class ModSetup {
 		MinecraftForge.EVENT_BUS.register(CapabilityEvents.class);
 		MinecraftForge.EVENT_BUS.register(EntityEvents.class);
 		MinecraftForge.EVENT_BUS.addListener(ModSetup::registerFurnaceFuels);
+		MinecraftForge.EVENT_BUS.addListener(BaseMachineBE::unloadFakePlayers);
 	}
 
 	public static void registerFurnaceFuels(FurnaceFuelBurnTimeEvent event) {
@@ -51,36 +48,11 @@ public class ModSetup {
 			event.setBurnTime(16000);
 	}
 
-	public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister
-			.create(Registries.CREATIVE_MODE_TAB, MODID);
-	public static final RegistryObject<CreativeModeTab> TAB_JUSTDIRETHINGS = CREATIVE_MODE_TABS.register(MODID,
-			() -> CreativeModeTab.builder().title(Component.literal("Just Dire Things"))
-					.withTabsBefore(CreativeModeTabs.SPAWN_EGGS)
-					.icon(() -> new ItemStack(Registration.Fuel_Canister.get())).displayItems((parameters, output) -> {
-						Registration.ITEMS.getEntries().forEach(e -> {
-							Item item = e.get();
-							output.accept(item);
-						});
-						Registration.BUCKET_ITEMS.getEntries().forEach(e -> {
-							Item item = e.get();
-							output.accept(item);
-						});
-						Registration.TOOLS.getEntries().forEach(e -> {
-							Item item = e.get();
-							output.accept(item);
-						});
-						Registration.BOWS.getEntries().forEach(e -> {
-							Item item = e.get();
-							output.accept(item);
-						});
-						Registration.ARMORS.getEntries().forEach(e -> {
-							Item item = e.get();
-							output.accept(item);
-						});
-						Registration.UPGRADES.getEntries().forEach(e -> {
-							Item item = e.get();
-							output.accept(item);
-						});
-					}).build());
+	public static final CreativeModeTab TAB_JUSTDIRETHINGS = new CreativeModeTab(MODID) {
+		@Override
+		public ItemStack makeIcon() {
+			return new ItemStack(Registration.Fuel_Canister.get());
+		}
+	};
 
 }

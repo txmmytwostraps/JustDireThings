@@ -11,10 +11,9 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
-import javax.annotation.Nullable;
-
 public class FinishedGooSpreadRecipeTag implements FinishedRecipe {
 	private final ResourceLocation id;
+	private final ResourceLocation recipeId;
 	private final TagKey<Block> input;
 	private final BlockState output;
 	private final int tierRequirement;
@@ -22,21 +21,25 @@ public class FinishedGooSpreadRecipeTag implements FinishedRecipe {
 	private final Advancement.Builder advancement;
 	private final ResourceLocation advancementId;
 
-	public FinishedGooSpreadRecipeTag(ResourceLocation id, TagKey<Block> input, BlockState output, int tierRequirement,
-			int craftingDuration) {
+	public FinishedGooSpreadRecipeTag(ResourceLocation id, ResourceLocation recipeId, TagKey<Block> input,
+			BlockState output, int tierRequirement, int craftingDuration, Advancement.Builder advancement,
+			ResourceLocation advancementId) {
 		this.id = id;
+		this.recipeId = recipeId;
 		this.input = input;
 		this.output = output;
 		this.tierRequirement = tierRequirement;
 		this.craftingDuration = craftingDuration;
-		this.advancement = null;
-		this.advancementId = null;
+		this.advancement = advancement;
+		this.advancementId = advancementId;
 	}
 
 	@Override
 	public void serializeRecipeData(JsonObject json) {
-		json.addProperty("id", id.toString());
-		json.addProperty("input", input.location().toString());
+		json.addProperty("id", recipeId.toString());
+		JsonObject inputJson = new JsonObject();
+		inputJson.addProperty("tag", input.location().toString());
+		json.add("input", inputJson);
 		json.add("output", BlockState.CODEC.encodeStart(JsonOps.INSTANCE, output).getOrThrow(false, e -> {
 		}));
 		json.addProperty("tierRequirement", tierRequirement);
@@ -53,13 +56,11 @@ public class FinishedGooSpreadRecipeTag implements FinishedRecipe {
 		return Registration.GOO_SPREAD_RECIPE_SERIALIZER_TAG.get();
 	}
 
-	@Nullable
 	@Override
 	public JsonObject serializeAdvancement() {
-		return null;
+		return advancement.serializeToJson();
 	}
 
-	@Nullable
 	@Override
 	public ResourceLocation getAdvancementId() {
 		return advancementId;

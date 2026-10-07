@@ -25,10 +25,8 @@ public class RedstoneControlData {
 
 	@Override
 	public boolean equals(Object o) {
-		if (this == o)
-			return true;
-		if (o == null || getClass() != o.getClass())
-			return false;
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
 		RedstoneControlData that = (RedstoneControlData) o;
 		return receivingRedstone == that.receivingRedstone && pulsed == that.pulsed
 				&& redstoneMode == that.redstoneMode;
