@@ -13,25 +13,22 @@ import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.resources.ResourceLocation;
 
-@SuppressWarnings("removal")
 public class AlwaysVisibleParticle extends TextureSheetParticle {
 	static final ParticleRenderType AlwaysOn = new ParticleRenderType() {
 		@Override
-		public void begin(BufferBuilder pBuilder, TextureManager pTextureManager) {
+		public void begin(BufferBuilder builder, TextureManager textureManager) {
 			RenderSystem.disableBlend();
 			RenderSystem.depthMask(true);
 			RenderSystem.setShader(GameRenderer::getParticleShader);
 			RenderSystem.disableDepthTest();
 			RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_PARTICLES);
 			Minecraft.getInstance().gameRenderer.lightTexture().turnOnLightLayer();
-			pBuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
+			builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
 		}
 
 		@Override
-		public void end(Tesselator pTesselator) {
-			pTesselator.end();
-			RenderSystem.enableDepthTest();
-			Minecraft.getInstance().gameRenderer.lightTexture().turnOffLightLayer();
+		public void end(Tesselator tesselator) {
+			tesselator.end();
 		}
 
 		@Override
@@ -40,13 +37,12 @@ public class AlwaysVisibleParticle extends TextureSheetParticle {
 		}
 	};
 
-	public AlwaysVisibleParticle(ClientLevel pLevel, double pX, double pY, double pZ, double pXSpeed, double pYSpeed,
-			double pZSpeed, ResourceLocation resourceLocation) {
+	public AlwaysVisibleParticle(ClientLevel pLevel, double pX, double pY, double pZ, double pXSpeed, double pYSpeed, double pZSpeed, ResourceLocation resourceLocation) {
 		super(pLevel, pX, pY, pZ, pXSpeed, pYSpeed, pZSpeed);
 		ParticleEngine particleEngine = Minecraft.getInstance().particleEngine;
 		SpriteSet spriteSet = particleEngine.spriteSets.get(resourceLocation);
 		if (spriteSet == null)
-			spriteSet = particleEngine.spriteSets.get(new ResourceLocation("minecraft", "smoke"));
+			spriteSet = particleEngine.spriteSets.get(ResourceLocation.withDefaultNamespace("smoke"));
 		this.pickSprite(spriteSet);
 		this.xd = 0;
 		this.yd = 0;
@@ -58,14 +54,14 @@ public class AlwaysVisibleParticle extends TextureSheetParticle {
 		return AlwaysOn;
 	}
 
+	@Override
 	protected int getLightColor(float pPartialTick) {
 		return 0xF00080;
 	}
 
-	public static ParticleProvider<AlwaysVisibleParticleData> FACTORY = (data, level, x, y, z, xSpeed, ySpeed,
-			zSpeed) -> {
-		AlwaysVisibleParticle alwaysVisibleParticle = new AlwaysVisibleParticle(level, x, y, z, xSpeed, ySpeed, zSpeed,
-				data.resourceLocation);
-		return alwaysVisibleParticle;
-	};
+	public static ParticleProvider<AlwaysVisibleParticleData> FACTORY =
+			(data, level, x, y, z, xSpeed, ySpeed, zSpeed) -> {
+				AlwaysVisibleParticle alwaysVisibleParticle = new AlwaysVisibleParticle(level, x, y, z, xSpeed, ySpeed, zSpeed, data.resourceLocation);
+				return alwaysVisibleParticle;
+			};
 }

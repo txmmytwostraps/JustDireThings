@@ -10,24 +10,49 @@ import net.minecraft.core.particles.ParticleType;
 import net.minecraft.network.FriendlyByteBuf;
 
 import javax.annotation.Nonnull;
-import java.util.Locale;
 
 public class GlitterParticleData implements ParticleOptions {
-	public static final Codec<GlitterParticleData> CODEC = RecordCodecBuilder.create(instance -> instance
-			.group(Codec.DOUBLE.fieldOf("targetX").forGetter(p -> p.targetX),
+	public static final Codec<GlitterParticleData> CODEC = RecordCodecBuilder.create(instance ->
+			instance.group(
+					Codec.STRING.fieldOf("partType").forGetter(p -> p.partType),
+					Codec.DOUBLE.fieldOf("targetX").forGetter(p -> p.targetX),
 					Codec.DOUBLE.fieldOf("targetY").forGetter(p -> p.targetY),
 					Codec.DOUBLE.fieldOf("targetZ").forGetter(p -> p.targetZ),
-					Codec.FLOAT.fieldOf("size").forGetter(p -> p.size), Codec.FLOAT.fieldOf("r").forGetter(p -> p.r),
-					Codec.FLOAT.fieldOf("g").forGetter(p -> p.g), Codec.FLOAT.fieldOf("b").forGetter(p -> p.b),
+					Codec.FLOAT.fieldOf("size").forGetter(p -> p.size),
+					Codec.FLOAT.fieldOf("r").forGetter(p -> p.r),
+					Codec.FLOAT.fieldOf("g").forGetter(p -> p.g),
+					Codec.FLOAT.fieldOf("b").forGetter(p -> p.b),
 					Codec.FLOAT.fieldOf("a").forGetter(p -> p.a),
-					Codec.FLOAT.fieldOf("maxAgeMul").forGetter(p -> p.maxAgeMul))
-			.apply(instance, GlitterParticleData::new));
+					Codec.FLOAT.fieldOf("maxAgeMul").forGetter(p -> p.maxAgeMul),
+					Codec.BOOL.fieldOf("depthTest").forGetter(p -> p.depthTest)
+			).apply(instance, GlitterParticleData::new));
+	public static final ParticleOptions.Deserializer<GlitterParticleData> DESERIALIZER = new ParticleOptions.Deserializer<>() {
+		@Nonnull
+		@Override
+		public GlitterParticleData fromCommand(ParticleType<GlitterParticleData> particleTypeIn, StringReader reader) throws CommandSyntaxException {
+			return ModParticles.readOptions(reader, CODEC);
+		}
 
-	public final double targetX, targetY, targetZ;
-	public final float size, r, g, b, a, maxAgeMul;
+		@Override
+		public GlitterParticleData fromNetwork(ParticleType<GlitterParticleData> particleTypeIn, FriendlyByteBuf buffer) {
+			return new GlitterParticleData(buffer.readUtf(), buffer.readDouble(), buffer.readDouble(), buffer.readDouble(), buffer.readFloat(), buffer.readFloat(), buffer.readFloat(), buffer.readFloat(), buffer.readFloat(), buffer.readFloat(), buffer.readBoolean());
+		}
+	};
 
-	public GlitterParticleData(double targetX, double targetY, double targetZ, float size, float r, float g, float b,
-			float a, float maxAgeMul) {
+	public final float size;
+	public final float r, g, b, a;
+	public final float maxAgeMul;
+	public final boolean depthTest;
+	public final double targetX;
+	public final double targetY;
+	public final double targetZ;
+	public final String partType;
+
+	public static GlitterParticleData playerparticle(String type, double targetX, double targetY, double targetZ, float size, float r, float g, float b, float a, float maxAgeMul, boolean depthTest) {
+		return new GlitterParticleData(type, targetX, targetY, targetZ, size, r, g, b, a, maxAgeMul, depthTest);
+	}
+
+	private GlitterParticleData(String type, double targetX, double targetY, double targetZ, float size, float r, float g, float b, float a, float maxAgeMul, boolean depthTest) {
 		this.targetX = targetX;
 		this.targetY = targetY;
 		this.targetZ = targetZ;
@@ -37,16 +62,19 @@ public class GlitterParticleData implements ParticleOptions {
 		this.b = b;
 		this.a = a;
 		this.maxAgeMul = maxAgeMul;
+		this.depthTest = depthTest;
+		this.partType = type;
 	}
 
 	@Nonnull
 	@Override
 	public ParticleType<GlitterParticleData> getType() {
-		return ModParticles.GLITTER.get();
+		return ModParticles.GLITTERPARTICLE.get();
 	}
 
 	@Override
 	public void writeToNetwork(FriendlyByteBuf buffer) {
+		buffer.writeUtf(partType);
 		buffer.writeDouble(targetX);
 		buffer.writeDouble(targetY);
 		buffer.writeDouble(targetZ);
@@ -56,45 +84,12 @@ public class GlitterParticleData implements ParticleOptions {
 		buffer.writeFloat(b);
 		buffer.writeFloat(a);
 		buffer.writeFloat(maxAgeMul);
+		buffer.writeBoolean(depthTest);
 	}
 
 	@Nonnull
 	@Override
 	public String writeToString() {
-		return String.format(Locale.ROOT, "%.2f %.2f %.2f %.4f %.2f %.2f %.2f %.2f %.2f", targetX, targetY, targetZ,
-				size, r, g, b, a, maxAgeMul);
+		return ModParticles.writeOptions(this, CODEC);
 	}
-
-	public static final Deserializer<GlitterParticleData> DESERIALIZER = new Deserializer<>() {
-		@Nonnull
-		@Override
-		public GlitterParticleData fromCommand(ParticleType<GlitterParticleData> type, StringReader reader)
-				throws CommandSyntaxException {
-			reader.expect(' ');
-			double tx = reader.readDouble();
-			reader.expect(' ');
-			double ty = reader.readDouble();
-			reader.expect(' ');
-			double tz = reader.readDouble();
-			reader.expect(' ');
-			float size = reader.readFloat();
-			reader.expect(' ');
-			float r = reader.readFloat();
-			reader.expect(' ');
-			float g = reader.readFloat();
-			reader.expect(' ');
-			float b = reader.readFloat();
-			reader.expect(' ');
-			float a = reader.readFloat();
-			reader.expect(' ');
-			float maxAgeMul = reader.readFloat();
-			return new GlitterParticleData(tx, ty, tz, size, r, g, b, a, maxAgeMul);
-		}
-
-		@Override
-		public GlitterParticleData fromNetwork(ParticleType<GlitterParticleData> type, FriendlyByteBuf buf) {
-			return new GlitterParticleData(buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readFloat(),
-					buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat());
-		}
-	};
 }

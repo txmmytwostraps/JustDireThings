@@ -12,12 +12,9 @@ import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.resources.ResourceLocation;
 
-@SuppressWarnings("removal")
 public class PortalProjectileModel extends HierarchicalModel<PortalProjectile> {
 
-	public static final ModelLayerLocation Portal_Projectile_Layer = new ModelLayerLocation(
-			new ResourceLocation(JustDireThings.MODID, "portal_projectile"), "body");
-
+	public static final ModelLayerLocation Portal_Projectile_Layer = new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(JustDireThings.MODID, "portal_projectile"), "body");
 	private final ModelPart root;
 	private final ModelPart main;
 
@@ -27,13 +24,20 @@ public class PortalProjectileModel extends HierarchicalModel<PortalProjectile> {
 	}
 
 	public static LayerDefinition createBodyLayer() {
-		MeshDefinition mesh = new MeshDefinition();
-		PartDefinition part = mesh.getRoot();
-		part.addOrReplaceChild("main",
-				CubeListBuilder.create().texOffs(0, 0).addBox(-4f, -4f, -1f, 8f, 8f, 2f).texOffs(0, 10)
-						.addBox(-1f, -4f, -4f, 2f, 8f, 8f).texOffs(20, 0).addBox(-4f, -1f, -4f, 8f, 2f, 8f),
-				PartPose.ZERO);
-		return LayerDefinition.create(mesh, 64, 32);
+		MeshDefinition meshdefinition = new MeshDefinition();
+		PartDefinition partdefinition = meshdefinition.getRoot();
+		partdefinition.addOrReplaceChild(
+				"main",
+				CubeListBuilder.create()
+						.texOffs(0, 0)
+						.addBox(-4.0F, -4.0F, -1.0F, 8.0F, 8.0F, 2.0F)
+						.texOffs(0, 10)
+						.addBox(-1.0F, -4.0F, -4.0F, 2.0F, 8.0F, 8.0F)
+						.texOffs(20, 0)
+						.addBox(-4.0F, -1.0F, -4.0F, 8.0F, 2.0F, 8.0F),
+				PartPose.ZERO
+		);
+		return LayerDefinition.create(meshdefinition, 64, 32);
 	}
 
 	@Override
@@ -41,10 +45,12 @@ public class PortalProjectileModel extends HierarchicalModel<PortalProjectile> {
 		return this.root;
 	}
 
+	/**
+	 * Sets this entity's model rotation angles
+	 */
 	@Override
-	public void setupAnim(PortalProjectile entity, float limbSwing, float limbSwingAmount, float ageInTicks,
-			float netHeadYaw, float headPitch) {
-		this.main.yRot = netHeadYaw * (float) (Math.PI / 180.0);
-		this.main.xRot = headPitch * (float) (Math.PI / 180.0);
+	public void setupAnim(PortalProjectile pEntity, float pLimbSwing, float pLimbSwingAmount, float pAgeInTicks, float pNetHeadYaw, float pHeadPitch) {
+		this.main.yRot = pNetHeadYaw * (float) (Math.PI / 180.0);
+		this.main.xRot = pHeadPitch * (float) (Math.PI / 180.0);
 	}
 }

@@ -2,42 +2,52 @@ package com.direwolf20.justdirethings.client.itemcustomrenders;
 
 import com.direwolf20.justdirethings.common.items.interfaces.FluidContainingItem;
 import com.direwolf20.justdirethings.common.items.interfaces.PoweredItem;
-import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.client.IItemDecorator;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
 
-public class FluidbarDecorator implements IItemDecorator {
-	public static final FluidbarDecorator INSTANCE = new FluidbarDecorator();
+public class FluidbarDecorator {
+	/**
+	 * Runs after the vanilla item decorations.
+	 */
+	public static void render(ItemStack stack, int xOffset, int yOffset) {
+		if (stack.getItem() instanceof FluidContainingItem fluidContainingItem) {
+			// Retrieve energy capability
+			boolean isPowerBarVisible = false;
+			if (stack.getItem() instanceof PoweredItem poweredItem) {
+				isPowerBarVisible = poweredItem.isPowerBarVisible(stack);
+			}
+			if (stack.isBarVisible())
+				isPowerBarVisible = true;
 
-	@Override
-	public boolean render(GuiGraphics guiGraphics, Font font, ItemStack stack, int xOffset, int yOffset) {
-		if (!(stack.getItem() instanceof FluidContainingItem fluidContainingItem))
-			return false;
+			// Retrieve fluid capability
+			boolean isFluidBarVisible = fluidContainingItem.isFluidBarVisible(stack);
 
-		boolean isPowerBarVisible = false;
-		if (stack.getItem() instanceof PoweredItem poweredItem)
-			isPowerBarVisible = poweredItem.isPowerBarVisible(stack);
-		if (stack.isBarVisible())
-			isPowerBarVisible = true;
+			if (!isFluidBarVisible) {
+				return; // Do not render if fluid is at max capacity
+			}
 
-		if (stack.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM, null).orElse(null) == null)
-			return false;
+			// Calculate positions based on whether the power bar is visible
+			int fluidBarY = isPowerBarVisible ? yOffset + 11 : yOffset + 13; // Adjust Y position based on power bar visibility
+			int fluidBarWidth = fluidContainingItem.getFluidBarWidth(stack);
+			int fluidBarColor = fluidContainingItem.getFluidBarColor(stack);
 
-		int fluidBarY = isPowerBarVisible ? yOffset + 11 : yOffset + 13;
-		int fluidBarWidth = fluidContainingItem.getFluidBarWidth(stack);
-		int fluidBarColor = fluidContainingItem.getFluidBarColor(stack);
-
-		guiGraphics.pose().pushPose();
-		guiGraphics.pose().translate(0, 0, 200);
-		renderBar(guiGraphics, xOffset + 2, fluidBarY, fluidBarWidth, fluidBarColor);
-		guiGraphics.pose().popPose();
-		return false;
+			// Render fluid bar
+			renderBar(new PoseStack(), xOffset + 2, fluidBarY, fluidBarWidth, fluidBarColor);
+		}
 	}
 
-	private void renderBar(GuiGraphics guiGraphics, int x, int y, int width, int color) {
-		guiGraphics.fill(x, y, x + 13, y + 2, 0xFF303030);
-		guiGraphics.fill(x, y, x + width, y + 1, color | 0xFF000000);
+	private static void renderBar(PoseStack poseStack, int x, int y, int width, int color) {
+		// Over the item, like the durability bar
+		RenderSystem.disableDepthTest();
+
+		// Render the background of the bar (black)
+		GuiComponent.fill(poseStack, x, y, x + 13, y + 2, 0xFF303030);
+
+		// Render the fluid bar with the calculated width and color
+		GuiComponent.fill(poseStack, x, y, x + width, y + 1, color | 0xFF000000);
+
+		RenderSystem.enableDepthTest();
 	}
 }

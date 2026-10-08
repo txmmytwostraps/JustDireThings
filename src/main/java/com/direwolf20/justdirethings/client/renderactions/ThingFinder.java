@@ -1,7 +1,6 @@
 package com.direwolf20.justdirethings.client.renderactions;
 
 import com.direwolf20.justdirethings.client.particles.alwaysvisibleparticle.AlwaysVisibleParticleData;
-import com.direwolf20.justdirethings.client.renderers.DireBufferBuilder;
 import com.direwolf20.justdirethings.client.renderers.OurRenderTypes;
 import com.direwolf20.justdirethings.common.items.interfaces.Ability;
 import com.direwolf20.justdirethings.util.MiscHelpers;
@@ -9,8 +8,10 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexBuffer;
-import com.mojang.blaze3d.vertex.VertexSorting;
+import com.mojang.logging.LogUtils;
+import com.mojang.math.Matrix4f;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.block.ModelBlockRenderer;
@@ -18,8 +19,6 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
@@ -29,11 +28,13 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.client.ForgeHooksClient;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
-import net.minecraftforge.client.model.data.ModelData;
+import net.minecraftforge.client.model.data.EmptyModelData;
+import net.minecraftforge.client.model.data.IModelData;
 import net.minecraftforge.common.Tags;
-import org.joml.Matrix4f;
-import org.joml.Vector3f;
+import net.minecraftforge.registries.ForgeRegistries;
+import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,34 +42,36 @@ import java.util.Random;
 import java.util.stream.Collectors;
 
 public class ThingFinder {
+	private static final Logger LOGGER = LogUtils.getLogger();
 	public static long xRayStartTime;
 	public static long blockParticlesStartTime;
 	private static long lastBlockDrawTime = 0; // The last time particles were drawn
 	private static long lastEntityDrawTime = 0; // The last time particles were drawn
 	public static long entityParticlesStartTime;
-	// public static Map<BlockPos, BlockState> oreMap = new HashMap<>();
+
 	public static List<BlockPos> oreBlocksList = new ArrayList<>();
 	public static List<Entity> entityList = new ArrayList<>();
 	private static int sortCounter = 0;
 
-	// A eBufferBuilder, so we can draw the render
-	private static final DireBufferBuilder builder = new DireBufferBuilder(RenderType.cutout().bufferSize());
-	// Cached SortStates used for re-sorting every so often
+	//A eBufferBuilder, so we can draw the render
+	private static final BufferBuilder builder = new BufferBuilder(RenderType.cutout().bufferSize());
+
+	//Cached SortStates used for re-sorting every so often
 	private static BufferBuilder.SortState sortState;
-	// Vertex Buffer to buffer the different ores.
-	private static final VertexBuffer vertexBuffer = new VertexBuffer(VertexBuffer.Usage.STATIC);
-	// The render type
+	//Vertex Buffer to buffer the different ores.
+	private static final VertexBuffer vertexBuffer = new VertexBuffer();
+	//The render type
 	private static final RenderType renderType = RenderType.translucent();
 	private static final RenderType xRayRender = OurRenderTypes.OreXRAY;
 	private static BlockPos renderedAtPos = BlockPos.ZERO;
 
 	public static void render(RenderLevelStageEvent evt, Player player, ItemStack heldItemMain) {
-		if (((System.currentTimeMillis() - xRayStartTime) / 1000) < 10) // Lasts for 10 seconds
+		if (((System.currentTimeMillis() - xRayStartTime) / 1000) < 10)  //Lasts for 10 seconds
 			drawVBO(evt, player);
 		if (!oreBlocksList.isEmpty()) {
 			long currentTime = System.currentTimeMillis();
-			if ((currentTime - blockParticlesStartTime) < 10000) { // Lasts for 10 seconds
-				if ((currentTime - lastBlockDrawTime) >= 500) { // Every 1/2 second
+			if ((currentTime - blockParticlesStartTime) < 10000) { //Lasts for 10 seconds
+				if ((currentTime - lastBlockDrawTime) >= 500) { //Every 1/2 second
 					drawParticlesOre(evt, player);
 					lastBlockDrawTime = currentTime;
 				}
@@ -77,8 +80,8 @@ public class ThingFinder {
 		}
 		if (!entityList.isEmpty()) {
 			long currentTime = System.currentTimeMillis();
-			if ((currentTime - entityParticlesStartTime) < 10000) { // Lasts for 10 seconds
-				if ((currentTime - lastEntityDrawTime) >= 500) { // Every 1/2 second
+			if ((currentTime - entityParticlesStartTime) < 10000) { //Lasts for 10 seconds
+				if ((currentTime - lastEntityDrawTime) >= 500) { //Every 1/2 second
 					discoverMobs(player, false);
 					drawParticlesEntity(evt, player);
 					lastEntityDrawTime = currentTime;
@@ -98,11 +101,10 @@ public class ThingFinder {
 	private static void discoverOres(Player player, Ability toolAbility, ItemStack itemStack) {
 		oreBlocksList.clear();
 		BlockPos playerPos = player.getOnPos();
-		int radius = 10; // TODO 50 seems to be ok perf wise but ridiculous
-		oreBlocksList = BlockPos
-				.betweenClosedStream(playerPos.offset(-radius, -radius, -radius),
-						playerPos.offset(radius, radius, radius))
-				.filter(blockPos -> isValidBlock(blockPos, player, itemStack)).map(BlockPos::immutable)
+		int radius = 10;
+		oreBlocksList = BlockPos.betweenClosedStream(playerPos.offset(-radius, -radius, -radius), playerPos.offset(radius, radius, radius))
+				.filter(blockPos -> isValidBlock(blockPos, player, itemStack))
+				.map(BlockPos::immutable)
 				.collect(Collectors.toList());
 		if (toolAbility.equals(Ability.OREXRAY)) {
 			xRayStartTime = System.currentTimeMillis();
@@ -113,12 +115,11 @@ public class ThingFinder {
 	}
 
 	private static boolean isValidBlock(BlockPos blockPos, Player player, ItemStack itemStack) {
-		BlockState blockState = player.level().getBlockState(blockPos);
+		BlockState blockState = player.level.getBlockState(blockPos);
 		if (!blockState.getTags().anyMatch(tag -> tag.equals(Tags.Blocks.ORES)))
 			return false;
-		if (itemStack.getItem() instanceof TieredItem tieredItem) {
-			return net.minecraftforge.common.TierSortingRegistry.isCorrectTierForDrops(tieredItem.getTier(),
-					blockState);
+		if (itemStack.getItem() instanceof TieredItem) {
+			return itemStack.isCorrectToolForDrops(blockState);
 		}
 		return true;
 	}
@@ -126,21 +127,20 @@ public class ThingFinder {
 	private static void discoverMobs(Player player, boolean startTimer) {
 		entityList.clear();
 		BlockPos playerPos = player.getOnPos();
-		int radius = 10; // TODO 50 seems to be ok perf wise but ridiculous
+		int radius = 10;
 
-		entityList = player.level()
-				.getEntities(player,
-						new AABB(playerPos.offset(-radius, -radius, -radius), playerPos.offset(radius, radius, radius)))
-				.stream().filter(entity -> entity instanceof Monster).collect(Collectors.toList());
+		entityList = player.level.getEntities(player, new AABB(playerPos).inflate(radius))
+				.stream()
+				.filter(entity -> entity instanceof Monster)
+				.collect(Collectors.toList());
 		if (startTimer)
 			entityParticlesStartTime = System.currentTimeMillis();
 	}
 
 	public static void drawParticlesOre(RenderLevelStageEvent evt, Player player) {
 		Random random = new Random();
-		Level level = player.level();
-		AlwaysVisibleParticleData data = new AlwaysVisibleParticleData(
-				BuiltInRegistries.PARTICLE_TYPE.getKey(ParticleTypes.HAPPY_VILLAGER));
+		Level level = player.level;
+		AlwaysVisibleParticleData data = new AlwaysVisibleParticleData(ForgeRegistries.PARTICLE_TYPES.getKey(ParticleTypes.HAPPY_VILLAGER));
 		for (int i = 0; i < 2; i++) {
 			for (BlockPos pos : oreBlocksList) {
 				double d0 = (double) pos.getX() + random.nextDouble();
@@ -152,9 +152,8 @@ public class ThingFinder {
 	}
 
 	public static void drawParticlesEntity(RenderLevelStageEvent evt, Player player) {
-		Level level = player.level();
-		AlwaysVisibleParticleData data = new AlwaysVisibleParticleData(
-				BuiltInRegistries.PARTICLE_TYPE.getKey(ParticleTypes.SOUL));
+		Level level = player.level;
+		AlwaysVisibleParticleData data = new AlwaysVisibleParticleData(ForgeRegistries.PARTICLE_TYPES.getKey(ParticleTypes.SOUL));
 		for (int i = 0; i < 5; i++) {
 			for (Entity entity : entityList) {
 				AABB aabb = entity.getBoundingBox();
@@ -167,56 +166,67 @@ public class ThingFinder {
 	}
 
 	public static void generateVBO(Player player) {
-		if (oreBlocksList == null || oreBlocksList.isEmpty())
-			return;
-		PoseStack matrix = new PoseStack(); // Create a new matrix stack for use in the buffer building process
+		if (oreBlocksList == null || oreBlocksList.isEmpty()) return;
+		PoseStack matrix = new PoseStack(); //Create a new matrix stack for use in the buffer building process
 		BlockRenderDispatcher dispatcher = Minecraft.getInstance().getBlockRenderer();
 		ModelBlockRenderer modelBlockRenderer = dispatcher.getModelRenderer();
-		final RandomSource random = RandomSource.create();
-		Level level = player.level();
+		final Random random = new Random();
+		Level level = player.level;
 		renderedAtPos = player.getOnPos();
 
 		builder.begin(renderType.mode(), renderType.format());
+		boolean drawn = false;
 
 		for (BlockPos pos : oreBlocksList) {
 			BlockState renderState = level.getBlockState(pos);
-			if (renderState.isAir())
-				continue;
+			if (renderState.isAir()) continue;
 
 			BakedModel ibakedmodel = dispatcher.getBlockModel(renderState);
 			matrix.pushPose();
 			matrix.translate(-renderedAtPos.getX(), -renderedAtPos.getY(), -renderedAtPos.getZ());
 			matrix.translate(pos.getX(), pos.getY(), pos.getZ());
 
-			// We make this just a TINY bit smaller than a full block - because we're doing
-			// GREATERTHAN depth testing.
+			//We make this just a TINY bit smaller than a full block - because we're doing GREATERTHAN depth testing.
 			float translateF = (float) 1 / 2000;
 			matrix.translate(translateF, translateF, translateF);
 			float scaleF = (float) 1 / 1000;
 			matrix.scale(1 - scaleF, 1 - scaleF, 1 - scaleF);
 
-			for (RenderType renderTypeDraw : ibakedmodel.getRenderTypes(renderState, random, ModelData.EMPTY)) {
+			//Set the layer for models that split quads by layer
+			for (RenderType renderTypeDraw : RenderType.chunkBufferLayers()) {
+				if (!ItemBlockRenderTypes.canRenderInLayer(renderState, renderTypeDraw))
+					continue;
+				ForgeHooksClient.setRenderType(renderTypeDraw);
+				//tesselateBlock would read model data 255 blocks up
 				try {
-					modelBlockRenderer.tesselateBlock(level, ibakedmodel, renderState, pos.above(255), matrix, builder,
-							false, random, renderState.getSeed(pos), OverlayTexture.NO_OVERLAY,
-							ibakedmodel.getModelData(level, pos, renderState, ModelData.EMPTY), renderTypeDraw);
-				} catch (Exception e) {
-					// System.out.println(e);
+					IModelData modelData = ibakedmodel.getModelData(level, pos, renderState, EmptyModelData.INSTANCE);
+					boolean useAO = Minecraft.useAmbientOcclusion() && renderState.getLightEmission(level, pos.above(255)) == 0 && ibakedmodel.useAmbientOcclusion();
+					Vec3 offset = renderState.getOffset(level, pos.above(255));
+					matrix.translate(offset.x, offset.y, offset.z);
+					if (useAO)
+						drawn |= modelBlockRenderer.tesselateWithAO(level, ibakedmodel, renderState, pos.above(255), matrix, builder, false, random, renderState.getSeed(pos), OverlayTexture.NO_OVERLAY, modelData);
+					else
+						drawn |= modelBlockRenderer.tesselateWithoutAO(level, ibakedmodel, renderState, pos.above(255), matrix, builder, false, random, renderState.getSeed(pos), OverlayTexture.NO_OVERLAY, modelData);
+				} catch (Throwable e) {
+					//Skip models that fail to render
 				}
 			}
+			ForgeHooksClient.setRenderType(null);
 			matrix.popPose();
 		}
-		// Sort all the builder's vertices and then upload them to the vertex buffer
+		//Sort all the builder's vertices and then upload them to the vertex buffer
 		Vec3 projectedView = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
 		Vec3 subtracted = projectedView.subtract(renderedAtPos.getX(), renderedAtPos.getY(), renderedAtPos.getZ());
-		Vector3f sortPos = new Vector3f((float) subtracted.x, (float) subtracted.y, (float) subtracted.z);
-
-		builder.setQuadSorting(VertexSorting.byDistance(sortPos));
-		sortState = builder.getSortState();
-		vertexBuffer.bind();
-		vertexBuffer.upload(builder.end());
-		VertexBuffer.unbind();
-
+		builder.setQuadSortOrigin((float) subtracted.x, (float) subtracted.y, (float) subtracted.z);
+		BufferBuilder.SortState newSortState = builder.getSortState();
+		builder.end();
+		//Keep the previous scan if this one found nothing
+		if (drawn) {
+			sortState = newSortState;
+			vertexBuffer.upload(builder);
+		} else {
+			builder.discard();
+		}
 		oreBlocksList.clear();
 	}
 
@@ -227,11 +237,13 @@ public class ThingFinder {
 
 		Vec3 projectedView = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
 		BlockPos currentPos = player.getOnPos();
-		BlockPos renderPos = new BlockPos(currentPos.getX() - (currentPos.getX() - renderedAtPos.getX()),
+		BlockPos renderPos = new BlockPos(
+				currentPos.getX() - (currentPos.getX() - renderedAtPos.getX()),
 				currentPos.getY() - (currentPos.getY() - renderedAtPos.getY()),
-				currentPos.getZ() - (currentPos.getZ() - renderedAtPos.getZ()));
+				currentPos.getZ() - (currentPos.getZ() - renderedAtPos.getZ())
+		);
 
-		// Sort every <X> Frames to prevent screendoor effect
+		//Sort every <X> Frames to prevent screendoor effect
 		if (sortCounter > 20) {
 			if (sortState != null)
 				sortAll(renderPos);
@@ -244,41 +256,35 @@ public class ThingFinder {
 		matrix.pushPose();
 		matrix.translate(-projectedView.x(), -projectedView.y(), -projectedView.z());
 		matrix.translate(renderPos.getX(), renderPos.getY(), renderPos.getZ());
-		// Draw the renders in the specified order
+		//Draw the renders in the specified order
 		try {
-			if (vertexBuffer.getFormat() == null)
-				return; // IDE says this is never null, but if we remove this check we crash because its
-						// null so....
+			if (vertexBuffer.getFormat() == null) {
+				//Nothing uploaded yet. Later stages reuse this pose stack, so pop it.
+				matrix.popPose();
+				return;
+			}
 			xRayRender.setupRenderState();
-			vertexBuffer.bind();
-			vertexBuffer.drawWithShader(matrix.last().pose(), new Matrix4f(evt.getProjectionMatrix()),
-					RenderSystem.getShader());
-			VertexBuffer.unbind();
+			vertexBuffer.drawWithShader(matrix.last().pose(), new Matrix4f(evt.getProjectionMatrix()), RenderSystem.getShader());
 			xRayRender.clearRenderState();
 		} catch (Exception e) {
-			System.out.println(e);
+			LOGGER.error(e.toString());
 		}
 		matrix.popPose();
 	}
 
 	public static void sortAll(BlockPos lookingAt) {
-		BufferBuilder.RenderedBuffer renderedBuffer = sort(lookingAt, renderType);
-		vertexBuffer.bind();
-		vertexBuffer.upload(renderedBuffer);
-		VertexBuffer.unbind();
-
+		sort(lookingAt);
+		vertexBuffer.upload(builder);
 	}
 
-	// Sort the render type we pass in - using DireBufferBuilder because we want to
-	// sort in the opposite direction from normal
-	public static BufferBuilder.RenderedBuffer sort(BlockPos lookingAt, RenderType renderType) {
+	//Re-sort the quads back to front from the camera
+	public static void sort(BlockPos lookingAt) {
 		Vec3 projectedView = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
 		Vec3 subtracted = projectedView.subtract(lookingAt.getX(), lookingAt.getY(), lookingAt.getZ());
-		Vector3f sortPos = new Vector3f((float) subtracted.x, (float) subtracted.y, (float) subtracted.z);
 		builder.begin(renderType.mode(), renderType.format());
 		builder.restoreSortState(sortState);
-		builder.setQuadSorting(VertexSorting.byDistance(sortPos));
+		builder.setQuadSortOrigin((float) subtracted.x, (float) subtracted.y, (float) subtracted.z);
 		sortState = builder.getSortState();
-		return builder.end();
+		builder.end();
 	}
 }

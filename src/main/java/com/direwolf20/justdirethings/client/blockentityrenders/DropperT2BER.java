@@ -12,8 +12,7 @@ public class DropperT2BER extends AreaAffectingBER {
 	}
 
 	@Override
-	public void render(BlockEntity blockentity, float partialTicks, PoseStack matrixStackIn, MultiBufferSource bufferIn,
-			int combinedLightsIn, int combinedOverlayIn) {
+	public void render(BlockEntity blockentity, float partialTicks, PoseStack matrixStackIn, MultiBufferSource bufferIn, int combinedLightsIn, int combinedOverlayIn) {
 		super.render(blockentity, partialTicks, matrixStackIn, bufferIn, combinedLightsIn, combinedOverlayIn);
 	}
 }

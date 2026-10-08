@@ -6,7 +6,7 @@ import com.direwolf20.justdirethings.client.renderers.OurRenderTypes;
 import com.direwolf20.justdirethings.common.blockentities.ParadoxMachineBE;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Axis;
+import com.mojang.math.Vector3f;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.color.block.BlockColors;
 import net.minecraft.client.model.EntityModel;
@@ -24,194 +24,163 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.client.model.data.ModelData;
+import net.minecraftforge.client.model.data.EmptyModelData;
 
 import java.util.BitSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 public class ParadoxMachineBER extends AreaAffectingBER {
-
 	public ParadoxMachineBER(BlockEntityRendererProvider.Context context) {
+
 	}
 
 	@Override
-	public void render(BlockEntity blockentity, float partialTicks, PoseStack matrixStackIn, MultiBufferSource bufferIn,
-			int combinedLightsIn, int combinedOverlayIn) {
+	public void render(BlockEntity blockentity, float partialTicks, PoseStack matrixStackIn, MultiBufferSource bufferIn, int combinedLightsIn, int combinedOverlayIn) {
 		super.render(blockentity, partialTicks, matrixStackIn, bufferIn, combinedLightsIn, combinedOverlayIn);
-		if (!(blockentity instanceof ParadoxMachineBE paradoxMachineBE))
-			return;
-
+		if (!(blockentity instanceof ParadoxMachineBE paradoxMachineBE)) return;
+		// Render blocks
 		if (paradoxMachineBE.isRunning) {
-			float alpha = Mth.clamp(
-					0.05f + (paradoxMachineBE.timeRunning / (float) paradoxMachineBE.getRunTime()) * 0.95f, 0.05f,
-					1.0f);
+			float alpha = Mth.clamp(0.05f + (paradoxMachineBE.timeRunning / (float) paradoxMachineBE.getRunTime()) * 0.95f, 0.05f, 1.0f);
 			int intAlpha = (int) (alpha * 255);
-			renderBlocks(paradoxMachineBE, matrixStackIn, bufferIn, combinedLightsIn, combinedOverlayIn, alpha,
-					paradoxMachineBE.restoringBlocks);
-			renderEntities(paradoxMachineBE, matrixStackIn, bufferIn, partialTicks, combinedLightsIn, intAlpha);
+			renderBlocks(paradoxMachineBE, matrixStackIn, bufferIn, combinedLightsIn, combinedOverlayIn, alpha, paradoxMachineBE.restoringBlocks);
+			renderEntities(paradoxMachineBE, matrixStackIn, bufferIn, combinedLightsIn, combinedOverlayIn, intAlpha);
 		} else {
-			if (!paradoxMachineBE.renderParadox)
-				return;
-			int targetType = paradoxMachineBE.targetType;
-			if (targetType == 0 || targetType == 1)
-				renderBlocks(paradoxMachineBE, matrixStackIn, bufferIn, combinedLightsIn, combinedOverlayIn, 0.5f,
-						paradoxMachineBE.getBlocksFromNBT());
-			if (targetType == 0 || targetType == 2)
-				renderEntities(paradoxMachineBE, matrixStackIn, bufferIn, partialTicks, combinedLightsIn, 175);
+			if (paradoxMachineBE.renderParadox) {
+				int targetType = paradoxMachineBE.targetType;
+				if (targetType == 0 || targetType == 1)
+					renderBlocks(paradoxMachineBE, matrixStackIn, bufferIn, combinedLightsIn, combinedOverlayIn, 0.5f, paradoxMachineBE.getBlocksFromNBT());
+				if (targetType == 0 || targetType == 2)
+					renderEntities(paradoxMachineBE, matrixStackIn, bufferIn, combinedLightsIn, combinedOverlayIn, 175);
+			}
 		}
 	}
 
-	private void renderBlocks(ParadoxMachineBE be, PoseStack poseStack, MultiBufferSource bufferIn,
-			int combinedLightsIn, int combinedOverlayIn, float alpha, Map<BlockPos, BlockState> blocksToRestore) {
-		Level level = be.getLevel();
-		if (level == null || blocksToRestore.isEmpty())
-			return;
-
+	private void renderBlocks(ParadoxMachineBE paradoxMachineBE, PoseStack matrixStackIn, MultiBufferSource bufferIn, int combinedLightsIn, int combinedOverlayIn, float alpha, Map<BlockPos, BlockState> blocksToRestore) {
+		Level level = paradoxMachineBE.getLevel();
+		if (level == null) return;
 		BlockColors blockColors = Minecraft.getInstance().getBlockColors();
 		ModelBlockRenderer modelBlockRenderer = new ModelBlockRenderer(blockColors);
-		BlockRenderDispatcher blockRenderer = Minecraft.getInstance().getBlockRenderer();
+		BlockRenderDispatcher blockrendererdispatcher = Minecraft.getInstance().getBlockRenderer();
 
 		for (Map.Entry<BlockPos, BlockState> entry : blocksToRestore.entrySet()) {
 			BlockPos blockPos = entry.getKey();
 			BlockState renderState = entry.getValue();
 
-			if (!level.getBlockState(blockPos).canBeReplaced())
+			if (!level.getBlockState(blockPos).getMaterial().isReplaceable())
 				continue;
 
-			BakedModel model = blockRenderer.getBlockModel(renderState);
-			float[] shades = new float[Direction.values().length * 2];
-			BitSet shapeFlags = new BitSet(3);
-			RandomSource random = RandomSource.create();
-			BlockPos.MutableBlockPos mutablePos = blockPos.mutable();
-			ModelBlockRenderer.AmbientOcclusionFace aoFace = new ModelBlockRenderer.AmbientOcclusionFace();
+			float[] afloat = new float[Direction.values().length * 2];
+			BitSet bitset = new BitSet(3);
+			Random randomSource = new Random();
+			BakedModel ibakedmodel = blockrendererdispatcher.getBlockModel(renderState);
 
-			poseStack.pushPose();
-			poseStack.translate(blockPos.getX() - be.getBlockPos().getX(), blockPos.getY() - be.getBlockPos().getY(),
-					blockPos.getZ() - be.getBlockPos().getZ());
+			matrixStackIn.pushPose();
+			matrixStackIn.translate(blockPos.getX() - paradoxMachineBE.getBlockPos().getX(),
+					blockPos.getY() - paradoxMachineBE.getBlockPos().getY(),
+					blockPos.getZ() - paradoxMachineBE.getBlockPos().getZ());
 
-			VertexConsumer raw = renderState.isSolidRender(level, blockPos)
-					? bufferIn.getBuffer(OurRenderTypes.RenderBlockFade)
-					: bufferIn.getBuffer(OurRenderTypes.RenderBlockFadeNoCull);
-			DireVertexConsumer vc = new DireVertexConsumer(raw, alpha);
+			// Render the block as semi-transparent
+			VertexConsumer builder = renderState.isSolidRender(level, blockPos) ? bufferIn.getBuffer(OurRenderTypes.RenderBlockFade) : bufferIn.getBuffer(OurRenderTypes.RenderBlockFadeNoCull);
+			DireVertexConsumer direVertexConsumer = new DireVertexConsumer(builder, alpha);
 
-			for (Direction dir : Direction.values()) {
-				random.setSeed(renderState.getSeed(blockPos));
-				List<BakedQuad> quads = model.getQuads(renderState, dir, random, ModelData.EMPTY, null);
-				if (quads.isEmpty())
-					continue;
-
-				mutablePos.setWithOffset(blockPos, dir);
-				BlockPos neighbor = blockPos.relative(dir);
-				boolean skip = blocksToRestore.containsKey(neighbor)
-						&& blocksToRestore.get(neighbor).isSolidRender(level, neighbor);
-				if (!skip) {
-					modelBlockRenderer.renderModelFaceAO(level, renderState, blockPos, poseStack, vc, quads, shades,
-							shapeFlags, aoFace, combinedOverlayIn);
+			ModelBlockRenderer.AmbientOcclusionFace modelblockrenderer$ambientocclusionface = modelBlockRenderer.new AmbientOcclusionFace();
+			for (Direction direction : Direction.values()) {
+				randomSource.setSeed(renderState.getSeed(blockPos));
+				List<BakedQuad> list = ibakedmodel.getQuads(renderState, direction, randomSource, EmptyModelData.INSTANCE);
+				if (!list.isEmpty()) {
+					BlockPos testPos = blockPos.relative(direction);
+					boolean renderAdjacent = true;
+					if (blocksToRestore.containsKey(testPos)) {
+						BlockState otherState = blocksToRestore.get(testPos);
+						if (otherState.isSolidRender(level, testPos))
+							renderAdjacent = false;
+					}
+					if (renderAdjacent) {
+						modelBlockRenderer.renderModelFaceAO(level, renderState, blockPos, matrixStackIn, direVertexConsumer, list, afloat, bitset, modelblockrenderer$ambientocclusionface, combinedOverlayIn);
+					}
 				}
 			}
-
-			// Unculled quads (no face direction)
-			random.setSeed(renderState.getSeed(blockPos));
-			List<BakedQuad> unculled = model.getQuads(renderState, null, random, ModelData.EMPTY, null);
-			if (!unculled.isEmpty()) {
-				modelBlockRenderer.renderModelFaceAO(level, renderState, blockPos, poseStack, vc, unculled, shades,
-						shapeFlags, aoFace, combinedOverlayIn);
+			randomSource.setSeed(renderState.getSeed(blockPos));
+			List<BakedQuad> list = ibakedmodel.getQuads(renderState, null, randomSource, EmptyModelData.INSTANCE);
+			if (!list.isEmpty()) {
+				modelBlockRenderer.renderModelFaceAO(level, renderState, blockPos, matrixStackIn, direVertexConsumer, list, afloat, bitset, modelblockrenderer$ambientocclusionface, combinedOverlayIn);
 			}
 
-			poseStack.popPose();
+			matrixStackIn.popPose();
 		}
 	}
 
-	private void renderEntities(ParadoxMachineBE be, PoseStack poseStack, MultiBufferSource bufferIn,
-			float partialTicks, int combinedLightsIn, int alpha) {
-		Level level = be.getLevel();
-		if (level == null)
-			return;
+	private void renderEntities(ParadoxMachineBE paradoxMachineBE, PoseStack matrixStackIn, MultiBufferSource bufferIn, float partialTicks, int combinedLightsIn, int alpha) {
+		Level level = paradoxMachineBE.getLevel();
+		if (level == null) return;
 
-		for (Map.Entry<Vec3, LivingEntity> entry : be.getEntitiesFromNBT().entrySet()) {
+		for (Map.Entry<Vec3, LivingEntity> entry : paradoxMachineBE.getEntitiesFromNBT().entrySet()) {
 			Vec3 entityPos = entry.getKey();
-			if (be.isRunning && !be.restoringEntites.contains(entityPos))
+			if (paradoxMachineBE.isRunning && !paradoxMachineBE.restoringEntites.contains(entityPos))
 				continue;
 			LivingEntity entity = entry.getValue();
-			if (entity == null)
-				continue;
 
-			poseStack.pushPose();
-			poseStack.translate(entityPos.x - be.getBlockPos().getX(), entityPos.y - be.getBlockPos().getY(),
-					entityPos.z - be.getBlockPos().getZ());
+			// Apply transformations and translate to entity position
+			matrixStackIn.pushPose();
+			matrixStackIn.translate(entityPos.x - paradoxMachineBE.getBlockPos().getX(),
+					entityPos.y - paradoxMachineBE.getBlockPos().getY(),
+					entityPos.z - paradoxMachineBE.getBlockPos().getZ());
 
-			renderTransparentEntity(poseStack, bufferIn, entity, partialTicks, combinedLightsIn, alpha);
+			// Render the entity with transparency
+			renderTransparentEntity(matrixStackIn, bufferIn, entity, partialTicks, combinedLightsIn, alpha);
 
-			poseStack.popPose();
+			matrixStackIn.popPose();
 		}
 	}
 
-	@SuppressWarnings("unchecked")
-	private void renderTransparentEntity(PoseStack poseStack, MultiBufferSource bufferIn, LivingEntity entity,
-			float partialTicks, int combinedLightsIn, int alpha) {
-		EntityRenderDispatcher dispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
-		EntityRenderer<? super LivingEntity> renderer = dispatcher.getRenderer(entity);
-		if (renderer == null)
-			return;
+	private void renderTransparentEntity(PoseStack matrixStackIn, MultiBufferSource bufferIn, LivingEntity entity, float partialTicks, int combinedLightsIn, int alpha) {
+		EntityRenderDispatcher renderManager = Minecraft.getInstance().getEntityRenderDispatcher();
+		EntityRenderer<? super LivingEntity> renderer = renderManager.getRenderer(entity);
 
-		ResourceLocation texture = renderer.getTextureLocation(entity);
-		if (texture == null)
-			return;
+		// Set up render type for transparency
+		ResourceLocation resourceLocation = renderer.getTextureLocation(entity);
+		if (resourceLocation == null) return; //Caused soaryn to crash without this
+		RenderType renderType = RenderType.itemEntityTranslucentCull(resourceLocation);
+		VertexConsumer vertexconsumer = bufferIn.getBuffer(renderType);
 
-		VertexConsumer vc = bufferIn.getBuffer(RenderType.itemEntityTranslucentCull(texture));
+		// Calculate overlay and lighting
 		int overlayCoords = LivingEntityRenderer.getOverlayCoords(entity, 0);
-		// Ghost entities aren't in the world, so use full brightness instead of the
-		// BER's light value
-		combinedLightsIn = 0xF000F0;
 
-		// Entities are recreated from NBT each frame so yBodyRotO is 0 — skip
-		// interpolation
-		float bodyRot = entity.yBodyRot;
-		setupRotations(entity, poseStack, bodyRot);
-		poseStack.scale(-1.0F, -1.0F, 1.0F);
-		poseStack.translate(0.0F, -1.501F, 0.0F);
+		// Ensure proper rotation and scaling
+		float f = Mth.rotLerp(partialTicks, entity.yBodyRot, entity.yBodyRot);
+		float f1 = Mth.rotLerp(partialTicks, entity.yHeadRot, entity.yHeadRot);
+		float f2 = f1 - f;
+		float f5 = Mth.lerp(partialTicks, entity.getXRot(), entity.getXRot());
+		float f7 = 0;
+		setupRotations(entity, matrixStackIn, f7, f, partialTicks);
+		matrixStackIn.scale(-1.0F, -1.0F, 1.0F);
+		matrixStackIn.translate(0.0F, -1.501F, 0.0F);
+		float f8 = 0.0F;
+		float f4 = 0.0F;
 
+		// Render entity model with transparency
 		if (renderer instanceof LivingEntityRenderer<?, ?> livingRenderer) {
-			EntityModel<LivingEntity> model = (EntityModel<LivingEntity>) livingRenderer.getModel();
-			model.attackTime = 0f;
-			model.riding = false;
-			model.young = entity.isBaby();
-			model.prepareMobModel(entity, 0f, 0f, partialTicks);
-			model.setupAnim(entity, 0f, 0f, 0f, 0f, entity.getXRot());
-			model.renderToBuffer(poseStack, vc, combinedLightsIn, overlayCoords, 1.0f, 1.0f, 1.0f, alpha / 255.0f);
+			EntityModel<LivingEntity> entityModel = (EntityModel<LivingEntity>) livingRenderer.getModel();
+			entityModel.attackTime = 0f;
+			entityModel.riding = false;
+			entityModel.young = entity.isBaby();
+			entityModel.prepareMobModel(entity, f4, f8, partialTicks);
+			entityModel.setupAnim(entity, f4, f8, f7, f2, f5);
+			entityModel.renderToBuffer(matrixStackIn, vertexconsumer, combinedLightsIn, overlayCoords, 1.0F, 1.0F, 1.0F, alpha / 255.0F);
 		}
 	}
 
-	private static void setupRotations(LivingEntity entity, PoseStack poseStack, float bodyRot) {
-		if (!entity.hasPose(Pose.SLEEPING)) {
-			poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - bodyRot));
+	protected static void setupRotations(LivingEntity pEntityLiving, PoseStack pPoseStack, float pAgeInTicks, float pRotationYaw, float pPartialTicks) {
+		if (pEntityLiving.getPose() != Pose.SLEEPING) {
+			pPoseStack.mulPose(Vector3f.YP.rotationDegrees(180.0F - pRotationYaw));
 		}
-	}
-
-	@Override
-	public boolean shouldRenderOffScreen(BlockEntity blockEntity) {
-		// Must always be true — this is evaluated once at chunk compile time, not per
-		// frame.
-		// The render() method exits early when there's nothing to show.
-		return true;
-	}
-
-	@Override
-	public AABB getRenderBoundingBox(BlockEntity blockEntity) {
-		if (!(blockEntity instanceof ParadoxMachineBE be)) {
-			BlockPos pos = blockEntity.getBlockPos();
-			return new AABB(pos.offset(-20, -20, -20), pos.offset(20, 20, 20));
-		}
-		// Cover the full snapshot/restore area so frustum culling still works
-		return be.getAABB(be.getBlockPos()).inflate(5);
 	}
 }

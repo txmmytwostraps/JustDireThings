@@ -1,38 +1,71 @@
 package com.direwolf20.justdirethings.client.renderers;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.util.Mth;
-import net.minecraftforge.client.model.pipeline.VertexConsumerWrapper;
+import com.mojang.blaze3d.vertex.VertexFormat;
 
-public class DireVertexConsumer extends VertexConsumerWrapper {
+
+public class DireVertexConsumer implements VertexConsumer {
+	private final VertexConsumer parent;
 	private float alpha;
-	private float red = -1;
-	private float green = -1;
-	private float blue = -1;
 
 	public DireVertexConsumer(VertexConsumer parent, float alpha) {
-		super(parent);
+		this.parent = parent;
 		this.alpha = alpha;
 	}
 
-	public DireVertexConsumer(VertexConsumer parent, float alpha, float red, float green, float blue) {
-		super(parent);
-		this.alpha = alpha;
-		this.red = red;
-		this.green = green;
-		this.blue = blue;
+	@Override
+	public VertexConsumer vertex(double x, double y, double z) {
+		parent.vertex(x, y, z);
+		return this;
 	}
 
 	@Override
 	public VertexConsumer color(int r, int g, int b, int a) {
-		if (red == -1)
-			parent.color(r, g, b, Math.round((float) 255 * alpha));
-		else {
-			int rCol = (int) Mth.lerp(red, 0, r);
-			int gCol = (int) Mth.lerp(green, 0, g);
-			int bCol = (int) Mth.lerp(blue, 0, b);
-			parent.color(rCol, gCol, bCol, Math.round((float) 255 * alpha));
-		}
+		parent.color(r, g, b, Math.round((float) 255 * alpha));
 		return this;
+	}
+
+	@Override
+	public VertexConsumer uv(float u, float v) {
+		parent.uv(u, v);
+		return this;
+	}
+
+	@Override
+	public VertexConsumer overlayCoords(int u, int v) {
+		parent.overlayCoords(u, v);
+		return this;
+	}
+
+	@Override
+	public VertexConsumer uv2(int u, int v) {
+		parent.uv2(u, v);
+		return this;
+	}
+
+	@Override
+	public VertexConsumer normal(float x, float y, float z) {
+		parent.normal(x, y, z);
+		return this;
+	}
+
+	@Override
+	public void endVertex() {
+		parent.endVertex();
+	}
+
+	@Override
+	public void defaultColor(int r, int g, int b, int a) {
+		parent.defaultColor(r, g, b, a);
+	}
+
+	@Override
+	public void unsetDefaultColor() {
+		parent.unsetDefaultColor();
+	}
+
+	@Override
+	public VertexFormat getVertexFormat() {
+		return parent.getVertexFormat();
 	}
 }

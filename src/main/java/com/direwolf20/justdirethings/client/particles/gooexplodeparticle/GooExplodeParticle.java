@@ -1,5 +1,6 @@
 package com.direwolf20.justdirethings.client.particles.gooexplodeparticle;
 
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.BreakingItemParticle;
@@ -28,8 +29,7 @@ public class GooExplodeParticle extends BreakingItemParticle {
 		this.scale(partSize);
 		this.partSize = quadSize;
 		if (this.sprite == null) {
-			this.setSprite(Minecraft.getInstance().getItemRenderer()
-					.getModel(new ItemStack(Blocks.COBBLESTONE), world, (LivingEntity) null, 0).getParticleIcon());
+			this.setSprite(Minecraft.getInstance().getItemRenderer().getModel(new ItemStack(Blocks.COBBLESTONE), world, (LivingEntity) null, 0).getParticleIcon());
 		}
 	}
 
@@ -40,7 +40,7 @@ public class GooExplodeParticle extends BreakingItemParticle {
 	}
 
 	public void updateColorAndGravity() {
-		float relativeAge = (float) ((this.lifetime - this.age)) / this.lifetime; // 1.0 -> 0.0
+		float relativeAge = (float) ((this.lifetime - this.age)) / this.lifetime; //1.0 -> 0.0
 		float adjustedAge;
 
 		if (relativeAge < 0.5f) {
@@ -49,11 +49,12 @@ public class GooExplodeParticle extends BreakingItemParticle {
 		}
 	}
 
-	@Override // Performance Reasons
+	@Override //Performance Reasons
 	protected int getLightColor(float pPartialTick) {
 		return 0xF00080;
 	}
 
-	public static ParticleProvider<GooExplodeParticleData> FACTORY = (data, world, x, y, z, xSpeed, ySpeed,
-			zSpeed) -> new GooExplodeParticle(world, x, y, z, data.getItemStack());
+	public static ParticleProvider<GooExplodeParticleData> FACTORY =
+			(data, world, x, y, z, xSpeed, ySpeed, zSpeed) ->
+					new GooExplodeParticle(world, x, y, z, data.getItemStack());
 }

@@ -8,11 +8,11 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 
 public class FluidPlacerT2BER extends AreaAffectingBER {
 	public FluidPlacerT2BER(BlockEntityRendererProvider.Context context) {
+
 	}
 
 	@Override
-	public void render(BlockEntity blockentity, float partialTicks, PoseStack matrixStackIn, MultiBufferSource bufferIn,
-			int combinedLightsIn, int combinedOverlayIn) {
+	public void render(BlockEntity blockentity, float partialTicks, PoseStack matrixStackIn, MultiBufferSource bufferIn, int combinedLightsIn, int combinedOverlayIn) {
 		super.render(blockentity, partialTicks, matrixStackIn, bufferIn, combinedLightsIn, combinedOverlayIn);
 	}
 }
