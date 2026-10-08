@@ -9,20 +9,24 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
 
 public class PortalGunLeftClickPacket {
-	public static void handle(final PortalGunLeftClickPayload payload, final Supplier<NetworkEvent.Context> ctx) {
+	public static final PortalGunLeftClickPacket INSTANCE = new PortalGunLeftClickPacket();
+
+	public static PortalGunLeftClickPacket get() {
+		return INSTANCE;
+	}
+
+	public void handle(final PortalGunLeftClickPayload payload, final Supplier<NetworkEvent.Context> ctx) {
 		ctx.get().enqueueWork(() -> {
 			ServerPlayer sender = ctx.get().getSender();
 			if (sender == null)
 				return;
-
-			ItemStack stack = sender.getMainHandItem();
-			if (!(stack.getItem() instanceof PortalGun)) {
-				stack = sender.getOffhandItem();
-			}
-			if (!(stack.getItem() instanceof PortalGun))
+			ItemStack itemStack = sender.getMainHandItem();
+			if (!(itemStack.getItem() instanceof PortalGun))
+				itemStack = sender.getOffhandItem();
+			if (!(itemStack.getItem() instanceof PortalGun))
 				return;
 
-			PortalGun.firePortal(sender.level(), sender, stack, true);
+			PortalGun.spawnProjectile(sender.level, sender, itemStack, true);
 		});
 		ctx.get().setPacketHandled(true);
 	}

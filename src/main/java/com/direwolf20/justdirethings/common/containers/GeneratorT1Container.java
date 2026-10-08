@@ -47,7 +47,7 @@ public class GeneratorT1Container extends BaseMachineContainer {
 
 	@Override
 	public boolean stillValid(Player playerIn) {
-		return stillValid(ContainerLevelAccess.create(player.level(), pos), player, Registration.GeneratorT1.get());
+		return stillValid(ContainerLevelAccess.create(player.level, pos), player, Registration.GeneratorT1.get());
 	}
 
 	@Override

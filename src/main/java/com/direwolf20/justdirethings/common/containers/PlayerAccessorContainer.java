@@ -21,7 +21,7 @@ public class PlayerAccessorContainer extends BaseMachineContainer {
 
 	@Override
 	public boolean stillValid(Player playerIn) {
-		return stillValid(ContainerLevelAccess.create(player.level(), pos), player, Registration.PlayerAccessor.get());
+		return stillValid(ContainerLevelAccess.create(player.level, pos), player, Registration.PlayerAccessor.get());
 	}
 
 	@Override

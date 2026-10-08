@@ -3,29 +3,31 @@ package com.direwolf20.justdirethings.common.network.handler;
 import com.direwolf20.justdirethings.common.blockentities.ParadoxMachineBE;
 import com.direwolf20.justdirethings.common.network.data.ParadoxSyncPayload;
 import net.minecraft.client.Minecraft;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
 public class ParadoxSyncPacket {
-	public static void handle(final ParadoxSyncPayload payload, final Supplier<NetworkEvent.Context> ctx) {
-		ctx.get().enqueueWork(() -> {
-			handleClient(payload);
-		});
-		ctx.get().setPacketHandled(true);
+	public static final ParadoxSyncPacket INSTANCE = new ParadoxSyncPacket();
+
+	public static ParadoxSyncPacket get() {
+		return INSTANCE;
 	}
 
-	@OnlyIn(Dist.CLIENT)
-	private static void handleClient(ParadoxSyncPayload payload) {
-		Minecraft mc = Minecraft.getInstance();
-		if (mc.level == null)
-			return;
-		BlockEntity be = mc.level.getBlockEntity(payload.pos());
-		if (be instanceof ParadoxMachineBE paradoxMachineBE) {
-			paradoxMachineBE.receiveRunTime(payload.timeRunning());
-		}
+	public void handle(final ParadoxSyncPayload payload, final Supplier<NetworkEvent.Context> ctx) {
+		ctx.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+			//Not Minecraft.level, which loads ClientLevel on a dedicated server
+			Level level = Minecraft.getInstance().player.level;
+			if (level == null) return;
+			BlockEntity blockEntity = level.getBlockEntity(payload.blockPos());
+			if (blockEntity instanceof ParadoxMachineBE paradoxMachineBE) {
+				paradoxMachineBE.receiveRunTime(payload.runtime());
+			}
+		}));
+		ctx.get().setPacketHandled(true);
 	}
 }

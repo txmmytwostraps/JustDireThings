@@ -11,12 +11,12 @@ import com.direwolf20.justdirethings.util.interfacehelpers.AreaAffectingData;
 import com.direwolf20.justdirethings.util.interfacehelpers.FilterData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.FakePlayer;
 import net.minecraftforge.fluids.FluidStack;
 
@@ -26,18 +26,16 @@ import java.util.stream.Collectors;
 
 public class FluidPlacerT2BE extends FluidPlacerT1BE implements PoweredMachineBE, AreaAffectingBE, FilterableBE {
 	public FilterData filterData = new FilterData();
-	public AreaAffectingData areaAffectingData = new AreaAffectingData();
+	public AreaAffectingData areaAffectingData = new AreaAffectingData(getBlockState().getValue(BlockStateProperties.FACING));
 	public final PoweredMachineContainerData poweredMachineData;
 	private final MachineEnergyStorage energyStorage;
 	private final FilterBasicHandler filterHandler;
 
 	public FluidPlacerT2BE(BlockPos pPos, BlockState pBlockState) {
 		super(Registration.FluidPlacerT2BE.get(), pPos, pBlockState);
-		areaAffectingData = new AreaAffectingData(pBlockState.getValue(BlockStateProperties.FACING));
-		fluidTank.setCapacity(getMaxMB());
+		poweredMachineData = new PoweredMachineContainerData(this);
 		energyStorage = new MachineEnergyStorage(getMaxEnergy());
 		filterHandler = new FilterBasicHandler(9);
-		poweredMachineData = new PoweredMachineContainerData(this);
 	}
 
 	@Override
@@ -46,7 +44,7 @@ public class FluidPlacerT2BE extends FluidPlacerT1BE implements PoweredMachineBE
 	}
 
 	@Override
-	public ContainerData getContainerData() {
+	public PoweredMachineContainerData getContainerData() {
 		return poweredMachineData;
 	}
 
@@ -58,11 +56,6 @@ public class FluidPlacerT2BE extends FluidPlacerT1BE implements PoweredMachineBE
 	@Override
 	public int getStandardEnergyCost() {
 		return 500;
-	}
-
-	@Override
-	public BlockEntity getBlockEntity() {
-		return this;
 	}
 
 	@Override
@@ -95,27 +88,19 @@ public class FluidPlacerT2BE extends FluidPlacerT1BE implements PoweredMachineBE
 
 	@Override
 	public List<BlockPos> findSpotsToPlace(FakePlayer fakePlayer) {
-		if (isEmptyScanOnCooldown())
-			return List.of();
 		AABB area = getAABB(getBlockPos());
-		List<BlockPos> result = BlockPos
-				.betweenClosedStream((int) area.minX, (int) area.minY, (int) area.minZ, (int) area.maxX - 1,
-						(int) area.maxY - 1, (int) area.maxZ - 1)
-				.filter(blockPos -> isBlockPosValid(blockPos, fakePlayer)).map(BlockPos::immutable)
-				.sorted(Comparator.comparingDouble(x -> x.distSqr(getBlockPos()))).collect(Collectors.toList());
-		if (result.isEmpty())
-			setEmptyScanCooldown(20);
-		return result;
+		return BlockPos.betweenClosedStream((int) area.minX, (int) area.minY, (int) area.minZ, (int) area.maxX - 1, (int) area.maxY - 1, (int) area.maxZ - 1)
+				.filter(blockPos -> isBlockPosValid(blockPos, fakePlayer))
+				.map(BlockPos::immutable)
+				.sorted(Comparator.comparingDouble(x -> x.distSqr(getBlockPos())))
+				.collect(Collectors.toList());
 	}
 
 	@Override
 	public boolean isBlockPosValid(BlockPos blockPos, FakePlayer fakePlayer) {
 		if (!super.isBlockPosValid(blockPos, fakePlayer))
-			return false;
-		BlockPos adjacentPos = blockPos.relative(getDirectionValue());
-		ItemStack blockItemStack = level.getBlockState(adjacentPos)
-				.getCloneItemStack(new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.ZERO,
-						getDirectionValue(), adjacentPos, false), level, adjacentPos, null);
+			return false; //Do the same checks as normal, then check the filters
+		ItemStack blockItemStack = level.getBlockState(blockPos.relative(getDirectionValue())).getCloneItemStack(new BlockHitResult(Vec3.ZERO, getDirectionValue(), blockPos, false), level, blockPos, null);
 		return isStackValidFilter(blockItemStack);
 	}
 
@@ -127,8 +112,8 @@ public class FluidPlacerT2BE extends FluidPlacerT1BE implements PoweredMachineBE
 
 	@Override
 	public void load(CompoundTag tag) {
-		super.load(tag);
 		if (tag.contains("energy"))
 			energyStorage.setEnergy(tag.getInt("energy"));
+		super.load(tag);
 	}
 }

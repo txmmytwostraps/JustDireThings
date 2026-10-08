@@ -1,45 +1,49 @@
 package com.direwolf20.justdirethings.common.blockentities.basebe;
 
 import com.direwolf20.justdirethings.client.particles.gooexplodeparticle.GooExplodeParticleData;
-import com.direwolf20.justdirethings.common.blocks.gooblocks.GooBlock_Base;
 import com.direwolf20.justdirethings.datagen.recipes.GooSpreadRecipe;
 import com.direwolf20.justdirethings.datagen.recipes.GooSpreadRecipeTag;
 import com.direwolf20.justdirethings.setup.Config;
 import com.direwolf20.justdirethings.setup.Registration;
+import com.direwolf20.justdirethings.util.SculkSounds;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.RecipeManager;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+
+import static com.direwolf20.justdirethings.common.blocks.gooblocks.GooBlock_Base.ALIVE;
 
 public class GooBlockBE_Base extends BlockEntity {
 	public final Map<Direction, Integer> sidedCounters = new Object2IntOpenHashMap<>();
 	public final Map<Direction, Integer> sidedDurations = new Object2IntOpenHashMap<>();
-	private long lastClientGameTime = Long.MIN_VALUE;
+
+	// Cache so we don't have to iterate recipes every time
+	public final Map<BlockState, BlockState> outputCache = new HashMap<>();
+	public final Map<BlockState, Integer> durationCache = new Object2IntOpenHashMap<>();
 
 	public GooBlockBE_Base(BlockEntityType<?> type, BlockPos pos, BlockState state) {
 		super(type, pos, state);
 		for (Direction direction : Direction.values()) {
-			sidedCounters.put(direction, -1);
-			sidedDurations.put(direction, -1);
+			sidedCounters.put(direction, -1); //Init the counters, -1 means we aren't operating on anything on that side
+			sidedDurations.put(direction, -1); //Init the durations, -1 means we aren't operating on anything on that side
 		}
 	}
 
@@ -52,6 +56,7 @@ public class GooBlockBE_Base extends BlockEntity {
 		int duration = sidedDurations.get(direction);
 		if (newCounter <= 0 || duration <= 0)
 			return false;
+		// Every 3 seconds or so
 		return (newCounter % (60 * counterReducer())) == 0;
 	}
 
@@ -72,13 +77,7 @@ public class GooBlockBE_Base extends BlockEntity {
 	}
 
 	public void tickClient() {
-		if (level == null)
-			return;
-		long gameTime = level.getGameTime();
-		if (gameTime == lastClientGameTime)
-			return;
-		lastClientGameTime = gameTime;
-		tickCounters();
+		tickCounters(); //We tick on client side too, just for rendering of course!
 	}
 
 	public void tickServer() {
@@ -94,14 +93,10 @@ public class GooBlockBE_Base extends BlockEntity {
 		GooExplodeParticleData data = new GooExplodeParticleData(itemStack);
 		for (Direction direction : Direction.values()) {
 			for (int i = 0; i < 100; i++) {
-				double randomX = 0.5 + (0.6 * direction.getNormal().getX())
-						+ (direction.getNormal().getX() == 0 ? random.nextDouble() - 0.5 : 0);
-				double randomY = 0.5 + (0.6 * direction.getNormal().getY())
-						+ (direction.getNormal().getY() == 0 ? random.nextDouble() - 0.5 : 0);
-				double randomZ = 0.5 + (0.6 * direction.getNormal().getZ())
-						+ (direction.getNormal().getZ() == 0 ? random.nextDouble() - 0.5 : 0);
-				level.addParticle(data, startPos.getX() + randomX, startPos.getY() + randomY, startPos.getZ() + randomZ,
-						0, 0, 0);
+				double randomX = 0.5 + (0.6 * direction.getNormal().getX()) + (direction.getNormal().getX() == 0 ? random.nextDouble() - 0.5 : 0);
+				double randomY = 0.5 + (0.6 * direction.getNormal().getY()) + (direction.getNormal().getY() == 0 ? random.nextDouble() - 0.5 : 0);
+				double randomZ = 0.5 + (0.6 * direction.getNormal().getZ()) + (direction.getNormal().getZ() == 0 ? random.nextDouble() - 0.5 : 0);
+				level.addParticle(data, startPos.getX() + randomX, startPos.getY() + randomY, startPos.getZ() + randomZ, 0, 0, 0);
 			}
 		}
 	}
@@ -121,36 +116,24 @@ public class GooBlockBE_Base extends BlockEntity {
 	}
 
 	public void checkSides() {
-		if (level == null)
-			return;
+		if (level == null) return;
 		for (Direction direction : Direction.values()) {
-			GooSpreadRecipe gooSpreadRecipe = findRecipe(getBlockPos().relative(direction));
-			GooSpreadRecipeTag gooSpreadRecipeTag = gooSpreadRecipe == null
-					? findRecipeTag(getBlockPos().relative(direction))
-					: null;
+			BlockState input = level.getBlockState(getBlockPos().relative(direction));
+			BlockState output = findOutput(input);
+			int duration = findDuration(input);
 			int sideCounter = sidedCounters.get(direction);
-			if (gooSpreadRecipe != null) {
-				if (sideCounter == -1 && getBlockState().getValue(GooBlock_Base.ALIVE)) {
-					sideCounter = gooSpreadRecipe.getCraftingDuration();
-					updateSideCounter(direction, sideCounter);
+			if (!output.isAir()) {
+				if (sideCounter == -1 && this.getBlockState().getValue(ALIVE)) { //Valid Recipe and not running yet
+					sideCounter = duration;
 					sidedDurations.put(direction, sideCounter);
-					markDirtyClient();
-				} else if (sideCounter == 0) { // Crafting done!
-					setBlockToTarget(gooSpreadRecipe.getOutput(), direction);
-					markDirtyClient();
-				}
-			} else if (gooSpreadRecipeTag != null) {
-				if (sideCounter == -1 && getBlockState().getValue(GooBlock_Base.ALIVE)) {
-					sideCounter = gooSpreadRecipeTag.getCraftingDuration();
 					updateSideCounter(direction, sideCounter);
-					sidedDurations.put(direction, sideCounter);
-					markDirtyClient();
-				} else if (sideCounter == 0) { // Crafting done!
-					setBlockToTarget(gooSpreadRecipeTag.getOutput(), direction);
-					markDirtyClient();
+					markDirtyClient(); //Either way, update the client with the new sideCounters
+				} else if (sideCounter == 0) { //Craftings done!
+					setBlockToTarget(output, direction);
+					markDirtyClient(); //Either way, update the client with the new sideCounters
 				}
-			} else { // No valid recipe — cancel any running timer
-				if (sideCounter != -1) {
+			} else { //If the recipe is null, it means this isn't a valid input block (or its already been converted!)
+				if (sideCounter != -1) { //If we have a timer running, cancel it
 					sideCounter = -1;
 					updateSideCounter(direction, sideCounter);
 					sidedDurations.put(direction, sideCounter);
@@ -162,37 +145,65 @@ public class GooBlockBE_Base extends BlockEntity {
 
 	public void setBlockToTarget(BlockState output, Direction direction) {
 		if (output.hasProperty(BlockStateProperties.FACING))
-			level.setBlockAndUpdate(getBlockPos().relative(direction),
-					output.setValue(BlockStateProperties.FACING, direction));
+			level.setBlockAndUpdate(getBlockPos().relative(direction), output.setValue(BlockStateProperties.FACING, direction));
 		else
 			level.setBlockAndUpdate(getBlockPos().relative(direction), output);
 		updateSideCounter(direction, -1);
 		sidedDurations.put(direction, -1);
-		level.playSound(null, getBlockPos(), SoundEvents.SCULK_BLOCK_BREAK, SoundSource.BLOCKS, 1.0F, 1.0F);
+		level.playSound(null, getBlockPos(), SculkSounds.blockBreak(), SoundSource.BLOCKS, 1.0F, 1.0F);
 		killGoo();
 	}
 
 	private void killGoo() {
-		if (!Config.GOO_CAN_DIE.get())
-			return;
-		if (level == null || level.isClientSide)
-			return;
-		BlockState state = getBlockState();
-		if (state.getValue(GooBlock_Base.ALIVE)
-				&& level.random.nextFloat() < Config.GOO_DEATH_CHANCE.get().floatValue()) {
-			level.setBlock(worldPosition, state.setValue(GooBlock_Base.ALIVE, false), 3);
-			level.playSound(null, getBlockPos(), SoundEvents.VEX_DEATH, SoundSource.BLOCKS, 1.0F, 0.25F);
+		if (!Config.GOO_CAN_DIE.get()) return;
+		if (level != null && !level.isClientSide) {
+			BlockState state = this.getBlockState();
+
+			// Ensure the block is currently alive and perform the 10% chance check
+			if (state.getValue(ALIVE) && level.random.nextFloat() < Config.GOO_DEATH_CHANCE.get().floatValue()) {
+				// Update the block state to dead
+				level.setBlock(worldPosition, state.setValue(ALIVE, false), 3);
+				level.playSound(null, getBlockPos(), SoundEvents.VEX_DEATH, SoundSource.BLOCKS, 1.0F, 0.25F);
+			}
 		}
 	}
 
+	public BlockState findOutput(BlockState input) {
+		if (!outputCache.containsKey(input))
+			populateCaches(input);
+		return outputCache.get(input);
+	}
+
+	public int findDuration(BlockState input) {
+		if (!durationCache.containsKey(input))
+			populateCaches(input);
+		return durationCache.get(input);
+	}
+
+	public void populateCaches(BlockState input) {
+		BlockState output = Blocks.AIR.defaultBlockState();
+		int duration = -1;
+		GooSpreadRecipe gooSpreadRecipe = findRecipe(input);
+		if (gooSpreadRecipe != null) {
+			output = gooSpreadRecipe.getOutput();
+			duration = gooSpreadRecipe.getCraftingDuration();
+		} else {
+			GooSpreadRecipeTag gooSpreadRecipeTag = findRecipeTag(input);
+			if (gooSpreadRecipeTag != null) {
+				output = gooSpreadRecipeTag.getOutput();
+				duration = gooSpreadRecipeTag.getCraftingDuration();
+			}
+		}
+		outputCache.put(input, output);
+		durationCache.put(input, duration);
+	}
+
 	@Nullable
-	private GooSpreadRecipe findRecipe(BlockPos coords) {
-		BlockState state = getLevel().getBlockState(coords);
+	private GooSpreadRecipe findRecipe(BlockState state) {
 		RecipeManager recipeManager = getLevel().getRecipeManager();
 
-		for (GooSpreadRecipe gooSpreadRecipe : recipeManager
-				.getAllRecipesFor(Registration.GOO_SPREAD_RECIPE_TYPE.get())) {
-			if (gooSpreadRecipe.matches(getLevel(), coords, this, state) && isDimensionAllowed(gooSpreadRecipe)) {
+		for (GooSpreadRecipe gooSpreadRecipe : recipeManager.getAllRecipesFor(Registration.GOO_SPREAD_RECIPE_TYPE.get())) {
+			if (gooSpreadRecipe.matches(this, state)) {
 				return gooSpreadRecipe;
 			}
 		}
@@ -201,40 +212,16 @@ public class GooBlockBE_Base extends BlockEntity {
 	}
 
 	@Nullable
-	private GooSpreadRecipeTag findRecipeTag(BlockPos coords) {
-		BlockState state = getLevel().getBlockState(coords);
+	private GooSpreadRecipeTag findRecipeTag(BlockState state) {
 		RecipeManager recipeManager = getLevel().getRecipeManager();
 
-		for (GooSpreadRecipeTag gooSpreadRecipeTag : recipeManager
-				.getAllRecipesFor(Registration.GOO_SPREAD_RECIPE_TYPE_TAG.get())) {
-			if (gooSpreadRecipeTag.matches(getLevel(), coords, this, state)) {
+		for (GooSpreadRecipeTag gooSpreadRecipeTag : recipeManager.getAllRecipesFor(Registration.GOO_SPREAD_RECIPE_TYPE_TAG.get())) {
+			if (gooSpreadRecipeTag.matches(this, state)) {
 				return gooSpreadRecipeTag;
 			}
 		}
 
 		return null;
-	}
-
-	private boolean isDimensionAllowed(GooSpreadRecipe recipe) {
-		List<? extends Object> restrictions = Config.GOO_DIMENSION_RESTRICTIONS.get();
-		if (restrictions.isEmpty())
-			return true;
-
-		ResourceLocation inputKey = ForgeRegistries.BLOCKS.getKey(recipe.getInput().getBlock());
-		if (inputKey == null)
-			return true;
-		String inputBlockId = inputKey.toString();
-		String currentDimension = level.dimension().location().toString();
-
-		for (Object entry : restrictions) {
-			if (!(entry instanceof List<?> pair) || pair.size() < 2)
-				continue;
-			if (pair.get(0) instanceof String blockId && pair.get(1) instanceof String dimId) {
-				if (blockId.equals(inputBlockId))
-					return dimId.equals(currentDimension);
-			}
-		}
-		return true;
 	}
 
 	@Override
@@ -284,15 +271,8 @@ public class GooBlockBE_Base extends BlockEntity {
 
 	@Override
 	public ClientboundBlockEntityDataPacket getUpdatePacket() {
-		// Vanilla uses the type parameter to indicate which type of tile entity
-		// (command block, skull, or beacon?) is receiving the packet, but it seems like
-		// Forge has overridden this behavior
+		// Vanilla uses the type parameter to indicate which type of tile entity (command block, skull, or beacon?) is receiving the packet, but it seems like Forge has overridden this behavior
 		return ClientboundBlockEntityDataPacket.create(this);
-	}
-
-	@Override
-	public void handleUpdateTag(CompoundTag tag) {
-		this.load(tag);
 	}
 
 	@Override
@@ -303,8 +283,9 @@ public class GooBlockBE_Base extends BlockEntity {
 	}
 
 	@Override
-	public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt) {
-		this.load(pkt.getTag());
+	public AABB getRenderBoundingBox() {
+		// The spread pattern draws on neighboring blocks
+		return new AABB(getBlockPos()).inflate(10);
 	}
 
 	public void markDirtyClient() {

@@ -24,8 +24,8 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.fluids.capability.CapabilityFluidHandler;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 
 import javax.annotation.Nonnull;
@@ -33,8 +33,7 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 public class ExperienceHolderBE extends BaseMachineBE implements AreaAffectingBE, RedstoneControlledBE {
-	public AreaAffectingData areaAffectingData = new AreaAffectingData(
-			getBlockState().getValue(BlockStateProperties.FACING).getOpposite());
+	public AreaAffectingData areaAffectingData = new AreaAffectingData(getBlockState().getValue(BlockStateProperties.FACING).getOpposite());
 	public RedstoneControlData redstoneControlData = getDefaultRedstoneData();
 	public int exp;
 	public int targetExp;
@@ -42,22 +41,18 @@ public class ExperienceHolderBE extends BaseMachineBE implements AreaAffectingBE
 	public boolean collectExp;
 	public boolean ownerOnly;
 	public boolean showParticles = true;
-
-	private ExperienceHolderFluidTank xpTank;
 	private LazyOptional<IFluidHandler> lazyXpTank = LazyOptional.empty();
 
-	private ExperienceHolderFluidTank getXpTank() {
-		if (xpTank == null)
-			xpTank = new ExperienceHolderFluidTank(this);
-		return xpTank;
+	public ExperienceHolderBE(BlockPos pPos, BlockState pBlockState) {
+		super(Registration.ExperienceHolderBE.get(), pPos, pBlockState);
 	}
 
 	@Nonnull
 	@Override
 	public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> cap, @Nullable Direction side) {
-		if (cap == ForgeCapabilities.FLUID_HANDLER) {
+		if (cap == CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY) {
 			if (!lazyXpTank.isPresent())
-				lazyXpTank = LazyOptional.of(this::getXpTank);
+				lazyXpTank = LazyOptional.of(() -> new ExperienceHolderFluidTank(this));
 			return lazyXpTank.cast();
 		}
 		return super.getCapability(cap, side);
@@ -67,10 +62,6 @@ public class ExperienceHolderBE extends BaseMachineBE implements AreaAffectingBE
 	public void invalidateCaps() {
 		super.invalidateCaps();
 		lazyXpTank.invalidate();
-	}
-
-	public ExperienceHolderBE(BlockPos pPos, BlockState pBlockState) {
-		super(Registration.ExperienceHolderBE.get(), pPos, pBlockState);
 	}
 
 	@Override
@@ -88,10 +79,8 @@ public class ExperienceHolderBE extends BaseMachineBE implements AreaAffectingBE
 		return areaAffectingData;
 	}
 
-	public void changeSettings(Player player, int targetExp, boolean ownerOnly, boolean collectExp,
-			boolean showParticles) {
-		if (this.ownerOnly && !player.getUUID().equals(placedByUUID))
-			return;
+	public void changeSettings(Player player, int targetExp, boolean ownerOnly, boolean collectExp, boolean showParticles) {
+		if (this.ownerOnly && !player.getUUID().equals(placedByUUID)) return;
 		this.targetExp = targetExp;
 		this.ownerOnly = ownerOnly;
 		this.collectExp = collectExp;
@@ -101,10 +90,12 @@ public class ExperienceHolderBE extends BaseMachineBE implements AreaAffectingBE
 
 	public int addExp(int addition) {
 		if (this.exp > Integer.MAX_VALUE - addition) {
+			// Prevent overflow by capping the experience at Integer.MAX_VALUE
 			int remainingExp = addition - (Integer.MAX_VALUE - this.exp);
 			this.exp = Integer.MAX_VALUE;
-			return remainingExp;
+			return remainingExp; //Return Remaining
 		} else {
+			// Safe to add the experience
 			this.exp += addition;
 			return 0;
 		}
@@ -117,62 +108,70 @@ public class ExperienceHolderBE extends BaseMachineBE implements AreaAffectingBE
 	}
 
 	public void storeExp(Player player, int levelChange) {
-		if (ownerOnly && !player.getUUID().equals(placedByUUID))
-			return;
+		if (ownerOnly && !player.getUUID().equals(placedByUUID)) return;
 		if (levelChange == -1) {
+			// Move all experience from player
 			int totalExp = ExperienceUtils.getPlayerTotalExperience(player);
 			int remaining = addExp(totalExp);
-			player.giveExperiencePoints(-totalExp);
-			player.giveExperienceLevels(-1);
+			player.giveExperiencePoints(-totalExp); // Removes all levels
+			player.giveExperienceLevels(-1); //Handles dangling Floating Point Math (RAGE!) Consider it a tax on storing exp :)
 			if (remaining > 0)
 				player.giveExperiencePoints(remaining);
 		} else if (levelChange > 0) {
+			// Handle fractional progress first, if the player is in the middle of a level
 			int expInCurrentLevel = (int) (player.experienceProgress * player.getXpNeededForNextLevel());
+
+			// If the player has partial progress within the current level, remove that first
 			if (player.experienceProgress > 0.0f) {
 				int expRemoved = ExperienceUtils.removePoints(player, expInCurrentLevel);
 				int remaining = addExp(expRemoved);
-				levelChange--;
-				player.experienceProgress = 0f;
+				levelChange--;  // We've already removed part of a level
+				player.experienceProgress = 0f; //Clear the player's partial exp, to handle super low floating point values
 				if (remaining > 0)
 					player.giveExperiencePoints(remaining);
 			}
+
 			if (levelChange > 0) {
+				// Now remove the specified number of full levels
 				int expRemoved = ExperienceUtils.removeLevels(player, levelChange);
 				int remaining = addExp(expRemoved);
 				if (remaining > 0)
 					player.giveExperiencePoints(remaining);
 			}
 		}
+
 		markDirtyClient();
 	}
 
 	public void extractExp(Player player, int levelChange) {
-		if (exp == 0)
-			return;
-		if (ownerOnly && !player.getUUID().equals(placedByUUID))
-			return;
+		if (exp == 0) return;  // No experience in the block, exit early
+		if (ownerOnly && !player.getUUID().equals(placedByUUID)) return;
+
 		if (levelChange == -1) {
+			// Move all experience from block to player
 			int expToGive = exp;
 			player.giveExperiencePoints(expToGive);
-			this.exp = 0;
+			this.exp = 0;  // Remove all experience from the block
 		} else if (levelChange > 0) {
+			// Handle fractional progress first, if the player is in the middle of a level
 			if (roundUpToNextLevel(player))
 				levelChange--;
+
 			if (levelChange > 0 && this.exp > 0) {
-				int expForNextLevels = ExperienceUtils.getTotalExperienceForLevel(player.experienceLevel + levelChange)
-						- ExperienceUtils.getPlayerTotalExperience(player);
+				// Give full levels based on the remaining levels requested
+				int expForNextLevels = ExperienceUtils.getTotalExperienceForLevel(player.experienceLevel + levelChange) - ExperienceUtils.getPlayerTotalExperience(player);
 				int expToGive = Math.min(this.exp, expForNextLevels);
 				player.giveExperiencePoints(expToGive);
 				this.exp -= expToGive;
-				roundUpToNextLevel(player);
+				roundUpToNextLevel(player); //Thanks Floating point math!!
 			}
 		}
+
 		markDirtyClient();
 	}
 
 	public boolean roundUpToNextLevel(Player player) {
-		if (this.exp <= 0)
-			return false;
+		if (this.exp <= 0) return false; // No experience available to round up
 		int expInCurrentLevel = (int) (player.experienceProgress * player.getXpNeededForNextLevel());
 		if (expInCurrentLevel > 0) {
 			int expToGive = Math.min(exp, ExperienceUtils.getExpNeededForNextLevel(player));
@@ -195,63 +194,57 @@ public class ExperienceHolderBE extends BaseMachineBE implements AreaAffectingBE
 		handleExperience();
 	}
 
-	private void handleExperience() {
-		assert level != null;
-		if (isActiveRedstone() && canRun() && currentPlayer == null)
-			findTargetPlayer();
-		if (currentPlayer == null)
-			return;
-		int currentLevel = currentPlayer.experienceLevel;
-		if (currentLevel < targetExp && exp > 0) {
-			extractExp(currentPlayer, 1);
-			doParticles(new ItemStack(Items.EXPERIENCE_BOTTLE), currentPlayer.getEyePosition().subtract(0, 0.25f, 0),
-					false);
-			if (exp == 0)
-				currentPlayer = null;
-		} else if (currentLevel > targetExp
-				|| (currentLevel == targetExp && currentPlayer.experienceProgress > 0.01f)) {
-			storeExp(currentPlayer, 1);
-			doParticles(new ItemStack(Items.EXPERIENCE_BOTTLE), currentPlayer.getEyePosition().subtract(0, 0.25f, 0),
-					true);
-		} else {
-			currentPlayer = null;
-		}
-	}
-
 	public void doParticles(ItemStack itemStack, Vec3 sourcePos, boolean toBlock) {
-		if (!showParticles)
-			return;
-		if (!(level instanceof ServerLevel serverLevel))
-			return;
+		if (!showParticles) return;
 		Direction direction = getBlockState().getValue(BlockStateProperties.FACING);
 		BlockPos blockPos = getBlockPos();
-		Vec3 baubleSpot = new Vec3(blockPos.getX() + 0.5f - (0.3 * direction.getStepX()),
-				blockPos.getY() + 0.5f - (0.3 * direction.getStepY()),
-				blockPos.getZ() + 0.5f - (0.3 * direction.getStepZ()));
+		Vec3 baubleSpot = new Vec3(blockPos.getX() + 0.5f - (0.3 * direction.getStepX()), blockPos.getY() + 0.5f - (0.3 * direction.getStepY()), blockPos.getZ() + 0.5f - (0.3 * direction.getStepZ()));
 		double d0 = sourcePos.x();
 		double d1 = sourcePos.y();
 		double d2 = sourcePos.z();
 		if (toBlock) {
-			ItemFlowParticleData data = new ItemFlowParticleData(itemStack, baubleSpot.x, baubleSpot.y, baubleSpot.z,
-					1);
-			serverLevel.sendParticles(data, d0, d1, d2, 10, 0, 0, 0, 0);
+			ItemFlowParticleData data = new ItemFlowParticleData(itemStack, baubleSpot.x, baubleSpot.y, baubleSpot.z, 1);
+			((ServerLevel) level).sendParticles(data, d0, d1, d2, 10, 0, 0, 0, 0);
 		} else {
 			ItemFlowParticleData data = new ItemFlowParticleData(itemStack, d0, d1, d2, 1);
-			serverLevel.sendParticles(data, baubleSpot.x, baubleSpot.y, baubleSpot.z, 10, 0, 0, 0, 0);
+			((ServerLevel) level).sendParticles(data, baubleSpot.x, baubleSpot.y, baubleSpot.z, 10, 0, 0, 0, 0);
 		}
+	}
+
+	private void handleExperience() {
+		assert level != null;
+		if (isActiveRedstone() && canRun() && currentPlayer == null)
+			findTargetPlayer();
+
+		if (currentPlayer == null) return;
+
+		int currentLevel = currentPlayer.experienceLevel;
+		if (currentLevel < targetExp && exp > 0) {
+			extractExp(currentPlayer, 1);
+			doParticles(new ItemStack(Items.EXPERIENCE_BOTTLE), currentPlayer.getEyePosition().subtract(0, 0.25f, 0), false);
+			if (exp == 0)
+				currentPlayer = null; //Clear current target if we run out of exp
+		} else if (currentLevel > targetExp || (currentLevel == targetExp && currentPlayer.experienceProgress > 0.01f)) {
+			storeExp(currentPlayer, 1);
+			doParticles(new ItemStack(Items.EXPERIENCE_BOTTLE), currentPlayer.getEyePosition().subtract(0, 0.25f, 0), true);
+		} else
+			currentPlayer = null;
 	}
 
 	private void collectExp() {
 		if (operationTicks != 0)
-			return;
+			return; //Run at the tick speed of the machine, but ignore redstone signal (For now at least)
 		assert level != null;
 		AABB searchArea = getAABB(getBlockPos());
-		List<ExperienceOrb> entityList = level.getEntitiesOfClass(ExperienceOrb.class, searchArea);
-		if (entityList.isEmpty())
-			return;
+
+		List<ExperienceOrb> entityList = level.getEntitiesOfClass(ExperienceOrb.class, searchArea, entity -> true);
+
+		if (entityList.isEmpty()) return;
+
 		for (ExperienceOrb experienceOrb : entityList) {
 			int orbValue = experienceOrb.getValue();
 			addExp(orbValue);
+			doParticles(new ItemStack(Items.EXPERIENCE_BOTTLE), experienceOrb.position(), true);
 			experienceOrb.discard();
 		}
 		markDirtyClient();
@@ -260,9 +253,11 @@ public class ExperienceHolderBE extends BaseMachineBE implements AreaAffectingBE
 	private void findTargetPlayer() {
 		assert level != null;
 		AABB searchArea = getAABB(getBlockPos());
-		List<Player> entityList = level.getEntitiesOfClass(Player.class, searchArea);
-		if (entityList.isEmpty())
-			return;
+
+		List<Player> entityList = level.getEntitiesOfClass(Player.class, searchArea, entity -> true);
+
+		if (entityList.isEmpty()) return;
+
 		for (Player player : entityList) {
 			if (ownerOnly && !player.getUUID().equals(placedByUUID))
 				continue;
@@ -294,10 +289,8 @@ public class ExperienceHolderBE extends BaseMachineBE implements AreaAffectingBE
 	}
 
 	@Override
-	public AreaAffectingData getDefaultAreaData() {
-		if (level != null)
-			return new AreaAffectingData(getBlockState().getValue(BlockStateProperties.FACING).getOpposite());
-		return new AreaAffectingData();
+	public AreaAffectingData getDefaultAreaData(AreaAffectingBE areaAffectingBE) {
+		return areaAffectingBE.getDefaultAreaData(getBlockState().getValue(BlockStateProperties.FACING).getOpposite());
 	}
 
 	@Override

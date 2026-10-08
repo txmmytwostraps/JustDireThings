@@ -28,7 +28,7 @@ public class DropperT1BE extends BaseMachineBE implements RedstoneControlledBE {
 
 	public DropperT1BE(BlockEntityType<?> pType, BlockPos pPos, BlockState pBlockState) {
 		super(pType, pPos, pBlockState);
-		MACHINE_SLOTS = 1; // Slot for dropping
+		MACHINE_SLOTS = 1; //Slot for dropping
 	}
 
 	public DropperT1BE(BlockPos pPos, BlockState pBlockState) {
@@ -85,29 +85,42 @@ public class DropperT1BE extends BaseMachineBE implements RedstoneControlledBE {
 		return true;
 	}
 
+	@Override
+	public boolean isActiveRedstone() {
+		if (getRedstoneControlData().redstoneMode.equals(MiscHelpers.RedstoneMode.IGNORED))
+			return true;
+		if (getRedstoneControlData().redstoneMode.equals(MiscHelpers.RedstoneMode.LOW))
+			return !getRedstoneControlData().receivingRedstone;
+		if (getRedstoneControlData().redstoneMode.equals(MiscHelpers.RedstoneMode.HIGH))
+			return getRedstoneControlData().receivingRedstone;
+		if (getRedstoneControlData().redstoneMode.equals(MiscHelpers.RedstoneMode.PULSE) && getRedstoneControlData().pulsed) {
+			getRedstoneControlData().pulsed = false;
+			if (slotsToDropList.isEmpty())
+				operationTicks = 0; //Because of how this machine works, we force Operation Ticks to 0 on pulse
+			return true;
+		}
+		return false;
+	}
+
 	public void doDrop() {
 		if (clearTrackerIfNeeded()) {
 			slotsToDropList.clear();
 			return;
 		}
-		if (!canDrop())
-			return;
+		if (!canDrop()) return;
 		if (isActiveRedstone() && canRun() && slotsToDropList.isEmpty())
 			populateDropSlots();
 		if (slotsToDropList.isEmpty())
 			return;
-		if (operationTicks == 0) { // Use this check, because we want to ensure we drop once every <Ticks>
+		if (operationTicks == 0) { //Use this check, because we want to ensure we drop once every <Ticks>
 			ItemStack dropStack = getMachineHandler().getStackInSlot(slotsToDropList.remove(0));
-			if (dropStack.isEmpty()) { // If this occurs, something changed, so clear the remaining list of things to
-										// drop
+			if (dropStack.isEmpty()) { //If this occurs, something changed, so clear the remaining list of things to drop
 				slotsToDropList.clear();
 				return;
 			}
 			BlockPos dropPos = getDropPos();
-			if (dropPos == null)
-				return; // Happens if the position is invalid - like not air...
-			spawnItem(level, dropStack.split(dropCount), 0.3, Direction.values()[this.direction],
-					new Vec3(dropPos.getX() + 0.5, dropPos.getY() + 0.5, dropPos.getZ() + 0.5));
+			if (dropPos == null) return; //Happens if the position is invalid - like not air...
+			spawnItem(level, dropStack.split(dropCount), 0.3, Direction.values()[this.direction], new Vec3(dropPos.getX() + 0.5, dropPos.getY() + 0.5, dropPos.getZ() + 0.5));
 		}
 	}
 
@@ -117,15 +130,16 @@ public class DropperT1BE extends BaseMachineBE implements RedstoneControlledBE {
 		double d2 = position.z();
 
 		ItemEntity itementity = new ItemEntity(level, d0, d1, d2, stack);
-		itementity.setDeltaMovement((double) direction.getStepX() * speed, (double) direction.getStepY() * speed,
-				(double) direction.getStepZ() * speed);
+		itementity.setDeltaMovement(
+				(double) direction.getStepX() * speed,
+				(double) direction.getStepY() * speed,
+				(double) direction.getStepZ() * speed
+		);
 		itementity.setPickUpDelay(pickupDelay);
 		level.addFreshEntity(itementity);
 	}
 
 	public boolean isBlockPosValid(BlockPos blockPos) {
-		if (!level.getBlockState(blockPos).isAir())
-			return false;
 		return true;
 	}
 

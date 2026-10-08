@@ -28,12 +28,12 @@ public class BlockPlacerT1Container extends BaseMachineContainer {
 
 	@Override
 	public boolean stillValid(Player playerIn) {
-		return stillValid(ContainerLevelAccess.create(player.level(), pos), player, Registration.BlockPlacerT1.get());
+		return stillValid(ContainerLevelAccess.create(player.level, pos), player, Registration.BlockPlacerT1.get());
 	}
 
 	@Override
 	public ItemStack quickMoveStack(Player playerIn, int index) {
-		return super.quickMoveStack(playerIn, index); // Only does filter slots!
+		return super.quickMoveStack(playerIn, index);
 	}
 
 	@Override

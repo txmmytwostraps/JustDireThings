@@ -22,7 +22,7 @@ public class ItemCollectorContainer extends BaseMachineContainer {
 
 	@Override
 	public boolean stillValid(Player playerIn) {
-		return stillValid(ContainerLevelAccess.create(player.level(), pos), player, Registration.ItemCollector.get());
+		return stillValid(ContainerLevelAccess.create(player.level, pos), player, Registration.ItemCollector.get());
 	}
 
 	@Override

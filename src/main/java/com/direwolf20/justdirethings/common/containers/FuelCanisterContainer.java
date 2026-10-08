@@ -71,7 +71,7 @@ public class FuelCanisterContainer extends BaseContainer {
 
 	@Override
 	public void removed(Player playerIn) {
-		Level world = playerIn.level();
+		Level world = playerIn.level;
 		if (!world.isClientSide) {
 			ItemStack containerItem = handler.getStackInSlot(0);
 			if (!containerItem.isEmpty())

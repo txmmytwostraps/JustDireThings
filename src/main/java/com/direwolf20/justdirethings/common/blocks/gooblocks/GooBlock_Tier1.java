@@ -20,8 +20,7 @@ public class GooBlock_Tier1 extends GooBlock_Base implements EntityBlock {
 
 	@Nullable
 	@Override
-	public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
-			BlockEntityType<T> type) {
+	public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
 		if (level.isClientSide()) {
 			return (lvl, pos, blockState, t) -> {
 				if (t instanceof GooBlockBE_Tier1 tile) {

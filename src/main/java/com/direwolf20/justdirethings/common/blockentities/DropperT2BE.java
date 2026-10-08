@@ -12,6 +12,7 @@ import com.direwolf20.justdirethings.util.interfacehelpers.AreaAffectingData;
 import com.direwolf20.justdirethings.util.interfacehelpers.FilterData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -24,7 +25,7 @@ import java.util.List;
 
 public class DropperT2BE extends DropperT1BE implements AreaAffectingBE, PoweredMachineBE, FilterableBE {
 	public FilterData filterData = new FilterData();
-	public AreaAffectingData areaAffectingData = new AreaAffectingData();
+	public AreaAffectingData areaAffectingData = new AreaAffectingData(getBlockState().getValue(BlockStateProperties.FACING));
 	public final PoweredMachineContainerData poweredMachineData;
 	public List<ItemStack> filteredList;
 	private final MachineEnergyStorage energyStorage;
@@ -32,8 +33,7 @@ public class DropperT2BE extends DropperT1BE implements AreaAffectingBE, Powered
 
 	public DropperT2BE(BlockEntityType<?> pType, BlockPos pPos, BlockState pBlockState) {
 		super(pType, pPos, pBlockState);
-		areaAffectingData = new AreaAffectingData(pBlockState.getValue(BlockStateProperties.FACING));
-		MACHINE_SLOTS = 9; // Slot for dropping
+		MACHINE_SLOTS = 9; //Slot for dropping
 		poweredMachineData = new PoweredMachineContainerData(this);
 		energyStorage = new MachineEnergyStorage(getMaxEnergy());
 		filterHandler = new FilterBasicHandler(9);
@@ -55,7 +55,7 @@ public class DropperT2BE extends DropperT1BE implements AreaAffectingBE, Powered
 
 	@Override
 	public int getStandardEnergyCost() {
-		return 25; // Todo Config?
+		return 25;
 	}
 
 	@Override
@@ -78,8 +78,7 @@ public class DropperT2BE extends DropperT1BE implements AreaAffectingBE, Powered
 			filteredList = new ArrayList<>();
 			for (int slot = 0; slot < getFilterHandler().getSlots(); slot++) {
 				ItemStack itemStack = getFilterHandler().getStackInSlot(slot);
-				if (!itemStack.isEmpty())
-					filteredList.add(itemStack);
+				if (!itemStack.isEmpty()) filteredList.add(itemStack);
 			}
 		}
 		return filteredList;
@@ -91,16 +90,14 @@ public class DropperT2BE extends DropperT1BE implements AreaAffectingBE, Powered
 			boolean foundThisOne = false;
 			for (int machineSlot = 0; machineSlot < getMachineHandler().getSlots(); machineSlot++) {
 				ItemStack itemStack = getMachineHandler().getStackInSlot(machineSlot);
-				if (itemStack.isEmpty())
-					continue;
+				if (itemStack.isEmpty()) continue;
 				if (filterKey.equals(new ItemStackKey(itemStack, getFilterData().compareNBT))) {
 					foundThisOne = true;
 					slotsToDropList.add(machineSlot);
 					break;
 				}
 			}
-			if (!foundThisOne) { // If we didn't find this filtered item in the machine, clear the list and
-									// leave!
+			if (!foundThisOne) { //If we didn't find this filtered item in the machine, clear the list and leave!
 				slotsToDropList.clear();
 				return;
 			}
@@ -117,12 +114,11 @@ public class DropperT2BE extends DropperT1BE implements AreaAffectingBE, Powered
 
 	public boolean canDrop() {
 		int cost = getStandardEnergyCost();
-		return hasEnoughPower(cost); // Really extract because if we pass this we'll be scanning!
+		return hasEnoughPower(cost); //Really extract because if we pass this we'll be scanning!
 	}
 
 	public BlockPos getDropPos() {
-		BlockPos blockPos = getBlockPos().offset(getAreaAffectingData().xOffset, getAreaAffectingData().yOffset,
-				getAreaAffectingData().zOffset);
+		BlockPos blockPos = getBlockPos().offset(getAreaAffectingData().xOffset, getAreaAffectingData().yOffset, getAreaAffectingData().zOffset);
 		if (isBlockPosValid(blockPos))
 			return blockPos;
 		return null;
@@ -137,6 +133,19 @@ public class DropperT2BE extends DropperT1BE implements AreaAffectingBE, Powered
 	@Override
 	public void setChanged() {
 		super.setChanged();
-		this.filteredList = null; // Null it out, so it regenerates if needed
+		this.filteredList = null; //Null it out, so it regenerates if needed
+	}
+
+	@Override
+	public void saveAdditional(CompoundTag tag) {
+		super.saveAdditional(tag);
+		tag.putInt("energy", energyStorage.getEnergyStored());
+	}
+
+	@Override
+	public void load(CompoundTag tag) {
+		if (tag.contains("energy"))
+			energyStorage.setEnergy(tag.getInt("energy"));
+		super.load(tag);
 	}
 }

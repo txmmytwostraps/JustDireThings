@@ -22,7 +22,7 @@ public class ParadoxMachineContainer extends BaseMachineContainer {
 
 	@Override
 	public boolean stillValid(Player playerIn) {
-		return stillValid(ContainerLevelAccess.create(player.level(), pos), player, Registration.ParadoxMachine.get());
+		return stillValid(ContainerLevelAccess.create(player.level, pos), player, Registration.ParadoxMachine.get());
 	}
 
 	@Override

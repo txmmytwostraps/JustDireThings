@@ -11,12 +11,12 @@ import com.direwolf20.justdirethings.util.UsefulFakePlayer;
 import com.direwolf20.justdirethings.util.interfacehelpers.AreaAffectingData;
 import com.direwolf20.justdirethings.util.interfacehelpers.FilterData;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.SpawnEggItem;
+import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
@@ -30,14 +30,13 @@ import java.util.stream.Collectors;
 
 public class ClickerT2BE extends ClickerT1BE implements PoweredMachineBE, AreaAffectingBE, FilterableBE {
 	public FilterData filterData = new FilterData();
-	public AreaAffectingData areaAffectingData = new AreaAffectingData();
+	public AreaAffectingData areaAffectingData = new AreaAffectingData(getBlockState().getValue(BlockStateProperties.FACING));
 	public final PoweredMachineContainerData poweredMachineData;
 	private final MachineEnergyStorage energyStorage;
 	private final FilterBasicHandler filterHandler;
 
 	public ClickerT2BE(BlockPos pPos, BlockState pBlockState) {
 		super(Registration.ClickerT2BE.get(), pPos, pBlockState);
-		areaAffectingData = new AreaAffectingData(pBlockState.getValue(BlockStateProperties.FACING));
 		poweredMachineData = new PoweredMachineContainerData(this);
 		energyStorage = new MachineEnergyStorage(getMaxEnergy());
 		filterHandler = new FilterBasicHandler(9);
@@ -55,7 +54,7 @@ public class ClickerT2BE extends ClickerT1BE implements PoweredMachineBE, AreaAf
 
 	@Override
 	public int getStandardEnergyCost() {
-		return 250; // Todo Config?
+		return 250;
 	}
 
 	@Override
@@ -69,27 +68,14 @@ public class ClickerT2BE extends ClickerT1BE implements PoweredMachineBE, AreaAf
 	}
 
 	@Override
-	public void saveAdditional(net.minecraft.nbt.CompoundTag tag) {
-		super.saveAdditional(tag);
-		tag.putInt("energy", energyStorage.getEnergyStored());
-	}
-
-	@Override
-	public void load(net.minecraft.nbt.CompoundTag tag) {
-		if (tag.contains("energy"))
-			energyStorage.setEnergy(tag.getInt("energy"));
-		super.load(tag);
-	}
-
-	@Override
 	public FilterData getFilterData() {
 		return filterData;
 	}
 
 	@Override
 	public void tickServer() {
-		chargeItemStack(getClickStack());
 		super.tickServer();
+		chargeItemStack(getClickStack());
 	}
 
 	@Override
@@ -116,25 +102,22 @@ public class ClickerT2BE extends ClickerT1BE implements PoweredMachineBE, AreaAf
 	@Override
 	public boolean isBlockPosValid(FakePlayer fakePlayer, BlockPos blockPos) {
 		if (!super.isBlockPosValid(fakePlayer, blockPos))
-			return false; // Do the same checks as normal, then check the filters
-		ItemStack blockItemStack = level.getBlockState(blockPos).getCloneItemStack(
-				new BlockHitResult(Vec3.ZERO, getDirectionValue(), blockPos, false), level, blockPos, fakePlayer);
+			return false; //Do the same checks as normal, then check the filters
+		BlockState blockState = level.getBlockState(blockPos);
+		if ((blockState.getBlock() instanceof LiquidBlock liquidBlock))
+			return isStackValidFilter(liquidBlock);
+		ItemStack blockItemStack = blockState.getCloneItemStack(new BlockHitResult(Vec3.ZERO, getDirectionValue(), blockPos, false), level, blockPos, fakePlayer);
 		return isStackValidFilter(blockItemStack);
 	}
 
 	@Override
 	public List<BlockPos> findSpotsToClick(FakePlayer fakePlayer) {
-		if (isEmptyScanOnCooldown())
-			return List.of();
 		AABB area = getAABB(getBlockPos());
-		List<BlockPos> result = BlockPos
-				.betweenClosedStream((int) area.minX, (int) area.minY, (int) area.minZ, (int) area.maxX - 1,
-						(int) area.maxY - 1, (int) area.maxZ - 1)
-				.filter(blockPos -> isBlockPosValid(fakePlayer, blockPos)).map(BlockPos::immutable)
-				.sorted(Comparator.comparingDouble(x -> x.distSqr(getBlockPos()))).collect(Collectors.toList());
-		if (result.isEmpty())
-			setEmptyScanCooldown(20);
-		return result;
+		return BlockPos.betweenClosedStream((int) area.minX, (int) area.minY, (int) area.minZ, (int) area.maxX - 1, (int) area.maxY - 1, (int) area.maxZ - 1)
+				.filter(blockPos -> isBlockPosValid(fakePlayer, blockPos))
+				.map(BlockPos::immutable)
+				.sorted(Comparator.comparingDouble(x -> x.distSqr(getBlockPos())))
+				.collect(Collectors.toList());
 	}
 
 	@Override
@@ -145,13 +128,20 @@ public class ClickerT2BE extends ClickerT1BE implements PoweredMachineBE, AreaAf
 	@Override
 	public boolean isValidEntity(Entity entity) {
 		if (!super.isValidEntity(entity))
-			return false; // Do the same checks as normal, then check the filters
-		Item eggItem = SpawnEggItem.byId(entity.getType());
-		ItemStack eggItemStack;
-		if (eggItem == null)
-			eggItemStack = ItemStack.EMPTY;
-		else
-			eggItemStack = new ItemStack(eggItem);
-		return isStackValidFilter(eggItemStack);
+			return false; //Do the same checks as normal, then check the filters
+		return isEntityValidFilter(entity, this.level);
+	}
+
+	@Override
+	public void saveAdditional(CompoundTag tag) {
+		super.saveAdditional(tag);
+		tag.putInt("energy", energyStorage.getEnergyStored());
+	}
+
+	@Override
+	public void load(CompoundTag tag) {
+		if (tag.contains("energy"))
+			energyStorage.setEnergy(tag.getInt("energy"));
+		super.load(tag);
 	}
 }

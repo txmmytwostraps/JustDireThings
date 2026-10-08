@@ -28,7 +28,7 @@ public class ClickerT1Container extends BaseMachineContainer {
 
 	@Override
 	public boolean stillValid(Player playerIn) {
-		return stillValid(ContainerLevelAccess.create(player.level(), pos), player, Registration.ClickerT1.get());
+		return stillValid(ContainerLevelAccess.create(player.level, pos), player, Registration.ClickerT1.get());
 	}
 
 	@Override

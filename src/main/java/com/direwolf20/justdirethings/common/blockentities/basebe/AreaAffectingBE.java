@@ -2,6 +2,7 @@ package com.direwolf20.justdirethings.common.blockentities.basebe;
 
 import com.direwolf20.justdirethings.util.interfacehelpers.AreaAffectingData;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.AABB;
@@ -14,27 +15,6 @@ public interface AreaAffectingBE {
 
 	AreaAffectingData getAreaAffectingData();
 
-	/**
-	 * Ticks down and reports whether the last full-area scan is still on cooldown.
-	 * Call before doing an expensive rescan; if this returns true, skip the scan
-	 * this tick.
-	 */
-	default boolean isEmptyScanOnCooldown() {
-		if (getAreaAffectingData().emptyScanCooldown > 0) {
-			getAreaAffectingData().emptyScanCooldown--;
-			return true;
-		}
-		return false;
-	}
-
-	/**
-	 * Call after a full-area scan comes back with nothing to do, so the next scan
-	 * is delayed instead of re-running every tick while idle.
-	 */
-	default void setEmptyScanCooldown(int ticks) {
-		getAreaAffectingData().emptyScanCooldown = ticks;
-	}
-
 	default AABB getAABBOffsetOnly(BlockPos relativePos) {
 		double xOffset = getAreaAffectingData().xOffset;
 		double yOffset = getAreaAffectingData().yOffset;
@@ -45,13 +25,23 @@ public interface AreaAffectingBE {
 			yOffset = yOffset + 0.75;
 		if (getAreaAffectingData().zRadius != Math.floor(getAreaAffectingData().zRadius))
 			zOffset = zOffset + 0.75;
-		return new AABB(relativePos.getX() + xOffset, relativePos.getY() + yOffset, relativePos.getZ() + zOffset,
-				relativePos.getX() + xOffset
-						+ (getAreaAffectingData().xRadius != Math.floor(getAreaAffectingData().xRadius) ? 0.5 : 1),
-				relativePos.getY() + yOffset
-						+ (getAreaAffectingData().yRadius != Math.floor(getAreaAffectingData().yRadius) ? 0.5 : 1),
-				relativePos.getZ() + zOffset
-						+ (getAreaAffectingData().zRadius != Math.floor(getAreaAffectingData().zRadius) ? 0.5 : 1));
+		return new AABB(relativePos.getX() + xOffset, relativePos.getY() + yOffset, relativePos.getZ() + zOffset, relativePos.getX() + xOffset + (getAreaAffectingData().xRadius != Math.floor(getAreaAffectingData().xRadius) ? 0.5 : 1), relativePos.getY() + yOffset + (getAreaAffectingData().yRadius != Math.floor(getAreaAffectingData().yRadius) ? 0.5 : 1), relativePos.getZ() + zOffset + (getAreaAffectingData().zRadius != Math.floor(getAreaAffectingData().zRadius) ? 0.5 : 1));
+	}
+
+	default AreaAffectingData getDefaultAreaData(Direction facing) {
+		return new AreaAffectingData(facing);
+	}
+
+	default void handleRotate(Direction oldDirection, Direction newDirection) {
+		if (oldDirection == newDirection)
+			return;
+		AreaAffectingData areaAffectingData = getAreaAffectingData();
+		AreaAffectingData defaultData = getDefaultAreaData(oldDirection);
+		defaultData.renderArea = areaAffectingData.renderArea; //Still rotate if the renderArea's don't match
+		if (!areaAffectingData.equals(defaultData))
+			return;
+		AreaAffectingData newAreaData = new AreaAffectingData(newDirection);
+		setAreaSettings(newAreaData.xRadius, newAreaData.yRadius, newAreaData.zRadius, newAreaData.xOffset, newAreaData.yOffset, newAreaData.zOffset, areaAffectingData.renderArea);
 	}
 
 	default AABB getAABB(BlockPos relativePos) {
@@ -65,10 +55,7 @@ public interface AreaAffectingBE {
 				yOffset = yOffset + 0.5;
 			if (getAreaAffectingData().zRadius != Math.floor(getAreaAffectingData().zRadius))
 				zOffset = zOffset + 0.5;
-			getAreaAffectingData().area = new AABB(relativePos.getX() + xOffset, relativePos.getY() + yOffset,
-					relativePos.getZ() + zOffset, relativePos.getX() + xOffset + 1, relativePos.getY() + yOffset + 1,
-					relativePos.getZ() + zOffset + 1).inflate(getAreaAffectingData().xRadius,
-							getAreaAffectingData().yRadius, getAreaAffectingData().zRadius);
+			getAreaAffectingData().area = new AABB(relativePos.getX() + xOffset, relativePos.getY() + yOffset, relativePos.getZ() + zOffset, relativePos.getX() + xOffset + 1, relativePos.getY() + yOffset + 1, relativePos.getZ() + zOffset + 1).inflate(getAreaAffectingData().xRadius, getAreaAffectingData().yRadius, getAreaAffectingData().zRadius);
 		}
 		return getAreaAffectingData().area;
 	}
@@ -96,44 +83,10 @@ public interface AreaAffectingBE {
 		tag.putBoolean("renderArea", getAreaAffectingData().renderArea);
 	}
 
-	default void loadAreaSettings(CompoundTag tag) {
-		if (tag.contains("xRadius")) { // TODO Remove in 1.21
-			getAreaAffectingData().xRadius = tag.getInt("xRadius");
-			getAreaAffectingData().yRadius = tag.getInt("yRadius");
-			getAreaAffectingData().zRadius = tag.getInt("zRadius");
-			getAreaAffectingData().xOffset = tag.getInt("xOffset");
-			getAreaAffectingData().yOffset = tag.getInt("yOffset");
-			getAreaAffectingData().zOffset = tag.getInt("zOffset");
-			getAreaAffectingData().renderArea = tag.getBoolean("renderArea");
-		}
-		if (tag.contains("xRadiusDouble")) { // Assume all the others are there too...
-			getAreaAffectingData().xRadius = tag.getDouble("xRadiusDouble");
-			getAreaAffectingData().yRadius = tag.getDouble("yRadiusDouble");
-			getAreaAffectingData().zRadius = tag.getDouble("zRadiusDouble");
-			getAreaAffectingData().xOffset = tag.getInt("xOffset");
-			getAreaAffectingData().yOffset = tag.getInt("yOffset");
-			getAreaAffectingData().zOffset = tag.getInt("zOffset");
-			getAreaAffectingData().renderArea = tag.getBoolean("renderArea");
-		}
-	}
-
 	default void saveAreaOnly(CompoundTag tag) {
 		tag.putDouble("xRadiusDouble", getAreaAffectingData().xRadius);
 		tag.putDouble("yRadiusDouble", getAreaAffectingData().yRadius);
 		tag.putDouble("zRadiusDouble", getAreaAffectingData().zRadius);
-		tag.putBoolean("renderArea", getAreaAffectingData().renderArea);
-	}
-
-	default void loadAreaOnly(CompoundTag tag) {
-		if (tag.contains("xRadiusDouble")) {
-			getAreaAffectingData().xRadius = tag.getDouble("xRadiusDouble");
-			getAreaAffectingData().yRadius = tag.getDouble("yRadiusDouble");
-			getAreaAffectingData().zRadius = tag.getDouble("zRadiusDouble");
-			getAreaAffectingData().renderArea = tag.getBoolean("renderArea");
-			getAreaAffectingData().area = null;
-			if (getBlockEntity() instanceof BaseMachineBE baseMachineBE)
-				baseMachineBE.markDirtyClient();
-		}
 	}
 
 	default void saveOffsetOnly(CompoundTag tag) {
@@ -142,14 +95,31 @@ public interface AreaAffectingBE {
 		tag.putInt("zOffset", getAreaAffectingData().zOffset);
 	}
 
-	default void loadOffsetOnly(CompoundTag tag) {
-		if (tag.contains("xOffset")) {
+	default void loadAreaSettings(CompoundTag tag) {
+		if (tag.contains("xRadiusDouble")) { //Assume all the others are there too...
+			getAreaAffectingData().xRadius = tag.getDouble("xRadiusDouble");
+			getAreaAffectingData().yRadius = tag.getDouble("yRadiusDouble");
+			getAreaAffectingData().zRadius = tag.getDouble("zRadiusDouble");
 			getAreaAffectingData().xOffset = tag.getInt("xOffset");
 			getAreaAffectingData().yOffset = tag.getInt("yOffset");
 			getAreaAffectingData().zOffset = tag.getInt("zOffset");
-			getAreaAffectingData().area = null;
-			if (getBlockEntity() instanceof BaseMachineBE baseMachineBE)
-				baseMachineBE.markDirtyClient();
+			getAreaAffectingData().renderArea = tag.getBoolean("renderArea");
+		}
+	}
+
+	default void loadAreaOnly(CompoundTag tag) {
+		if (tag.contains("xRadiusDouble")) { //Assume all the others are there too...
+			getAreaAffectingData().xRadius = tag.getDouble("xRadiusDouble");
+			getAreaAffectingData().yRadius = tag.getDouble("yRadiusDouble");
+			getAreaAffectingData().zRadius = tag.getDouble("zRadiusDouble");
+		}
+	}
+
+	default void loadOffsetOnly(CompoundTag tag) {
+		if (tag.contains("xOffset")) { //Assume all the others are there too...
+			getAreaAffectingData().xOffset = tag.getInt("xOffset");
+			getAreaAffectingData().yOffset = tag.getInt("yOffset");
+			getAreaAffectingData().zOffset = tag.getInt("zOffset");
 		}
 	}
 }

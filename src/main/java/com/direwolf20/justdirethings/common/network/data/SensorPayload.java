@@ -1,22 +1,21 @@
 package com.direwolf20.justdirethings.common.network.data;
 
-import com.direwolf20.justdirethings.JustDireThings;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
 
-@SuppressWarnings("removal")
-public record SensorPayload(int senseTarget, boolean strongSignal, int senseCount, int equality) {
-	public static final ResourceLocation ID = new ResourceLocation(JustDireThings.MODID, "sensor_packet");
-
+public record SensorPayload(
+		int senseTarget,
+		boolean strongSignal,
+		int senseCount,
+		int equality
+) {
 	public SensorPayload(final FriendlyByteBuf buffer) {
-		this(buffer.readInt(), buffer.readBoolean(), buffer.readInt(), buffer.readInt());
+		this(buffer.readVarInt(), buffer.readBoolean(), buffer.readVarInt(), buffer.readVarInt());
 	}
 
 	public void write(FriendlyByteBuf buffer) {
-		buffer.writeInt(senseTarget);
+		buffer.writeVarInt(senseTarget);
 		buffer.writeBoolean(strongSignal);
-		buffer.writeInt(senseCount);
-		buffer.writeInt(equality);
+		buffer.writeVarInt(senseCount);
+		buffer.writeVarInt(equality);
 	}
-
 }

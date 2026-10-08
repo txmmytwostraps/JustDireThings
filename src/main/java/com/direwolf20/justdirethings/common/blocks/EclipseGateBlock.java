@@ -11,7 +11,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.PushReaction;
+import net.minecraft.world.level.material.Material;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -20,16 +20,18 @@ import javax.annotation.Nullable;
 
 public class EclipseGateBlock extends Block implements EntityBlock {
 	public EclipseGateBlock() {
-		super(Properties.of().strength(20f).noOcclusion().noCollission().forceSolidOn() // This appears to prevent water
-																						// from flowing into my block...
-				.isSuffocating(BaseMachineBlock::never).isViewBlocking(BaseMachineBlock::never)
-				.pushReaction(PushReaction.BLOCK));
+		//Barrier keeps water out and pistons off
+		super(Properties.of(Material.BARRIER)
+				.strength(20f, 3600000.0F)
+				.noOcclusion()
+				.noCollission()
+				.isSuffocating(BaseMachineBlock::never)
+				.isViewBlocking(BaseMachineBlock::never));
 	}
 
 	@Nullable
 	@Override
-	public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
-			BlockEntityType<T> type) {
+	public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
 		if (level.isClientSide()) {
 			return (lvl, pos, blockState, t) -> {
 				if (t instanceof EclipseGateBE tile) {
@@ -50,7 +52,8 @@ public class EclipseGateBlock extends Block implements EntityBlock {
 		return new EclipseGateBE(pos, state);
 	}
 
-	// These 2 methods after the shadows under the block
+
+	//These 2 methods after the shadows under the block
 	@Override
 	public boolean propagatesSkylightDown(BlockState p_48740_, BlockGetter p_48741_, BlockPos p_48742_) {
 		return true;
@@ -62,8 +65,7 @@ public class EclipseGateBlock extends Block implements EntityBlock {
 	}
 
 	@Override
-	public VoxelShape getCollisionShape(BlockState pState, BlockGetter pLevel, BlockPos pPos,
-			CollisionContext pContext) {
+	public VoxelShape getCollisionShape(BlockState pState, BlockGetter pLevel, BlockPos pPos, CollisionContext pContext) {
 		return Shapes.empty(); // No collision shape
 	}
 

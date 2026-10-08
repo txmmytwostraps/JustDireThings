@@ -14,6 +14,7 @@ import com.direwolf20.justdirethings.util.interfacehelpers.AreaAffectingData;
 import com.direwolf20.justdirethings.util.interfacehelpers.FilterData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
@@ -24,20 +25,19 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.FakePlayer;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class BlockBreakerT2BE extends BlockBreakerT1BE implements PoweredMachineBE, AreaAffectingBE, FilterableBE {
 	public FilterData filterData = new FilterData(false, false, 0);
-	public AreaAffectingData areaAffectingData = new AreaAffectingData();
+	public AreaAffectingData areaAffectingData = new AreaAffectingData(getBlockState().getValue(BlockStateProperties.FACING));
 	public final PoweredMachineContainerData poweredMachineData;
 	private final MachineEnergyStorage energyStorage;
 	private final FilterBasicHandler filterHandler;
 
 	public BlockBreakerT2BE(BlockPos pPos, BlockState pBlockState) {
 		super(Registration.BlockBreakerT2BE.get(), pPos, pBlockState);
-		areaAffectingData = new AreaAffectingData(pBlockState.getValue(BlockStateProperties.FACING));
 		poweredMachineData = new PoweredMachineContainerData(this);
 		energyStorage = new MachineEnergyStorage(getMaxEnergy());
 		filterHandler = new FilterBasicHandler(9);
@@ -55,7 +55,7 @@ public class BlockBreakerT2BE extends BlockBreakerT1BE implements PoweredMachine
 
 	@Override
 	public int getStandardEnergyCost() {
-		return 500; // Todo Config?
+		return 500;
 	}
 
 	@Override
@@ -66,19 +66,6 @@ public class BlockBreakerT2BE extends BlockBreakerT1BE implements PoweredMachine
 	@Override
 	public FilterBasicHandler getFilterHandler() {
 		return filterHandler;
-	}
-
-	@Override
-	public void saveAdditional(net.minecraft.nbt.CompoundTag tag) {
-		super.saveAdditional(tag);
-		tag.putInt("energy", energyStorage.getEnergyStored());
-	}
-
-	@Override
-	public void load(net.minecraft.nbt.CompoundTag tag) {
-		if (tag.contains("energy"))
-			energyStorage.setEnergy(tag.getInt("energy"));
-		super.load(tag);
 	}
 
 	@Override
@@ -93,8 +80,8 @@ public class BlockBreakerT2BE extends BlockBreakerT1BE implements PoweredMachine
 
 	@Override
 	public void tickServer() {
-		chargeItemStack(getMachineHandler().getStackInSlot(0));
 		super.tickServer();
+		chargeItemStack(getMachineHandler().getStackInSlot(0));
 	}
 
 	@Override
@@ -115,41 +102,58 @@ public class BlockBreakerT2BE extends BlockBreakerT1BE implements PoweredMachine
 
 	@Override
 	public List<BlockPos> findBlocksToMine(FakePlayer fakePlayer) {
-		if (isEmptyScanOnCooldown())
-			return List.of();
 		AABB area = getAABB(getBlockPos());
-		List<BlockPos> result = BlockPos
-				.betweenClosedStream((int) area.minX, (int) area.minY, (int) area.minZ, (int) area.maxX - 1,
-						(int) area.maxY - 1, (int) area.maxZ - 1)
-				.filter(blockPos -> isBlockValid(fakePlayer, blockPos)).map(BlockPos::immutable)
-				.sorted(Comparator.comparingDouble(x -> x.distSqr(getBlockPos()))).collect(Collectors.toList());
-		if (result.isEmpty())
-			setEmptyScanCooldown(20);
-		return result;
+		List<BlockPos> blockPositions = new ArrayList<>();
+		BlockPos originPos = getBlockPos();
+
+		// Use BlockPos.betweenClosed() to get a stream of positions within the area
+		Iterable<BlockPos> positions = BlockPos.betweenClosed(
+				(int) area.minX, (int) area.minY, (int) area.minZ,
+				(int) area.maxX - 1, (int) area.maxY - 1, (int) area.maxZ - 1
+		);
+
+		// Iterate through the positions
+		for (BlockPos blockPos : positions) {
+			if (isBlockValid(fakePlayer, blockPos)) {
+				blockPositions.add(blockPos.immutable());
+			}
+		}
+
+		// Sort the positions based on distance from the origin position
+		blockPositions.sort(Comparator.comparingDouble(pos -> pos.distSqr(originPos)));
+		return blockPositions;
 	}
 
 	public boolean isBlockValid(FakePlayer fakePlayer, BlockPos blockPos) {
 		if (!super.isBlockValid(fakePlayer, blockPos))
-			return false; // Do the same checks as normal, then check the filters
-		if (filterData.blockItemFilter == 0) { // Block Comparison
-			ItemStack blockItemStack = level.getBlockState(blockPos).getCloneItemStack(
-					new BlockHitResult(Vec3.ZERO, Direction.UP, blockPos, false), level, blockPos, fakePlayer);
+			return false; //Do the same checks as normal, then check the filters
+		if (filterData.blockItemFilter == 0) { //Block Comparison
+			ItemStack blockItemStack = level.getBlockState(blockPos).getCloneItemStack(new BlockHitResult(Vec3.ZERO, Direction.UP, blockPos, false), level, blockPos, fakePlayer);
 			return isStackValidFilter(blockItemStack);
-		} else { // Item Drop Comparison
+		} else { //Item Drop Comparison
 			ItemStack tool = getTool();
-			List<ItemStack> drops = Block.getDrops(level.getBlockState(blockPos), (ServerLevel) level, blockPos,
-					level.getBlockEntity(blockPos), fakePlayer, tool);
+			List<ItemStack> drops = Block.getDrops(level.getBlockState(blockPos), (ServerLevel) level, blockPos, level.getBlockEntity(blockPos), fakePlayer, tool);
 			for (ItemStack drop : drops) {
-				if (tool.getItem() instanceof ToggleableTool toggleableTool
-						&& toggleableTool.canUseAbility(tool, Ability.SMELTER)) {
-					if (isStackValidFilter(Helpers.getSmeltedItem(level, drop)))
-						return true;
+				if (tool.getItem() instanceof ToggleableTool toggleableTool && toggleableTool.canUseAbility(tool, Ability.SMELTER)) {
+					if (isStackValidFilter(Helpers.getSmeltedItem(level, drop))) return true;
 				} else {
-					if (isStackValidFilter(drop))
-						return true;
+					if (isStackValidFilter(drop)) return true;
 				}
 			}
 		}
 		return false;
+	}
+
+	@Override
+	public void saveAdditional(CompoundTag tag) {
+		super.saveAdditional(tag);
+		tag.putInt("energy", energyStorage.getEnergyStored());
+	}
+
+	@Override
+	public void load(CompoundTag tag) {
+		if (tag.contains("energy"))
+			energyStorage.setEnergy(tag.getInt("energy"));
+		super.load(tag);
 	}
 }

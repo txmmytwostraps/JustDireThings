@@ -7,18 +7,18 @@ import com.direwolf20.justdirethings.setup.Registration;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.Connection;
-import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.ItemStackHandler;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -27,19 +27,23 @@ public class PlayerAccessorBE extends BaseMachineBE {
 	public HashMap<Direction, PlayerHandler> playerHandlers = new HashMap<>();
 	public HashMap<Direction, Integer> sidedInventoryTypes = new HashMap<>();
 	boolean checkedPlayer = false;
+	private final HashMap<Direction, LazyOptional<IItemHandler>> playerHandlerCaps = new HashMap<>();
+	private LazyOptional<IItemHandler> clientHandler = LazyOptional.empty();
 
 	public PlayerAccessorBE(BlockEntityType<?> pType, BlockPos pPos, BlockState pBlockState) {
 		super(pType, pPos, pBlockState);
-		tickSpeed = Config.PLAYER_ACCESSOR_VALIDATION_TIME.get(); // This controls how often validatePlayer() runs.
-																	// Don't worry if the player leaves before this
-																	// checks, because the itemhandler will prevent
-																	// insertion if they do!
+	}
+
+	// Read live. The saved tick speed would go stale.
+	@Override
+	public int getTickSpeed() {
+		return Config.PLAYER_ACCESSOR_VALIDATION_TIME.get(); //This controls how often validatePlayer() runs.  Don't worry if the player leaves before this checks, because the itemhandler will prevent insertion if they do!
 	}
 
 	@Override
 	public void tickServer() {
 		super.tickServer();
-		if (canRun()) { // Do this every 100 ticks
+		if (canRun()) { //Do this every 100 ticks
 			checkedPlayer = false;
 			validatePlayer();
 		}
@@ -59,22 +63,25 @@ public class PlayerAccessorBE extends BaseMachineBE {
 		this.playerHandlers.clear();
 		this.serverPlayer = null;
 		if (level != null) {
-			updateServerPlayer(); // Since we cleared out the old player, check to see if they still exist, like a
-									// dimension change or something
+			updateServerPlayer(); //Since we cleared out the old player, check to see if they still exist, like a dimension change or something
 		}
 		markDirtyClient();
 	}
 
+	/**
+	 * Check if the player is in an invalid dimension.
+	 */
 	public boolean isValidDim(ServerPlayer serverPlayer) {
+		if (serverPlayer == null || serverPlayer.isRemoved())
+			return false;
 		if (!Config.PLAYER_ACCESSOR_DIMENSIONAL_BLACKLISTING.get())
 			return true;
 		List<? extends String> blacklist = Config.PLAYER_ACCESSOR_BLACKLISTED_DIMENSIONS.get();
-		return !blacklist.contains(serverPlayer.level().dimension().location().toString());
+		return !blacklist.contains(serverPlayer.level.dimension().location().toString());
 	}
 
 	/**
-	 * Clear the caches, and re-locate the player object if necessary (Like player
-	 * logged out, etc)
+	 * Clear the caches, and re-locate the player object if necessary (Like player logged out, etc)
 	 */
 	public void validatePlayer() {
 		if (getServerPlayer() != null && (serverPlayer.isRemoved() || !isValidDim(serverPlayer))) {
@@ -83,28 +90,24 @@ public class PlayerAccessorBE extends BaseMachineBE {
 	}
 
 	/**
-	 * If we have a cached player, return it, otherwise look for the player object
-	 * on the server
+	 * If we have a cached player, return it, otherwise look for the player object on the server
 	 */
 	public ServerPlayer getServerPlayer() {
-		if (serverPlayer == null && !checkedPlayer) // Only allow this to recheck every 100 ticks
+		if (serverPlayer == null && !checkedPlayer) //Only allow this to recheck every 100 ticks
 			updateServerPlayer();
 		return serverPlayer;
 	}
 
 	/**
-	 * Find the player on the server, if the one we have cached is either null or
-	 * removed.
+	 * Find the player on the server, if the one we have cached is either null or removed.
 	 */
 	public void updateServerPlayer() {
-		// System.out.println("Updating Player");
 		checkedPlayer = true;
 		if (this.placedByUUID == null) {
 			serverPlayer = null;
 			return;
 		}
-		ServerPlayer foundPlayer = level.getServer().getPlayerList().getPlayer(this.placedByUUID);
-		if (foundPlayer != null && !isValidDim(foundPlayer)) {
+		if (!isValidDim(level.getServer().getPlayerList().getPlayer(this.placedByUUID))) {
 			serverPlayer = null;
 			return;
 		}
@@ -120,20 +123,16 @@ public class PlayerAccessorBE extends BaseMachineBE {
 	 * Return the player handler for the specified side of this block
 	 */
 	public PlayerHandler getPlayerHandler(Direction side) {
-		if (getServerPlayer() == null) // If our player does not exist
+		if (getServerPlayer() == null) //If our player does not exist
 			return null;
-		if (!playerHandlers.containsKey(side)) { // If we don't have a cache of the side, create one using the player we
-													// have cached
-			playerHandlers.put(side, new PlayerHandler(serverPlayer,
-					PlayerHandler.InventoryType.values()[sidedInventoryTypes.getOrDefault(side, 0)]));
+		if (!playerHandlers.containsKey(side)) { //If we don't have a cache of the side, create one using the player we have cached
+			playerHandlers.put(side, new PlayerHandler(serverPlayer, PlayerHandler.InventoryType.values()[sidedInventoryTypes.getOrDefault(side, 0)]));
 		} else {
-			if (playerHandlers.get(side).player.isRemoved()) { // If the player handler's player has been removed
-																// (Logged off) re-validate
+			if (playerHandlers.get(side).player.isRemoved()) { //If the player handler's player has been removed (Logged off) re-validate
 				validatePlayer();
 				if (serverPlayer == null)
 					return null;
-				playerHandlers.put(side, new PlayerHandler(serverPlayer,
-						PlayerHandler.InventoryType.values()[sidedInventoryTypes.getOrDefault(side, 0)]));
+				playerHandlers.put(side, new PlayerHandler(serverPlayer, PlayerHandler.InventoryType.values()[sidedInventoryTypes.getOrDefault(side, 0)]));
 			}
 		}
 		return playerHandlers.get(side);
@@ -142,15 +141,34 @@ public class PlayerAccessorBE extends BaseMachineBE {
 	@Nonnull
 	@Override
 	public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> cap, @Nullable Direction side) {
-		if (cap == ForgeCapabilities.ITEM_HANDLER) {
-			if (side == null)
+		if (cap == CapabilityItemHandler.ITEM_HANDLER_CAPABILITY) {
+			if (level.isClientSide) { //The player only exists on the server
+				if (!clientHandler.isPresent())
+					clientHandler = LazyOptional.of(() -> new ItemStackHandler(1));
+				return clientHandler.cast();
+			}
+			PlayerHandler playerHandler = getPlayerHandler(side);
+			if (playerHandler == null)
 				return LazyOptional.empty();
-			PlayerHandler handler = getPlayerHandler(side);
-			if (handler == null)
-				return LazyOptional.empty();
-			return LazyOptional.of(() -> (IItemHandler) handler).cast();
+			return playerHandlerCaps.computeIfAbsent(side, s -> LazyOptional.of(() -> playerHandler)).cast();
 		}
 		return super.getCapability(cap, side);
+	}
+
+	/**
+	 * Makes anything holding our handlers look them up again.
+	 */
+	private void invalidatePlayerHandlerCaps() {
+		List<LazyOptional<IItemHandler>> handlerCaps = new ArrayList<>(playerHandlerCaps.values());
+		playerHandlerCaps.clear();
+		handlerCaps.forEach(LazyOptional::invalidate);
+	}
+
+	@Override
+	public void invalidateCaps() {
+		super.invalidateCaps();
+		clientHandler.invalidate();
+		invalidatePlayerHandlerCaps();
 	}
 
 	@Override
@@ -176,15 +194,7 @@ public class PlayerAccessorBE extends BaseMachineBE {
 
 	@Override
 	public void markDirtyClient() {
-		// System.out.println("Marking Dirty Client!");
-		if (level != null) {
-			// invalidateCapabilities removed - not available in Forge 1.20.1
-		}
+		invalidatePlayerHandlerCaps();
 		super.markDirtyClient();
-	}
-
-	@Override
-	public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt) {
-		super.onDataPacket(net, pkt);
 	}
 }

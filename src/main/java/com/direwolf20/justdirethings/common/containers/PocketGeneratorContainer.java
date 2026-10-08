@@ -1,23 +1,22 @@
 package com.direwolf20.justdirethings.common.containers;
 
+import com.direwolf20.justdirethings.common.capabilities.ItemStackItemHandler;
 import com.direwolf20.justdirethings.common.containers.basecontainers.BaseContainer;
 import com.direwolf20.justdirethings.common.containers.slots.FuelSlot;
+import com.direwolf20.justdirethings.common.items.PocketGenerator;
 import com.direwolf20.justdirethings.setup.Registration;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.items.IItemHandler;
-import net.minecraftforge.items.ItemStackHandler;
 
 public class PocketGeneratorContainer extends BaseContainer {
 	public static final int SLOTS = 1;
-	public ItemStackHandler handler;
+	public ItemStackItemHandler handler;
 	public ItemStack pocketGeneratorItemStack;
 	public Player playerEntity;
-	private boolean syncing = false;
 
 	public PocketGeneratorContainer(int windowId, Inventory playerInventory, Player player, FriendlyByteBuf extraData) {
 		this(windowId, playerInventory, player, extraData.readItem());
@@ -26,26 +25,11 @@ public class PocketGeneratorContainer extends BaseContainer {
 	public PocketGeneratorContainer(int windowId, Inventory playerInventory, Player player, ItemStack pocketGenerator) {
 		super(Registration.PocketGenerator_Container.get(), windowId);
 		playerEntity = player;
+		handler = new ItemStackItemHandler(pocketGenerator, PocketGenerator.FUEL_INVENTORY, 1);
 		this.pocketGeneratorItemStack = pocketGenerator;
+		if (handler != null)
+			addGeneratorSlots(handler, 0, 80, 35, 1, 18);
 
-		// Read handler from NBT tag on the item
-		handler = new ItemStackHandler(SLOTS) {
-			@Override
-			protected void onContentsChanged(int slot) {
-				if (syncing)
-					return;
-				CompoundTag tag = pocketGeneratorItemStack.getOrCreateTag();
-				tag.put("FuelInventory", serializeNBT());
-			}
-		};
-
-		// Load existing contents if any
-		CompoundTag tag = pocketGenerator.getTag();
-		if (tag != null && tag.contains("FuelInventory")) {
-			handler.deserializeNBT(tag.getCompound("FuelInventory"));
-		}
-
-		addGeneratorSlots(handler, 0, 80, 35, 1, 18);
 		addPlayerSlots(playerInventory, 8, 84);
 	}
 
@@ -69,12 +53,12 @@ public class PocketGeneratorContainer extends BaseContainer {
 		Slot slot = this.slots.get(index);
 		if (slot.hasItem()) {
 			ItemStack currentStack = slot.getItem();
-			if (index < SLOTS) { // Slot to Player Inventory
+			if (index < SLOTS) { //Slot to Player Inventory
 				if (!this.moveItemStackTo(currentStack, SLOTS, Inventory.INVENTORY_SIZE + SLOTS, true)) {
 					return ItemStack.EMPTY;
 				}
 			}
-			if (index >= SLOTS) { // Player Inventory to Slots
+			if (index >= SLOTS) { //Player Inventory to Slots
 				if (!this.moveItemStackTo(currentStack, 0, SLOTS, false)) {
 					return ItemStack.EMPTY;
 				}
@@ -83,6 +67,7 @@ public class PocketGeneratorContainer extends BaseContainer {
 			if (currentStack.isEmpty()) {
 				slot.set(ItemStack.EMPTY);
 			} else {
+				slot.set(currentStack);
 				slot.setChanged();
 			}
 
@@ -93,24 +78,6 @@ public class PocketGeneratorContainer extends BaseContainer {
 			slot.onTake(playerIn, currentStack);
 		}
 		return itemstack;
-	}
-
-	@Override
-	public void broadcastChanges() {
-		// Sync handler from item NBT in case inventoryTick consumed fuel externally
-		CompoundTag tag = pocketGeneratorItemStack.getTag();
-		ItemStack nbtFuel = ItemStack.EMPTY;
-		if (tag != null && tag.contains("FuelInventory")) {
-			ItemStackHandler temp = new ItemStackHandler(SLOTS);
-			temp.deserializeNBT(tag.getCompound("FuelInventory"));
-			nbtFuel = temp.getStackInSlot(0);
-		}
-		if (!ItemStack.matches(nbtFuel, handler.getStackInSlot(0))) {
-			syncing = true;
-			handler.setStackInSlot(0, nbtFuel.copy());
-			syncing = false;
-		}
-		super.broadcastChanges();
 	}
 
 	@Override

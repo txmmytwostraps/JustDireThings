@@ -10,16 +10,21 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
 
 public class ExperienceHolderSettingsPacket {
-	public static void handle(final ExperienceHolderSettingsPayload payload, final Supplier<NetworkEvent.Context> ctx) {
+	public static final ExperienceHolderSettingsPacket INSTANCE = new ExperienceHolderSettingsPacket();
+
+	public static ExperienceHolderSettingsPacket get() {
+		return INSTANCE;
+	}
+
+	public void handle(final ExperienceHolderSettingsPayload payload, final Supplier<NetworkEvent.Context> ctx) {
 		ctx.get().enqueueWork(() -> {
 			ServerPlayer sender = ctx.get().getSender();
 			if (sender == null)
 				return;
 			AbstractContainerMenu container = sender.containerMenu;
-			if (container instanceof ExperienceHolderContainer experienceHolderContainer
-					&& experienceHolderContainer.baseMachineBE instanceof ExperienceHolderBE be) {
-				be.changeSettings(sender, payload.targetExp(), payload.ownerOnly(), payload.collectExp(),
-						payload.showParticles());
+
+			if (container instanceof ExperienceHolderContainer experienceHolderContainer && experienceHolderContainer.baseMachineBE instanceof ExperienceHolderBE experienceHolderBE) {
+				experienceHolderBE.changeSettings(sender, payload.targetExp(), payload.ownerOnly(), payload.collectExp(), payload.showParticles());
 			}
 		});
 		ctx.get().setPacketHandled(true);

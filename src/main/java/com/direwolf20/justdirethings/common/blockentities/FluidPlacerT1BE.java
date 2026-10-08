@@ -5,30 +5,36 @@ import com.direwolf20.justdirethings.common.blockentities.basebe.FluidContainerD
 import com.direwolf20.justdirethings.common.blockentities.basebe.FluidMachineBE;
 import com.direwolf20.justdirethings.common.blockentities.basebe.RedstoneControlledBE;
 import com.direwolf20.justdirethings.common.capabilities.JustDireFluidTank;
+import com.direwolf20.justdirethings.common.fluids.unstableportalfluid.UnstablePortalFluidAttributes;
+import com.direwolf20.justdirethings.setup.Config;
 import com.direwolf20.justdirethings.setup.Registration;
 import com.direwolf20.justdirethings.util.MiscHelpers;
+import com.direwolf20.justdirethings.util.MiscTools;
 import com.direwolf20.justdirethings.util.interfacehelpers.RedstoneControlData;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.LiquidBlockContainer;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.FakePlayer;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.FluidUtil;
+import net.minecraftforge.fluids.capability.CapabilityFluidHandler;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.fluids.capability.IFluidHandlerItem;
-import net.minecraftforge.items.ItemStackHandler;
-
-import javax.annotation.Nonnull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,36 +42,18 @@ import java.util.List;
 public class FluidPlacerT1BE extends BaseMachineBE implements RedstoneControlledBE, FluidMachineBE {
 	public RedstoneControlData redstoneControlData = new RedstoneControlData();
 	public final FluidContainerData fluidContainerData;
-	protected final JustDireFluidTank fluidTank;
+	private final JustDireFluidTank fluidTank;
 	List<BlockPos> positionsToPlace = new ArrayList<>();
 
 	public FluidPlacerT1BE(BlockEntityType<?> pType, BlockPos pPos, BlockState pBlockState) {
 		super(pType, pPos, pBlockState);
-		MACHINE_SLOTS = 1;
+		MACHINE_SLOTS = 1; //Slot for a bucket
 		fluidTank = new JustDireFluidTank(getMaxMB());
 		fluidContainerData = new FluidContainerData(this);
 	}
 
 	public FluidPlacerT1BE(BlockPos pPos, BlockState pBlockState) {
 		this(Registration.FluidPlacerT1BE.get(), pPos, pBlockState);
-	}
-
-	@Override
-	public ItemStackHandler getMachineHandler() {
-		if (machineHandler == null) {
-			machineHandler = new ItemStackHandler(MACHINE_SLOTS) {
-				@Override
-				protected void onContentsChanged(int slot) {
-					setChanged();
-				}
-
-				@Override
-				public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
-					return stack.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM).isPresent();
-				}
-			};
-		}
-		return machineHandler;
 	}
 
 	@Override
@@ -76,11 +64,6 @@ public class FluidPlacerT1BE extends BaseMachineBE implements RedstoneControlled
 	@Override
 	public ContainerData getFluidContainerData() {
 		return fluidContainerData;
-	}
-
-	@Override
-	public JustDireFluidTank getFluidTank() {
-		return fluidTank;
 	}
 
 	@Override
@@ -101,19 +84,15 @@ public class FluidPlacerT1BE extends BaseMachineBE implements RedstoneControlled
 	public void tickServer() {
 		super.tickServer();
 		handleItemStack();
+		if (MiscTools.isRestrictedDimension(level.dimension(), Config.RESTRICT_FLUID_PLACERS)) return;
 		doFluidPlace();
 	}
 
 	public void handleItemStack() {
-		if (isFull())
-			return;
+		if (isFull()) return;
 		ItemStack itemStack = getItemStack();
-		if (!isStackValid(itemStack))
-			return;
-		IFluidHandlerItem fluidHandlerItem = itemStack.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM, null)
-				.orElse(null);
-		if (fluidHandlerItem == null)
-			return;
+		if (!isStackValid(itemStack)) return;
+		IFluidHandlerItem fluidHandlerItem = itemStack.getCapability(CapabilityFluidHandler.FLUID_HANDLER_ITEM_CAPABILITY).orElse(null);
 		FluidStack testExtract = fluidHandlerItem.drain(1000, IFluidHandler.FluidAction.SIMULATE);
 		int insertAmt = getFluidTank().fill(testExtract, IFluidHandler.FluidAction.SIMULATE);
 		if (insertAmt > 0) {
@@ -131,19 +110,24 @@ public class FluidPlacerT1BE extends BaseMachineBE implements RedstoneControlled
 	public boolean isStackValid(ItemStack itemStack) {
 		if (itemStack.isEmpty())
 			return false;
-		IFluidHandlerItem fhi = itemStack.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM, null).orElse(null);
-		if (fhi == null)
+		IFluidHandlerItem fluidHandlerItem = itemStack.getCapability(CapabilityFluidHandler.FLUID_HANDLER_ITEM_CAPABILITY).orElse(null);
+		if (fluidHandlerItem == null)
 			return false;
-		FluidStack fluidStack = fhi.drain(1000, IFluidHandler.FluidAction.SIMULATE);
+		FluidStack fluidStack = fluidHandlerItem.drain(1000, IFluidHandler.FluidAction.SIMULATE);
 		if (fluidStack.getAmount() == 0)
 			return false;
-		if (!getFluidStack().isEmpty() && !getFluidStack().getFluid().isSame(fluidStack.getFluid()))
+		if (!getFluidStack().isEmpty() && getFluidStack().getFluid() != fluidStack.getFluid())
 			return false;
 		return true;
 	}
 
 	public FluidStack getPlaceStack() {
 		return getFluidTank().getFluid();
+	}
+
+	@Override
+	public JustDireFluidTank getFluidTank() {
+		return fluidTank;
 	}
 
 	public boolean isStackValid(FluidStack fluidStack) {
@@ -180,8 +164,7 @@ public class FluidPlacerT1BE extends BaseMachineBE implements RedstoneControlled
 			positionsToPlace.clear();
 			return;
 		}
-		if (!canPlace())
-			return;
+		if (!canPlace()) return;
 		FakePlayer fakePlayer = getFakePlayer((ServerLevel) level);
 		if (isActiveRedstone() && canRun() && positionsToPlace.isEmpty())
 			positionsToPlace = findSpotsToPlace(fakePlayer);
@@ -194,11 +177,33 @@ public class FluidPlacerT1BE extends BaseMachineBE implements RedstoneControlled
 	}
 
 	public boolean placeFluid(FluidStack fluidStack, BlockPos blockPos) {
+		//FluidUtil doesn't know this fluid vaporizes outside its biomes
+		if (fluidStack.getFluid().getAttributes() instanceof UnstablePortalFluidAttributes attributes && attributes.doesVaporize(level, blockPos, fluidStack)) {
+			if (!canDestinationTakeFluid(blockPos, fluidStack.getFluid()))
+				return false;
+			FluidStack result = getFluidTank().drain(fluidStack, IFluidHandler.FluidAction.EXECUTE);
+			if (result.isEmpty())
+				return false;
+			attributes.vaporize(null, level, blockPos, result);
+			return true;
+		}
 		return FluidUtil.tryPlaceFluid(null, level, InteractionHand.MAIN_HAND, blockPos, getFluidTank(), fluidStack);
 	}
 
+	/**
+	 * Same check as FluidUtil.tryPlaceFluid
+	 */
+	private boolean canDestinationTakeFluid(BlockPos blockPos, Fluid fluid) {
+		BlockPlaceContext context = new BlockPlaceContext(level, null, InteractionHand.MAIN_HAND, ItemStack.EMPTY, new BlockHitResult(Vec3.ZERO, Direction.UP, blockPos, false));
+		BlockState destBlockState = level.getBlockState(blockPos);
+		boolean isDestNonSolid = !destBlockState.getMaterial().isSolid();
+		boolean isDestReplaceable = destBlockState.canBeReplaced(context);
+		boolean canDestContainFluid = destBlockState.getBlock() instanceof LiquidBlockContainer liquidBlockContainer && liquidBlockContainer.canPlaceLiquid(level, blockPos, destBlockState, fluid);
+		return level.isEmptyBlock(blockPos) || isDestNonSolid || isDestReplaceable || canDestContainFluid;
+	}
+
 	public boolean isBlockPosValid(BlockPos blockPos, FakePlayer fakePlayer) {
-		if (!level.getBlockState(blockPos).canBeReplaced())
+		if (!level.getBlockState(blockPos).getMaterial().isReplaceable())
 			return false;
 		if (level.getBlockState(blockPos).getBlock() instanceof LiquidBlock && level.getFluidState(blockPos).isSource())
 			return false;

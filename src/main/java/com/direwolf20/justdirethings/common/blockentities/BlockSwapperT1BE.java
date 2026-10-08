@@ -3,12 +3,14 @@ package com.direwolf20.justdirethings.common.blockentities;
 import com.direwolf20.justdirethings.common.blockentities.basebe.BaseMachineBE;
 import com.direwolf20.justdirethings.common.blockentities.basebe.RedstoneControlledBE;
 import com.direwolf20.justdirethings.datagen.JustDireBlockTags;
+import com.direwolf20.justdirethings.datagen.JustDireEntityTags;
 import com.direwolf20.justdirethings.setup.Config;
 import com.direwolf20.justdirethings.setup.Registration;
 import com.direwolf20.justdirethings.util.MiscHelpers;
 import com.direwolf20.justdirethings.util.MiscTools;
 import com.direwolf20.justdirethings.util.NBTHelpers;
 import com.direwolf20.justdirethings.util.interfacehelpers.RedstoneControlData;
+import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -31,15 +33,17 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.common.util.FakePlayer;
 import net.minecraftforge.entity.PartEntity;
 import net.minecraftforge.registries.ForgeRegistries;
+import org.slf4j.Logger;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 
 public class BlockSwapperT1BE extends BaseMachineBE implements RedstoneControlledBE {
+	private static final Logger LOGGER = LogUtils.getLogger();
 	public RedstoneControlData redstoneControlData = getDefaultRedstoneData();
 	List<BlockPos> positions = new ArrayList<>();
 	public GlobalPos boundTo;
@@ -52,7 +56,15 @@ public class BlockSwapperT1BE extends BaseMachineBE implements RedstoneControlle
 	public List<Entity> entities = new ArrayList<>();
 
 	public enum SWAP_ENTITY_TYPE {
-		NONE, HOSTILE, PASSIVE, ADULT, CHILD, PLAYER, LIVING, ITEM, ALL;
+		NONE,
+		HOSTILE,
+		PASSIVE,
+		ADULT,
+		CHILD,
+		PLAYER,
+		LIVING,
+		ITEM,
+		ALL;
 
 		public SWAP_ENTITY_TYPE next() {
 			SWAP_ENTITY_TYPE[] values = values();
@@ -113,22 +125,17 @@ public class BlockSwapperT1BE extends BaseMachineBE implements RedstoneControlle
 	}
 
 	public ServerLevel getPartnerLevel() {
-		if (boundTo == null)
-			return null;
-		if (level == null)
-			return null;
+		if (boundTo == null) return null;
+		if (level == null) return null;
 		return level.getServer().getLevel(boundTo.dimension());
 	}
 
 	public BlockSwapperT1BE getPartnerBE() {
-		if (boundTo == null)
-			return null;
+		if (boundTo == null) return null;
 		ServerLevel partnerLevel = getPartnerLevel();
-		if (partnerLevel == null)
-			return null;
+		if (partnerLevel == null) return null;
 		BlockEntity partnerBE = partnerLevel.getBlockEntity(boundTo.pos());
-		if (!(partnerBE instanceof BlockSwapperT1BE blockSwapperT1BE))
-			return null;
+		if (!(partnerBE instanceof BlockSwapperT1BE blockSwapperT1BE)) return null;
 		return blockSwapperT1BE;
 	}
 
@@ -141,17 +148,13 @@ public class BlockSwapperT1BE extends BaseMachineBE implements RedstoneControlle
 	}
 
 	public boolean handleConnection(GlobalPos globalPos) {
-		if (level == null)
-			return false;
-		if (globalPos.equals(getGlobalPos()))
-			return false;
+		if (level == null) return false;
+		if (globalPos.equals(getGlobalPos())) return false;
 		ServerLevel partnerLevel = level.getServer().getLevel(globalPos.dimension());
 		BlockEntity partnerBE = partnerLevel.getBlockEntity(globalPos.pos());
-		if (!isValidPartner(partnerBE))
-			return false;
-		if (!(partnerBE instanceof BlockSwapperT1BE blockSwapperT1BE))
-			return false;
-		if (isPartnerNodeConnected(globalPos)) { // If these nodes are already connected, disconnect them
+		if (!isValidPartner(partnerBE)) return false;
+		if (!(partnerBE instanceof BlockSwapperT1BE blockSwapperT1BE)) return false;
+		if (isPartnerNodeConnected(globalPos)) { //If these nodes are already connected, disconnect them
 			removePartnerConnection();
 			return false;
 		} else {
@@ -165,19 +168,16 @@ public class BlockSwapperT1BE extends BaseMachineBE implements RedstoneControlle
 	}
 
 	/**
-	 * @param connectingPos
-	 *            The Position in world you're connecting this TE to.
-	 * @param be
-	 *            The block entity being connected to this one (And vice versa)
-	 *            Connects This Pos -> Target Pos, and connects Target Pos -> This
-	 *            pos
+	 * @param connectingPos The Position in world you're connecting this TE to.
+	 * @param be            The block entity being connected to this one (And vice versa)
+	 *                      Connects This Pos -> Target Pos, and connects Target Pos -> This pos
 	 */
 
 	public void addPartnerConnection(GlobalPos connectingPos, BlockSwapperT1BE be) {
-		if (getBoundTo() != null) { // Connections are 1-1
+		if (getBoundTo() != null) { //Connections are 1-1
 			removePartnerConnection();
 		}
-		if (be.getBoundTo() != null) { // Connections are 1-1
+		if (be.getBoundTo() != null) { //Connections are 1-1
 			be.removePartnerConnection();
 		}
 		setBoundTo(connectingPos); // Add that to this one
@@ -185,8 +185,7 @@ public class BlockSwapperT1BE extends BaseMachineBE implements RedstoneControlle
 	}
 
 	/**
-	 * Disconnects This Pos from Target Pos, and disconnects Target Pos from This
-	 * pos
+	 * Disconnects This Pos from Target Pos, and disconnects Target Pos from This pos
 	 */
 
 	public void removePartnerConnection() {
@@ -203,19 +202,13 @@ public class BlockSwapperT1BE extends BaseMachineBE implements RedstoneControlle
 
 	/** Validates the connections are still valid -- for use if a block is moved **/
 	public void validateConnections() {
-		// If we got here, it means the Block Swapper was moved, and so we assume it
-		// needs to update its partner
-		if (boundTo == null || level == null || level.isClientSide) { // Don't do anything if this wasn't bound to
-																		// something already
+		//If we got here, it means the Block Swapper was moved, and so we assume it needs to update its partner
+		if (boundTo == null || level == null || level.isClientSide) { //Don't do anything if this wasn't bound to something already
 			return;
 		}
-		// System.out.println("Validating Connections!");
 		BlockSwapperT1BE blockSwapperT1BE = getPartnerBE();
 		if (blockSwapperT1BE != null) {
-			addPartnerConnection(boundTo, blockSwapperT1BE); // If the partner still exists at the old spot, connect
-																// them, else remove
-		} else {
-			// removePartnerConnection(); //TODO What should we do here?
+			addPartnerConnection(boundTo, blockSwapperT1BE); //If the partner still exists at the old spot, connect them
 		}
 	}
 
@@ -224,8 +217,7 @@ public class BlockSwapperT1BE extends BaseMachineBE implements RedstoneControlle
 	}
 
 	public void doesPartnerExist() {
-		if (boundTo == null || level == null || level.isClientSide) { // Don't do anything if this wasn't bound to
-																		// something already
+		if (boundTo == null || level == null || level.isClientSide) { //Don't do anything if this wasn't bound to something already
 			return;
 		}
 		BlockSwapperT1BE blockSwapperT1BE = getPartnerBE();
@@ -252,6 +244,7 @@ public class BlockSwapperT1BE extends BaseMachineBE implements RedstoneControlle
 	@Override
 	public void tickServer() {
 		super.tickServer();
+		if (MiscTools.isRestrictedDimension(level.dimension(), Config.RESTRICT_BLOCK_SWAPPERS) || (boundTo != null && MiscTools.isRestrictedDimension(boundTo.dimension(), Config.RESTRICT_BLOCK_SWAPPERS))) return;
 		doSwap();
 	}
 
@@ -260,23 +253,20 @@ public class BlockSwapperT1BE extends BaseMachineBE implements RedstoneControlle
 	}
 
 	public void postSwap(int numBlocks) {
-		// No-Op in Tier 1
+		//No-Op in Tier 1
 	}
 
 	public void doSwap() {
-		if (!(isActiveRedstone() && canRun()))
-			return;
-		if (!canSwap())
-			return;
-		if (level == null)
-			return;
+		if (!(isActiveRedstone() && canRun())) return;
+		if (!canSwap()) return;
+		if (level == null) return;
 
 		BlockSwapperT1BE remoteSwapper = getPartnerBE();
-		if (remoteSwapper == null)
-			return;
+		if (remoteSwapper == null) return;
 		ServerLevel partnerLevel = getPartnerLevel();
-		if (partnerLevel == null)
-			return;
+		if (partnerLevel == null) return;
+		FakePlayer fakePlayer = getFakePlayer((ServerLevel) level);
+		FakePlayer partnerFakePlayer = getFakePlayer(partnerLevel);
 
 		if (swapBlocks)
 			positions = findSpotsToSwap();
@@ -284,8 +274,9 @@ public class BlockSwapperT1BE extends BaseMachineBE implements RedstoneControlle
 			entities = findEntitiesToSwap(getAABB());
 		if (positions.isEmpty() && entities.isEmpty())
 			return;
+
 		for (BlockPos blockPos : positions) {
-			swapBlock(blockPos, remoteSwapper, partnerLevel);
+			swapBlock(blockPos, remoteSwapper, partnerLevel, fakePlayer, partnerFakePlayer);
 		}
 		for (BlockPos thisPos : thisValidationList) {
 			validateBlock((ServerLevel) level, thisPos);
@@ -301,8 +292,7 @@ public class BlockSwapperT1BE extends BaseMachineBE implements RedstoneControlle
 		postSwap(totalSwapped);
 		if (totalSwapped > 0) {
 			level.playSound(null, getBlockPos(), SoundEvents.SHULKER_TELEPORT, SoundSource.BLOCKS, 0.33F, 1.0F);
-			partnerLevel.playSound(null, remoteSwapper.getBlockPos(), SoundEvents.SHULKER_TELEPORT, SoundSource.BLOCKS,
-					0.33F, 1.0F);
+			partnerLevel.playSound(null, remoteSwapper.getBlockPos(), SoundEvents.SHULKER_TELEPORT, SoundSource.BLOCKS, 0.33F, 1.0F);
 		}
 		positions.clear();
 		entities.clear();
@@ -312,8 +302,7 @@ public class BlockSwapperT1BE extends BaseMachineBE implements RedstoneControlle
 
 	public void swapEntity(Entity entity, BlockSwapperT1BE remoteSwapper, ServerLevel partnerLevel) {
 		Vec3 remotePosition = remoteSwapper.getWorldPos(getRelativePos(entity.position()));
-		entity.teleportTo(partnerLevel, remotePosition.x, remotePosition.y, remotePosition.z, new HashSet<>(),
-				entity.getYRot(), entity.getXRot());
+		MiscHelpers.teleportEntity(entity, partnerLevel, remotePosition.x, remotePosition.y, remotePosition.z, entity.getYRot(), entity.getXRot());
 	}
 
 	public AABB getAABB() {
@@ -331,14 +320,14 @@ public class BlockSwapperT1BE extends BaseMachineBE implements RedstoneControlle
 	}
 
 	private static boolean isEntitySwapperBlacklisted(Entity entity) {
-		ResourceLocation key = ForgeRegistries.ENTITY_TYPES.getKey(entity.getType());
+		ResourceLocation key = ForgeRegistries.ENTITIES.getKey(entity.getType());
 		if (key == null)
 			return false;
 		return MiscTools.matchesRegexBlacklist(Config.SWAPPER_ENTITY_BLACKLIST.get(), key.toString());
 	}
 
-	private static boolean isBlockSwapperBlacklisted(ServerLevel serverLevel, BlockPos blockPos) {
-		ResourceLocation key = ForgeRegistries.BLOCKS.getKey(serverLevel.getBlockState(blockPos).getBlock());
+	private static boolean isBlockSwapperBlacklisted(BlockState blockState) {
+		ResourceLocation key = ForgeRegistries.BLOCKS.getKey(blockState.getBlock());
 		if (key == null)
 			return false;
 		return MiscTools.matchesRegexBlacklist(Config.SWAPPER_BLOCK_BLACKLIST.get(), key.toString());
@@ -349,14 +338,15 @@ public class BlockSwapperT1BE extends BaseMachineBE implements RedstoneControlle
 			return false;
 		if (entity instanceof PartEntity<?>)
 			return false;
-		if (!entity.canChangeDimensions() && !isSameLevel())
+		if (!MiscHelpers.canChangeDimensions(entity, level, getPartnerBE().level) && !isSameLevel())
+			return false;
+		if (entity.getType().is(JustDireEntityTags.TELEPORTING_NOT_SUPPORTED))
 			return false;
 		if (isEntitySwapperBlacklisted(entity))
 			return false;
 		if (swap_entity_type.equals(SWAP_ENTITY_TYPE.HOSTILE) && !(entity instanceof Monster))
 			return false;
-		if (((swap_entity_type.equals(SWAP_ENTITY_TYPE.PASSIVE)) || (swap_entity_type.equals(SWAP_ENTITY_TYPE.ADULT))
-				|| (swap_entity_type.equals(SWAP_ENTITY_TYPE.CHILD))) && !(entity instanceof Animal))
+		if (((swap_entity_type.equals(SWAP_ENTITY_TYPE.PASSIVE)) || (swap_entity_type.equals(SWAP_ENTITY_TYPE.ADULT)) || (swap_entity_type.equals(SWAP_ENTITY_TYPE.CHILD))) && !(entity instanceof Animal))
 			return false;
 		if (swap_entity_type.equals(SWAP_ENTITY_TYPE.ADULT) && (entity instanceof Animal animal) && (animal.isBaby()))
 			return false;
@@ -369,17 +359,20 @@ public class BlockSwapperT1BE extends BaseMachineBE implements RedstoneControlle
 		return true;
 	}
 
-	public void swapBlock(BlockPos blockPos, BlockSwapperT1BE remoteSwapper, ServerLevel partnerLevel) {
+	public void swapBlock(BlockPos blockPos, BlockSwapperT1BE remoteSwapper, ServerLevel partnerLevel, FakePlayer fakePlayer, FakePlayer partnerFakePlayer) {
 		BlockPos remoteSwapPos = remoteSwapper.getWorldPos(getRelativePos(blockPos));
 
-		if (!isBlockPosValid(partnerLevel, remoteSwapPos))
+		if (!isBlockPosValid(partnerLevel, remoteSwapPos)) return;
+
+		if (!canBreakAndPlaceAt(level, blockPos, fakePlayer))
+			return;
+		if (!canBreakAndPlaceAt(partnerLevel, remoteSwapPos, partnerFakePlayer))
 			return;
 
 		BlockState thisBlock = level.getBlockState(blockPos);
 		BlockState thatBlock = partnerLevel.getBlockState(remoteSwapPos);
 
-		if (thisBlock.isAir() && thatBlock.isAir())
-			return;
+		if (thisBlock.isAir() && thatBlock.isAir()) return;
 
 		BlockEntity thisBE = level.getBlockEntity(blockPos);
 		BlockEntity thatBE = partnerLevel.getBlockEntity(remoteSwapPos);
@@ -395,50 +388,38 @@ public class BlockSwapperT1BE extends BaseMachineBE implements RedstoneControlle
 			thatNBT = thatBE.saveWithFullMetadata();
 		}
 
-		// Remove existing blocks and BE's
-		level.removeBlockEntity(blockPos); // Calling this prevents chests from dropping their contents
-		partnerLevel.removeBlockEntity(remoteSwapPos); // Calling this prevents chests from dropping their contents
+		//Remove existing blocks and BE's
+		level.removeBlockEntity(blockPos); //Calling this prevents chests from dropping their contents
+		partnerLevel.removeBlockEntity(remoteSwapPos); //Calling this prevents chests from dropping their contents
 
-		// BlockState adjustedthisBlock = Block.updateFromNeighbourShapes(thisBlock,
-		// partnerLevel, remoteSwapPos); //Ensure double chests are placed as single
-		// chests if only 1 chest available in copy/paste, for example, or fixes fences
-		boolean placedThat = partnerLevel.setBlock(remoteSwapPos, thisBlock, 51); // 16 + 32 + 3 -- Validate blocks
-																					// after this methods done
-		if (placedThat) {
+		boolean placedThat = partnerLevel.setBlock(remoteSwapPos, thisBlock, 51); //16 + 32 + 3 -- Validate blocks after this methods done
+		if (placedThat || partnerLevel.getBlockState(remoteSwapPos).equals(thisBlock)) {
 			if (!thisNBT.isEmpty()) {
 				BlockEntity newBE = partnerLevel.getBlockEntity(remoteSwapPos);
 				if (newBE != null) {
 					try {
 						newBE.load(thisNBT);
 					} catch (Exception e) {
-						System.out.println("Failed to restore tile data for block at: " + remoteSwapPos + " with NBT: "
-								+ thisNBT + ". Consider adding it to the blacklist");
+						LOGGER.error("Failed to restore tile data for block at: {} with NBT: {}. Consider adding it to the blacklist", remoteSwapPos, thisNBT);
 					}
 				}
 			}
 		}
-		// if (!thisBlock.isAir())
 		thatValidationList.add(remoteSwapPos);
 
-		// BlockState adjustedthatBlock = Block.updateFromNeighbourShapes(thatBlock,
-		// level, blockPos); //Ensure double chests are placed as single chests if only
-		// 1 chest available in copy/paste, for example, or fixes fences
-		boolean placedThis = level.setBlock(blockPos, thatBlock, 51); // 16 + 32 + 3 -- Validate blocks after this
-																		// methods done
-		if (placedThis) {
+		boolean placedThis = level.setBlock(blockPos, thatBlock, 51); //16 + 32 + 3 -- Validate blocks after this methods done
+		if (placedThis || level.getBlockState(blockPos).equals(thatBlock)) {
 			if (!thatNBT.isEmpty()) {
 				BlockEntity newBE = level.getBlockEntity(blockPos);
 				if (newBE != null) {
 					try {
 						newBE.load(thatNBT);
 					} catch (Exception e) {
-						System.out.println("Failed to restore tile data for block at: " + blockPos + " with NBT: "
-								+ thatNBT + ". Consider adding it to the blacklist");
+						LOGGER.error("Failed to restore tile data for block at: {} with NBT: {}. Consider adding it to the blacklist", blockPos, thatNBT);
 					}
 				}
 			}
 		}
-		// if (!thatBlock.isAir())
 		thisValidationList.add(blockPos);
 
 		teleportParticles((ServerLevel) level, blockPos);
@@ -451,20 +432,10 @@ public class BlockSwapperT1BE extends BaseMachineBE implements RedstoneControlle
 			level.destroyBlock(blockPos, true);
 			return;
 		}
-		BlockState adjustedBlockState = Block.updateFromNeighbourShapes(blockState, level, blockPos); // Ensure double
-																										// chests are
-																										// placed as
-																										// single chests
-																										// if only 1
-																										// chest
-																										// available in
-																										// copy/paste,
-																										// for example,
-																										// or fixes
-																										// fences
-		if (!adjustedBlockState.equals(blockState)) // SetBlockAndUpdate does the markAndNotify (below)
+		BlockState adjustedBlockState = Block.updateFromNeighbourShapes(blockState, level, blockPos); //Ensure double chests are placed as single chests if only 1 chest available in copy/paste, for example, or fixes fences
+		if (!adjustedBlockState.equals(blockState)) //SetBlockAndUpdate does the markAndNotify (below)
 			level.setBlockAndUpdate(blockPos, adjustedBlockState);
-		else { // Do this to ensure buttons/torches pop off if we swapped air into a spot
+		else { //Do this to ensure buttons/torches pop off if we swapped air into a spot
 			LevelChunk levelchunk = level.getChunkAt(blockPos);
 			level.markAndNotifyBlock(blockPos, levelchunk, blockState, blockState, 3, 512);
 		}
@@ -481,10 +452,12 @@ public class BlockSwapperT1BE extends BaseMachineBE implements RedstoneControlle
 	}
 
 	public boolean isBlockPosValid(ServerLevel serverLevel, BlockPos blockPos) {
-		if (serverLevel.getBlockState(blockPos).is(JustDireBlockTags.NO_MOVE)
-				|| serverLevel.getBlockState(blockPos).is(JustDireBlockTags.SWAPPERDENY))
+		BlockState blockState = serverLevel.getBlockState(blockPos);
+		if (blockState.is(JustDireBlockTags.NO_MOVE) || blockState.is(JustDireBlockTags.SWAPPERDENY))
 			return false;
-		if (isBlockSwapperBlacklisted(serverLevel, blockPos))
+		if (isBlockSwapperBlacklisted(blockState))
+			return false;
+		if (blockState.getDestroySpeed(serverLevel, blockPos) < 0)
 			return false;
 		GlobalPos targetGlobalPos = GlobalPos.of(serverLevel.dimension(), blockPos);
 		if (targetGlobalPos.equals(getGlobalPos()) || targetGlobalPos.equals(boundTo))
@@ -493,7 +466,7 @@ public class BlockSwapperT1BE extends BaseMachineBE implements RedstoneControlle
 	}
 
 	public BlockPos getStartingPoint() {
-		return getBlockPos().relative(getBlockState().getValue(BlockStateProperties.FACING)); // Tier 2 would use Offset
+		return getBlockPos().relative(getBlockState().getValue(BlockStateProperties.FACING)); //Tier 2 would use Offset
 	}
 
 	public List<BlockPos> findSpotsToSwap() {
@@ -514,13 +487,11 @@ public class BlockSwapperT1BE extends BaseMachineBE implements RedstoneControlle
 	}
 
 	public Vec3 getWorldPos(Vec3 relativePos) {
-		return new Vec3(getStartingPoint().getX() + relativePos.x, getStartingPoint().getY() + relativePos.y,
-				getStartingPoint().getZ() + relativePos.z);
+		return new Vec3(getStartingPoint().getX() + relativePos.x, getStartingPoint().getY() + relativePos.y, getStartingPoint().getZ() + relativePos.z);
 	}
 
 	public Vec3 getRelativePos(Vec3 worldPos) {
-		return new Vec3(worldPos.x - getStartingPoint().getX(), worldPos.y - getStartingPoint().getY(),
-				worldPos.z - getStartingPoint().getZ());
+		return new Vec3(worldPos.x - getStartingPoint().getX(), worldPos.y - getStartingPoint().getY(), worldPos.z - getStartingPoint().getZ());
 	}
 
 	@Override

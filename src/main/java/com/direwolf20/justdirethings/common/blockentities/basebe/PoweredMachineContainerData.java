@@ -21,8 +21,7 @@ public class PoweredMachineContainerData implements ContainerData {
 	@Override
 	public void set(int index, int value) {
 		switch (index) {
-			case 0 ->
-				poweredMachineBE.setEnergyStored((poweredMachineBE.getEnergyStored() & 0xFFFF0000) | (value & 0xFFFF));
+			case 0 -> poweredMachineBE.setEnergyStored((poweredMachineBE.getEnergyStored() & 0xFFFF0000) | (value & 0xFFFF));
 			case 1 -> poweredMachineBE.setEnergyStored((poweredMachineBE.getEnergyStored() & 0xFFFF) | (value << 16));
 			default -> throw new IllegalArgumentException("Invalid index: " + index);
 		}

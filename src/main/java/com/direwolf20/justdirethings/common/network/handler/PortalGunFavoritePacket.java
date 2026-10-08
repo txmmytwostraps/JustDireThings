@@ -9,18 +9,25 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
 
 public class PortalGunFavoritePacket {
-	public static void handle(final PortalGunFavoritePayload payload, final Supplier<NetworkEvent.Context> ctx) {
+	public static final PortalGunFavoritePacket INSTANCE = new PortalGunFavoritePacket();
+
+	public static PortalGunFavoritePacket get() {
+		return INSTANCE;
+	}
+
+	public void handle(final PortalGunFavoritePayload payload, final Supplier<NetworkEvent.Context> ctx) {
 		ctx.get().enqueueWork(() -> {
 			ServerPlayer sender = ctx.get().getSender();
 			if (sender == null)
 				return;
-
-			ItemStack stack = PortalGunV2.getPortalGunv2(sender);
-			if (stack.isEmpty())
+			ItemStack itemStack = sender.getMainHandItem();
+			if (!(itemStack.getItem() instanceof PortalGunV2))
+				itemStack = sender.getOffhandItem();
+			if (!(itemStack.getItem() instanceof PortalGunV2))
 				return;
 
-			PortalGunV2.setFavoritePosition(stack, payload.favorite());
-			PortalGunV2.setStayOpen(stack, payload.staysOpen());
+			PortalGunV2.setFavoritePosition(itemStack, payload.favorite());
+			PortalGunV2.setStayOpen(itemStack, payload.staysOpen());
 		});
 		ctx.get().setPacketHandled(true);
 	}

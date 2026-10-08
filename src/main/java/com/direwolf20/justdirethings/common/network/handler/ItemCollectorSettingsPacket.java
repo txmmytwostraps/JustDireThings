@@ -10,15 +10,21 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
 
 public class ItemCollectorSettingsPacket {
-	public static void handle(final ItemCollectorSettingsPayload payload, final Supplier<NetworkEvent.Context> ctx) {
+	public static final ItemCollectorSettingsPacket INSTANCE = new ItemCollectorSettingsPacket();
+
+	public static ItemCollectorSettingsPacket get() {
+		return INSTANCE;
+	}
+
+	public void handle(final ItemCollectorSettingsPayload payload, final Supplier<NetworkEvent.Context> ctx) {
 		ctx.get().enqueueWork(() -> {
 			ServerPlayer sender = ctx.get().getSender();
 			if (sender == null)
 				return;
 			AbstractContainerMenu container = sender.containerMenu;
-			if (container instanceof ItemCollectorContainer itemCollectorContainer
-					&& itemCollectorContainer.baseMachineBE instanceof ItemCollectorBE be) {
-				be.setSettings(payload.respectPickupDelay(), payload.showParticles());
+
+			if (container instanceof ItemCollectorContainer itemCollectorContainer && itemCollectorContainer.baseMachineBE instanceof ItemCollectorBE itemCollectorBE) {
+				itemCollectorBE.setSettings(payload.respectPickupDelay(), payload.showParticles());
 			}
 		});
 		ctx.get().setPacketHandled(true);

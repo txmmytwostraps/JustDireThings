@@ -3,7 +3,7 @@ package com.direwolf20.justdirethings.common.blockentities;
 import com.direwolf20.justdirethings.client.particles.itemparticle.ItemFlowParticleData;
 import com.direwolf20.justdirethings.common.blockentities.basebe.*;
 import com.direwolf20.justdirethings.common.blocks.EnergyTransmitter;
-import com.direwolf20.justdirethings.common.capabilities.EnergyStorageNoReceive;
+import com.direwolf20.justdirethings.common.capabilities.EnergyStorageItemStackNoReceive;
 import com.direwolf20.justdirethings.common.capabilities.TransmitterEnergyStorage;
 import com.direwolf20.justdirethings.common.containers.handlers.FilterBasicHandler;
 import com.direwolf20.justdirethings.common.items.PocketGenerator;
@@ -26,46 +26,54 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.energy.IEnergyStorage;
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.energy.CapabilityEnergy;
 import net.minecraftforge.energy.IEnergyStorage;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class EnergyTransmitterBE extends BaseMachineBE
-		implements
-			RedstoneControlledBE,
-			PoweredMachineBE,
-			AreaAffectingBE,
-			FilterableBE {
+public class EnergyTransmitterBE extends BaseMachineBE implements RedstoneControlledBE, PoweredMachineBE, AreaAffectingBE, FilterableBE {
 	public RedstoneControlData redstoneControlData = new RedstoneControlData();
 	public final PoweredMachineContainerData poweredMachineData;
+	private final BlockEnergyCache energyHandlers = new BlockEnergyCache();
+	private final Map<BlockPos, Direction> energyHandlerSides = new HashMap<>();
 	private final Set<BlockPos> blocksToCharge = new HashSet<>();
 	private final Set<BlockPos> transmitters = new HashSet<>();
 	public AreaAffectingData areaAffectingData = new AreaAffectingData();
 	public FilterData filterData = new FilterData();
 	public boolean showParticles = true;
-	private final FilterBasicHandler filterHandler = new FilterBasicHandler(9);
 	private final TransmitterEnergyStorage energyStorage;
-
-	/**
-	 * Caches neighbor/area energy capabilities — auto-invalidated when neighbors
-	 * change.
-	 */
-	private final BlockEnergyCache neighborEnergyCache = new BlockEnergyCache();
+	private final FilterBasicHandler filterHandler;
 
 	public EnergyTransmitterBE(BlockEntityType<?> pType, BlockPos pPos, BlockState pBlockState) {
 		super(pType, pPos, pBlockState);
 		MACHINE_SLOTS = 1;
 		poweredMachineData = new PoweredMachineContainerData(this);
-		tickSpeed = 50; // We use this to check how often to rescan the area
+		tickSpeed = 50; //We use this to check how often to rescan the area
 		energyStorage = new TransmitterEnergyStorage(getMaxEnergy(), this);
+		filterHandler = new FilterBasicHandler(9);
 	}
 
 	public EnergyTransmitterBE(BlockPos pPos, BlockState pBlockState) {
 		this(Registration.EnergyTransmitterBE.get(), pPos, pBlockState);
+	}
+
+	// A rescan interval, so the machine minimum doesn't apply
+	@Override
+	public int getTickSpeed() {
+		return tickSpeed;
+	}
+
+	@Nonnull
+	@Override
+	public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> cap, @Nullable Direction side) {
+		if (cap == CapabilityEnergy.ENERGY && side != getBlockState().getValue(BlockStateProperties.FACING))
+			return LazyOptional.empty();
+		return super.getCapability(cap, side);
 	}
 
 	public void setEnergyTransmitterSettings(boolean showParticles) {
@@ -123,28 +131,25 @@ public class EnergyTransmitterBE extends BaseMachineBE
 	}
 
 	/**
-	 * Get an UPDATED and ACTIVE list of transmitters that are currently available
-	 * (The cache'd cap still exists) via getTransmitterEnergyHandler
+	 * Get an UPDATED and ACTIVE list of transmitters that are currently available (The cache'd cap still exists) via getTransmitterEnergyHandler
 	 */
 	public Map<BlockPos, TransmitterEnergyStorage> getTransmitterEnergyStorages() {
-		return transmitters.stream().map(pos -> new AbstractMap.SimpleEntry<>(pos, getTransmitterEnergyHandler(pos)))
+		return transmitters.stream()
+				.map(pos -> new AbstractMap.SimpleEntry<>(pos, getTransmitterEnergyHandler(pos)))
 				.filter(entry -> entry.getValue() != null) // Filter out entries with null TransmitterEnergyStorages
 				.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 	}
 
+
 	/**
-	 * Balance the energy across the entire network of transmitters that THIS
-	 * transmitter can see/access. Other transmitters will handle balancing amongst
-	 * their own network
+	 * Balance the energy across the entire network of transmitters that THIS transmitter can see/access. Other transmitters will handle balancing amongst their own network
 	 */
 	public void balanceEnergy() {
-		if (transmitters.isEmpty() || transmitters.size() == 1)
-			return;
+		if (transmitters.isEmpty() || transmitters.size() == 1) return;
 		Map<BlockPos, TransmitterEnergyStorage> transmitterEnergyStorages = getTransmitterEnergyStorages();
 
 		int totalEnergy = transmitterEnergyStorages.values().stream()
-				.mapToInt(TransmitterEnergyStorage::getRealEnergyStored) // Convert each storage to an int representing
-																			// its stored energy
+				.mapToInt(TransmitterEnergyStorage::getRealEnergyStored) // Convert each storage to an int representing its stored energy
 				.sum(); // Sum up all the values
 		int count = transmitterEnergyStorages.size();
 		int averageEnergy = totalEnergy / count;
@@ -169,11 +174,9 @@ public class EnergyTransmitterBE extends BaseMachineBE
 	}
 
 	/**
-	 * Checks to see if the rest of the network is balanced, within a reasonable
-	 * margin of error (1 if theres a remainder value)
+	 * Checks to see if the rest of the network is balanced, within a reasonable margin of error (1 if theres a remainder value)
 	 */
-	private boolean isAlreadyBalanced(Map<BlockPos, TransmitterEnergyStorage> transmitterEnergyStorages,
-			int averageEnergy, int remainder) {
+	private boolean isAlreadyBalanced(Map<BlockPos, TransmitterEnergyStorage> transmitterEnergyStorages, int averageEnergy, int remainder) {
 		int minEnergy = averageEnergy;
 		int maxEnergy = averageEnergy + (remainder > 0 ? 1 : 0);
 
@@ -187,16 +190,8 @@ public class EnergyTransmitterBE extends BaseMachineBE
 	 * Get total energy stored across this transmitters entire network
 	 */
 	public int getTotalEnergyStored() {
-		return getTransmitterEnergyStorages().values().stream().mapToInt(TransmitterEnergyStorage::getRealEnergyStored) // Convert
-																														// each
-																														// storage
-																														// to
-																														// an
-																														// int
-																														// representing
-																														// its
-																														// stored
-																														// energy
+		return getTransmitterEnergyStorages().values().stream()
+				.mapToInt(TransmitterEnergyStorage::getRealEnergyStored) // Convert each storage to an int representing its stored energy
 				.sum();
 	}
 
@@ -205,10 +200,10 @@ public class EnergyTransmitterBE extends BaseMachineBE
 	 */
 	public int getTotalMaxEnergyStored() {
 		return getTransmitterEnergyStorages().values().stream()
-				.mapToInt(TransmitterEnergyStorage::getRealMaxEnergyStored) // Convert each storage to an int
-																			// representing its stored energy
+				.mapToInt(TransmitterEnergyStorage::getRealMaxEnergyStored) // Convert each storage to an int representing its stored energy
 				.sum();
 	}
+
 
 	/**
 	 * Add Energy to the network - called by TransmitterEnergyStorage.receiveEnergy
@@ -219,16 +214,13 @@ public class EnergyTransmitterBE extends BaseMachineBE
 			int insertedEnergy = transmitterEnergyStorage.realReceiveEnergy(energy, false);
 			energy = energy - insertedEnergy;
 			energyInserted = energyInserted + insertedEnergy;
-			if (energy <= 0)
-				break;
+			if (energy <= 0) break;
 		}
-		// balanceEnergy();
 		return energyInserted;
 	}
 
 	/**
-	 * Extract Energy from the network - called by
-	 * TransmitterEnergyStorage.extractEnergy
+	 * Extract Energy from the network - called by TransmitterEnergyStorage.extractEnergy
 	 */
 	public int extractEnergy(int energy) {
 		int energyExtracted = 0;
@@ -236,10 +228,8 @@ public class EnergyTransmitterBE extends BaseMachineBE
 			int extractedEnergy = transmitterEnergyStorage.realExtractEnergy(energy, false);
 			energy = energy - extractedEnergy;
 			energyExtracted = energyExtracted + extractedEnergy;
-			if (energy <= 0)
-				break;
+			if (energy <= 0) break;
 		}
-		// balanceEnergy();
 		return energyExtracted;
 	}
 
@@ -255,26 +245,19 @@ public class EnergyTransmitterBE extends BaseMachineBE
 	}
 
 	public void doParticles(BlockPos sourcePos, BlockPos targetPos) {
-		if (!showParticles)
-			return;
+		if (!showParticles) return;
 		Direction sourceFacing = level.getBlockState(sourcePos).getValue(BlockStateProperties.FACING);
-		Vec3 sourceVec = new Vec3(sourcePos.getX() + 0.5f - (0.3 * sourceFacing.getStepX()),
-				sourcePos.getY() + 0.5f - (0.3 * sourceFacing.getStepY()),
-				sourcePos.getZ() + 0.5f - (0.3 * sourceFacing.getStepZ()));
+		Vec3 sourceVec = new Vec3(sourcePos.getX() + 0.5f - (0.3 * sourceFacing.getStepX()), sourcePos.getY() + 0.5f - (0.3 * sourceFacing.getStepY()), sourcePos.getZ() + 0.5f - (0.3 * sourceFacing.getStepZ()));
 		BlockState targetState = level.getBlockState(targetPos);
-		Vec3 targetVec = new Vec3(0, 0, 0);
+		Vec3 targetVec;
 		if (targetState.getBlock() instanceof EnergyTransmitter) {
 			Direction targetFacing = targetState.getValue(BlockStateProperties.FACING);
-			targetVec = new Vec3(targetPos.getX() + 0.5f - (0.3 * targetFacing.getStepX()),
-					targetPos.getY() + 0.5f - (0.3 * targetFacing.getStepY()),
-					targetPos.getZ() + 0.5f - (0.3 * targetFacing.getStepZ()));
+			targetVec = new Vec3(targetPos.getX() + 0.5f - (0.3 * targetFacing.getStepX()), targetPos.getY() + 0.5f - (0.3 * targetFacing.getStepY()), targetPos.getZ() + 0.5f - (0.3 * targetFacing.getStepZ()));
 		} else {
-			VoxelShape voxelShape = targetState.getShape(level, targetPos); // Todo maybe use this?
 			targetVec = new Vec3(targetPos.getX() + 0.5, targetPos.getY() + 0.5, targetPos.getZ() + 0.5);
 		}
 
-		ItemFlowParticleData data = new ItemFlowParticleData(new ItemStack(Items.YELLOW_CONCRETE), targetVec.x,
-				targetVec.y, targetVec.z, 2);
+		ItemFlowParticleData data = new ItemFlowParticleData(new ItemStack(Items.YELLOW_CONCRETE), targetVec.x, targetVec.y, targetVec.z, 2);
 		double d0 = sourceVec.x();
 		double d1 = sourceVec.y();
 		double d2 = sourceVec.z();
@@ -282,36 +265,36 @@ public class EnergyTransmitterBE extends BaseMachineBE
 	}
 
 	/**
-	 * Allows filling the capacitor from another battery like device, or the Pocket
-	 * Generator
+	 * Allows filling the capacitor from another battery like device, or the Pocket Generator
 	 */
 	public void drainFromSlot() {
 		ItemStack itemStack = getMachineHandler().getStackInSlot(0);
-		if (itemStack.isEmpty())
-			return;
-		IEnergyStorage energyStorage = itemStack.getCapability(ForgeCapabilities.ENERGY).orElse(null);
-		if (energyStorage == null)
-			return;
+		if (itemStack.isEmpty()) return;
+		IEnergyStorage energyStorage = itemStack.getCapability(CapabilityEnergy.ENERGY).orElse(null);
+		if (energyStorage == null) return;
 		if (itemStack.getItem() instanceof PocketGenerator pocketGenerator) {
-			pocketGenerator.tryBurn((EnergyStorageNoReceive) energyStorage, itemStack);
+			pocketGenerator.tryBurn((EnergyStorageItemStackNoReceive) energyStorage, itemStack);
 		}
 		if (getEnergyStorage().getEnergyStored() >= getEnergyStorage().getMaxEnergyStored())
-			return; // Don't do anything if already full...
+			return; //Don't do anything if already full...
 		transmitPower(energyStorage, getEnergyStorage(), fePerTick());
 	}
 
+	/**
+	 * Keeps the first side that could receive until the block leaves the area.
+	 */
 	public IEnergyStorage getHandler(BlockPos blockPos) {
-		if (level == null)
-			return null;
-		// Try each side to find one that can receive, using the cache
-		for (Direction direction : Direction.values()) {
-			IEnergyStorage cap = neighborEnergyCache.get(level, blockPos, direction);
-			if (cap != null && cap.canReceive()) {
-				return cap;
+		Direction side = energyHandlerSides.get(blockPos);
+		if (side == null) {
+			for (Direction direction : Direction.values()) {
+				side = direction;
+				IEnergyStorage cap = energyHandlers.get(level, blockPos, direction);
+				if (cap != null && cap.canReceive())
+					break;
 			}
+			energyHandlerSides.put(blockPos, side); //Put the last one we checked, even if it can't receive!
 		}
-		// Fall back to isotropic (null-sided) query
-		return neighborEnergyCache.get(level, blockPos, null);
+		return energyHandlers.get(level, blockPos, side);
 	}
 
 	public TransmitterEnergyStorage getTransmitterEnergyHandler(BlockPos blockPos) {
@@ -322,29 +305,17 @@ public class EnergyTransmitterBE extends BaseMachineBE
 	}
 
 	public IEnergyStorage getTransmitterHandler(BlockPos blockPos) {
-		if (level == null)
-			return null;
 		BlockState blockState = level.getBlockState(blockPos);
-		if (blockState.is(Registration.EnergyTransmitter.get())) {
-			Direction facing = blockState.getValue(BlockStateProperties.FACING);
-			return neighborEnergyCache.get(level, blockPos, facing);
-		}
-		return null;
-	}
-
-	@Override
-	public void invalidateCaps() {
-		super.invalidateCaps();
-		neighborEnergyCache.invalidateAll();
+		if (!blockState.is(Registration.EnergyTransmitter.get()))
+			return null;
+		return energyHandlers.get(level, blockPos, blockState.getValue(BlockStateProperties.FACING));
 	}
 
 	public void providePower() {
-		if (getEnergyStorage().getEnergyStored() <= 0)
-			return; // Don't bother if we're empty!
+		if (getEnergyStorage().getEnergyStored() <= 0) return; //Don't bother if we're empty!
 		for (BlockPos blockPos : blocksToCharge) {
 			IEnergyStorage iEnergyStorage = getHandler(blockPos);
-			if (iEnergyStorage == null)
-				continue;
+			if (iEnergyStorage == null) continue;
 			int sentAmt = transmitPowerWithLoss(getEnergyStorage(), iEnergyStorage, fePerTick(), blockPos);
 			if (sentAmt > 0)
 				doParticles(getBlockPos(), blockPos);
@@ -353,28 +324,20 @@ public class EnergyTransmitterBE extends BaseMachineBE
 	}
 
 	public int calculateLoss(int amtToSend, BlockPos remotePosition) {
-		double energyLoss = (Config.ENERGY_TRANSMITTER_T1_LOSS_PER_BLOCK.get()
-				* Math.abs(getBlockPos().distManhattan(remotePosition))) / 100;
-		// System.out.println("Distance: " +
-		// Math.abs(getBlockPos().distManhattan(remotePosition)) + ". Energy Loss: " +
-		// energyLoss + ". Send vs receive: " + amtToSend + " : " + (amtToSend - (int)
-		// (Math.ceil(amtToSend * energyLoss))));
+		double energyLoss = (Config.ENERGY_TRANSMITTER_T1_LOSS_PER_BLOCK.get() * Math.abs(getBlockPos().distManhattan(remotePosition))) / 100;
 		return amtToSend - (int) (Math.floor(amtToSend * energyLoss));
 	}
 
-	public int transmitPowerWithLoss(IEnergyStorage sender, IEnergyStorage receiver, int amtToSend,
-			BlockPos remotePosition) {
+	public int transmitPowerWithLoss(IEnergyStorage sender, IEnergyStorage receiver, int amtToSend, BlockPos remotePosition) {
 		int amtFit = receiver.receiveEnergy(amtToSend, true);
-		if (amtFit <= 0)
-			return 0;
+		if (amtFit <= 0) return 0;
 		int extractAmt = sender.extractEnergy(amtFit, false);
 		return receiver.receiveEnergy(calculateLoss(extractAmt, remotePosition), false);
 	}
 
 	public int transmitPower(IEnergyStorage sender, IEnergyStorage receiver, int amtToSend) {
 		int amtFit = receiver.receiveEnergy(amtToSend, true);
-		if (amtFit <= 0)
-			return 0;
+		if (amtFit <= 0) return 0;
 		int extractAmt = sender.extractEnergy(amtFit, false);
 		return receiver.receiveEnergy(extractAmt, false);
 	}
@@ -383,25 +346,24 @@ public class EnergyTransmitterBE extends BaseMachineBE
 	 * Discover nearby blocks that need charging - runs once every 2.5 seconds
 	 */
 	public void getBlocksToCharge() {
+		Set<BlockPos> previousTargets = new HashSet<>(blocksToCharge);
+		previousTargets.addAll(transmitters);
 		transmitters.clear();
 		blocksToCharge.clear();
-		// Clear stale cache entries — positions that left the area won't
-		// auto-invalidate otherwise
-		neighborEnergyCache.invalidateAll();
-		transmitters.add(getBlockPos()); // Always add yourself
+		transmitters.add(getBlockPos()); //Always add yourself
 		AABB area = getAABB(getBlockPos());
-		BlockPos.betweenClosedStream((int) area.minX, (int) area.minY, (int) area.minZ, (int) area.maxX - 1,
-				(int) area.maxY - 1, (int) area.maxZ - 1).map(BlockPos::immutable)
-				.sorted(Comparator.comparingDouble(x -> x.distSqr(getBlockPos()))).forEach(blockPos -> {
-					if (blockPos.equals(getBlockPos()))
-						return; // Already added above!
+		BlockPos.betweenClosedStream((int) area.minX, (int) area.minY, (int) area.minZ, (int) area.maxX - 1, (int) area.maxY - 1, (int) area.maxZ - 1)
+				.map(BlockPos::immutable)
+				.sorted(Comparator.comparingDouble(x -> x.distSqr(getBlockPos())))
+				.forEach(blockPos -> {
+					if (blockPos.equals(getBlockPos())) return; //Already added above!
 					BlockState blockState = level.getBlockState(blockPos);
-					if (blockState.isAir() || level.getBlockEntity(blockPos) == null)
-						return;
+					BlockEntity blockEntity = level.getBlockEntity(blockPos);
+					if (blockState.isAir() || blockEntity == null) return;
 
 					boolean foundAcceptableSide = false;
 					for (Direction direction : Direction.values()) {
-						IEnergyStorage cap = neighborEnergyCache.get(level, blockPos, direction);
+						IEnergyStorage cap = blockEntity.getCapability(CapabilityEnergy.ENERGY, direction).orElse(null);
 						if (cap != null && cap.canReceive()) {
 							foundAcceptableSide = true;
 							break;
@@ -411,14 +373,17 @@ public class EnergyTransmitterBE extends BaseMachineBE
 						return;
 
 					ItemStack blockItemStack = blockState.getBlock().getCloneItemStack(level, blockPos, blockState);
-					if (!isStackValidFilter(blockItemStack))
-						return;
+					if (!isStackValidFilter(blockItemStack)) return;
 
 					if (blockState.getBlock() instanceof EnergyTransmitter)
 						transmitters.add(blockPos);
 					else
 						blocksToCharge.add(blockPos);
 				});
+		previousTargets.removeAll(blocksToCharge);
+		previousTargets.removeAll(transmitters);
+		previousTargets.forEach(energyHandlers::invalidatePos);
+		energyHandlerSides.keySet().retainAll(blocksToCharge);
 	}
 
 	public int fePerTick() {
@@ -442,11 +407,14 @@ public class EnergyTransmitterBE extends BaseMachineBE
 	@Override
 	public void saveAdditional(CompoundTag tag) {
 		super.saveAdditional(tag);
+		tag.putInt("energy", energyStorage.getRealEnergyStored());
 		tag.putBoolean("showParticles", showParticles);
 	}
 
 	@Override
 	public void load(CompoundTag tag) {
+		if (tag.contains("energy"))
+			energyStorage.setEnergy(tag.getInt("energy"));
 		super.load(tag);
 		if (tag.contains("showParticles"))
 			showParticles = tag.getBoolean("showParticles");

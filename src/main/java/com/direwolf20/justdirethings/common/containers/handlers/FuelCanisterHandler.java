@@ -27,7 +27,6 @@ public class FuelCanisterHandler extends ItemStackHandler {
 
 	@Override
 	public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
-		return !(stack.getItem() instanceof FuelCanister) && ForgeHooks.getBurnTime(stack, RecipeType.SMELTING) > 0
-				&& !stack.hasCraftingRemainingItem() && !stack.is(JustDireItemTags.FUEL_CANISTER_DENY);
+		return !(stack.getItem() instanceof FuelCanister) && ForgeHooks.getBurnTime(stack, RecipeType.SMELTING) > 0 && !stack.hasContainerItem() && !stack.is(JustDireItemTags.FUEL_CANISTER_DENY);
 	}
 }

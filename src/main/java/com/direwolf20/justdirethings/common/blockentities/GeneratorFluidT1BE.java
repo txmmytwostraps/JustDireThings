@@ -7,8 +7,8 @@ import com.direwolf20.justdirethings.common.blockentities.basebe.PoweredMachineB
 import com.direwolf20.justdirethings.common.blockentities.basebe.PoweredMachineContainerData;
 import com.direwolf20.justdirethings.common.blockentities.basebe.RedstoneControlledBE;
 import com.direwolf20.justdirethings.common.capabilities.EnergyStorageNoReceive;
+import com.direwolf20.justdirethings.common.capabilities.GeneratorFluidItemHandler;
 import com.direwolf20.justdirethings.common.capabilities.JustDireFluidTank;
-import com.direwolf20.justdirethings.common.capabilities.MachineEnergyStorage;
 import com.direwolf20.justdirethings.common.fluids.basefluids.RefinedFuel;
 import com.direwolf20.justdirethings.setup.Config;
 import com.direwolf20.justdirethings.setup.Registration;
@@ -23,32 +23,28 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.energy.IEnergyStorage;
 import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.CapabilityFluidHandler;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.fluids.capability.IFluidHandlerItem;
 import net.minecraftforge.items.ItemStackHandler;
 
-public class GeneratorFluidT1BE extends BaseMachineBE
-		implements
-			RedstoneControlledBE,
-			PoweredMachineBE,
-			FluidMachineBE {
+public class GeneratorFluidT1BE extends BaseMachineBE implements RedstoneControlledBE, PoweredMachineBE, FluidMachineBE {
 	public RedstoneControlData redstoneControlData = new RedstoneControlData();
 	public final PoweredMachineContainerData poweredMachineData;
 	public final FluidContainerData fluidContainerData;
-	private final MachineEnergyStorage energyStorage;
+	private final BlockEnergyCache energyHandlers = new BlockEnergyCache();
+	private final EnergyStorageNoReceive energyStorage;
 	private final JustDireFluidTank fluidTank;
-	private final BlockEnergyCache neighborEnergyCache = new BlockEnergyCache();
 
 	public GeneratorFluidT1BE(BlockEntityType<?> pType, BlockPos pPos, BlockState pBlockState) {
 		super(pType, pPos, pBlockState);
 		MACHINE_SLOTS = 1;
 		energyStorage = new EnergyStorageNoReceive(getMaxEnergy());
-		fluidTank = new JustDireFluidTank(getMaxMB(), stack -> stack.getFluid() instanceof RefinedFuel);
-		poweredMachineData = new PoweredMachineContainerData(this);
+		fluidTank = new JustDireFluidTank(getMaxMB(), fluidStack -> fluidStack.getFluid() instanceof RefinedFuel);
 		fluidContainerData = new FluidContainerData(this);
+		poweredMachineData = new PoweredMachineContainerData(this);
 	}
 
 	public GeneratorFluidT1BE(BlockPos pPos, BlockState pBlockState) {
@@ -61,13 +57,13 @@ public class GeneratorFluidT1BE extends BaseMachineBE
 	}
 
 	@Override
-	public ContainerData getFluidContainerData() {
-		return fluidContainerData;
+	public JustDireFluidTank getFluidTank() {
+		return fluidTank;
 	}
 
 	@Override
-	public JustDireFluidTank getFluidTank() {
-		return fluidTank;
+	public ContainerData getFluidContainerData() {
+		return fluidContainerData;
 	}
 
 	@Override
@@ -86,7 +82,7 @@ public class GeneratorFluidT1BE extends BaseMachineBE
 	}
 
 	@Override
-	public MachineEnergyStorage getEnergyStorage() {
+	public EnergyStorageNoReceive getEnergyStorage() {
 		return energyStorage;
 	}
 
@@ -113,93 +109,87 @@ public class GeneratorFluidT1BE extends BaseMachineBE
 
 	@Override
 	public ItemStackHandler getMachineHandler() {
-		return super.getMachineHandler();
+		if (machineHandler == null) {
+			machineHandler = new GeneratorFluidItemHandler(MACHINE_SLOTS) {
+				@Override
+				protected void onContentsChanged(int slot) {
+					setChanged();
+				}
+			};
+		}
+		return machineHandler;
 	}
 
 	public boolean isStackValid(ItemStack itemStack) {
 		if (itemStack.isEmpty())
 			return false;
-		IFluidHandlerItem fhi = itemStack.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM, null).orElse(null);
-		if (fhi == null)
+		IFluidHandlerItem fluidHandlerItem = itemStack.getCapability(CapabilityFluidHandler.FLUID_HANDLER_ITEM_CAPABILITY).orElse(null);
+		if (fluidHandlerItem == null)
 			return false;
-		FluidStack fluidStack = fhi.drain(1000, IFluidHandler.FluidAction.SIMULATE);
+		FluidStack fluidStack = fluidHandlerItem.drain(1000, IFluidHandler.FluidAction.SIMULATE);
 		if (fluidStack.getAmount() == 0)
 			return false;
-		if (!getFluidStack().isEmpty() && !getFluidStack().getFluid().isSame(fluidStack.getFluid()))
+		if (!getFluidStack().isEmpty() && getFluidStack().getFluid() != fluidStack.getFluid())
 			return false;
-		return getFluidTank().isFluidValid(fluidStack);
+		if (!(getFluidTank().isFluidValid(fluidStack)))
+			return false;
+		return true;
 	}
 
 	public void handleItemStack() {
-		if (isFull())
-			return;
+		if (isFull()) return;
 		ItemStack itemStack = getItemStack();
-		if (!isStackValid(itemStack))
-			return;
-		IFluidHandlerItem fhi = itemStack.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM, null).orElse(null);
-		if (fhi == null)
-			return;
-		FluidStack testExtract = fhi.drain(1000, IFluidHandler.FluidAction.SIMULATE);
+		if (!isStackValid(itemStack)) return;
+		IFluidHandlerItem fluidHandlerItem = itemStack.getCapability(CapabilityFluidHandler.FLUID_HANDLER_ITEM_CAPABILITY).orElse(null);
+		FluidStack testExtract = fluidHandlerItem.drain(1000, IFluidHandler.FluidAction.SIMULATE);
 		int insertAmt = getFluidTank().fill(testExtract, IFluidHandler.FluidAction.SIMULATE);
 		if (insertAmt > 0) {
-			FluidStack extractedStack = fhi.drain(insertAmt, IFluidHandler.FluidAction.EXECUTE);
+			FluidStack extractedStack = fluidHandlerItem.drain(insertAmt, IFluidHandler.FluidAction.EXECUTE);
 			getFluidTank().fill(extractedStack, IFluidHandler.FluidAction.EXECUTE);
 			if (itemStack.getItem() instanceof BucketItem)
-				getMachineHandler().setStackInSlot(0, fhi.getContainer());
+				getMachineHandler().setStackInSlot(0, fluidHandlerItem.getContainer());
 		}
 	}
 
 	@Override
 	public int insertEnergy(int power, boolean simulate) {
-		if (energyStorage instanceof EnergyStorageNoReceive noReceive)
-			return noReceive.forceReceiveEnergy(power, simulate);
-		return 0;
+		return energyStorage.forceReceiveEnergy(power, simulate);
 	}
 
 	public IEnergyStorage getHandler(Direction direction) {
-		if (level == null)
-			return null;
-		return neighborEnergyCache.get(level, getBlockPos().relative(direction), direction.getOpposite());
-	}
-
-	@Override
-	public void invalidateCaps() {
-		super.invalidateCaps();
-		neighborEnergyCache.invalidateAll();
+		return energyHandlers.get(level, getBlockPos().relative(direction), direction.getOpposite());
 	}
 
 	public void providePowerAdjacent() {
-		if (getEnergyStorage().getEnergyStored() <= 0)
-			return;
+		if (getEnergyStorage().getEnergyStored() <= 0) return; //Don't bother if we're empty!
 		for (Direction direction : Direction.values()) {
 			IEnergyStorage iEnergyStorage = getHandler(direction);
-			if (iEnergyStorage == null)
-				continue;
+			if (iEnergyStorage == null) continue;
 			int amtFit = iEnergyStorage.receiveEnergy(getFEOutputPerTick() * 10, true);
-			if (amtFit <= 0)
-				continue;
+			if (amtFit <= 0) continue;
 			int extractAmt = extractEnergy(amtFit, false);
 			iEnergyStorage.receiveEnergy(extractAmt, false);
 		}
 	}
 
 	public void doGenerate() {
-		if (!isActiveRedstone() || getFluidStack().isEmpty())
-			return;
+		if (!isActiveRedstone() || getFluidStack().isEmpty()) return;
 		int fePerFuelTick = getFePerFuelTick();
 		boolean canInsertEnergy = insertEnergy(fePerFuelTick, true) == fePerFuelTick;
-		if (fePerFuelTick == 0 || !canInsertEnergy)
-			return;
+		if (fePerFuelTick == 0 || !canInsertEnergy) return; //Don't burn if the buffer is full
 		FluidStack extractedStack = getFluidTank().drain(1, IFluidHandler.FluidAction.EXECUTE);
-		if (extractedStack.getAmount() == 0)
-			return;
-		insertEnergy(fePerFuelTick, false);
+		if (extractedStack.getAmount() == 0) return;
+
+		//At this point we extracted some fuel!
+		insertEnergy(fePerFuelTick, false); //Receive energy
+
 		setChanged();
 	}
 
 	@Override
 	public void handleTicks() {
-	} // NoOp
+		//NoOp
+	}
 
 	@Override
 	public boolean canRun() {
@@ -216,7 +206,7 @@ public class GeneratorFluidT1BE extends BaseMachineBE
 	}
 
 	public int getFePerFuelTick() {
-		return getFluidTank().getFluid().getFluid() instanceof RefinedFuel rf ? rf.fePerMb() : 0;
+		return getFluidTank().getFluid().getFluid() instanceof RefinedFuel refinedFuel ? refinedFuel.fePerMb() : 0;
 	}
 
 	@Override

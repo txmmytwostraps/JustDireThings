@@ -22,8 +22,7 @@ public class FluidCollectorT2Container extends BaseMachineContainer {
 
 	@Override
 	public boolean stillValid(Player playerIn) {
-		return stillValid(ContainerLevelAccess.create(player.level(), pos), player,
-				Registration.FluidCollectorT2.get());
+		return stillValid(ContainerLevelAccess.create(player.level, pos), player, Registration.FluidCollectorT2.get());
 	}
 
 	@Override

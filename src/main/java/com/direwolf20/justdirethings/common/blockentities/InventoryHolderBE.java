@@ -12,8 +12,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemStackHandler;
 
@@ -49,9 +49,9 @@ public class InventoryHolderBE extends BaseMachineBE {
 	@Nonnull
 	@Override
 	public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> cap, @Nullable Direction side) {
-		if (cap == ForgeCapabilities.ITEM_HANDLER) {
+		if (cap == CapabilityItemHandler.ITEM_HANDLER_CAPABILITY) {
 			if (!lazyHolderHandler.isPresent())
-				lazyHolderHandler = LazyOptional.of(() -> new InventoryHolderItemHandler(this, getMachineHandler()));
+				lazyHolderHandler = LazyOptional.of(this::getInventoryHolderHandler);
 			return lazyHolderHandler.cast();
 		}
 		return super.getCapability(cap, side);
@@ -70,8 +70,7 @@ public class InventoryHolderBE extends BaseMachineBE {
 		markDirtyClient();
 	}
 
-	public void saveSettings(boolean compareNBT, boolean filtersOnly, boolean compareCounts,
-			boolean automatedFiltersOnly, boolean automatedCompareCounts, boolean renderPlayer, int renderedSlot) {
+	public void saveSettings(boolean compareNBT, boolean filtersOnly, boolean compareCounts, boolean automatedFiltersOnly, boolean automatedCompareCounts, boolean renderPlayer, int renderedSlot) {
 		this.compareNBT = compareNBT;
 		this.filtersOnly = filtersOnly;
 		this.compareCounts = compareCounts;
@@ -86,8 +85,7 @@ public class InventoryHolderBE extends BaseMachineBE {
 		filteredCache.clear();
 		for (int i = 0; i < filterBasicHandler.getSlots(); i++) {
 			ItemStack stack = filterBasicHandler.getStackInSlot(i);
-			if (stack.isEmpty())
-				continue;
+			if (stack.isEmpty()) continue;
 			ItemStackKey key = new ItemStackKey(stack, compareNBT);
 			List<Integer> slotList = filteredCache.getOrDefault(key, new ArrayList<>());
 			slotList.add(i);
@@ -125,8 +123,7 @@ public class InventoryHolderBE extends BaseMachineBE {
 		if (!automatedCompareCounts)
 			return -1;
 		ItemStack stack = filterBasicHandler.getStackInSlot(slot);
-		if (stack.isEmpty())
-			return -1;
+		if (stack.isEmpty()) return -1;
 		return stack.getCount();
 	}
 
@@ -146,6 +143,17 @@ public class InventoryHolderBE extends BaseMachineBE {
 				return false;
 		}
 		return true;
+	}
+
+	public void saveInventory(CompoundTag tag) {
+		tag.put("storedItems", getMachineHandler().serializeNBT());
+	}
+
+	public void loadInventory(CompoundTag tag) {
+		if (tag.contains("storedItems")) {
+			getMachineHandler().deserializeNBT(tag.getCompound("storedItems"));
+			rebuildFilterCache();
+		}
 	}
 
 	@Override

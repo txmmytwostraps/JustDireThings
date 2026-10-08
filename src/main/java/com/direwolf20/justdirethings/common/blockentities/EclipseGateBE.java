@@ -2,10 +2,8 @@ package com.direwolf20.justdirethings.common.blockentities;
 
 import com.direwolf20.justdirethings.setup.Registration;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
-import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -14,8 +12,10 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 
 import java.util.List;
+
 
 public class EclipseGateBE extends BlockEntity {
 	public byte lifetime;
@@ -45,32 +45,21 @@ public class EclipseGateBE extends BlockEntity {
 	}
 
 	public void setRealBlock(BlockState realBlock) {
-		if (realBlock == null) { // This should never happen in theory, defensive coding
+		if (realBlock == null) { //This should never happen in theory, defensive coding
 			level.setBlockAndUpdate(this.getBlockPos(), Blocks.AIR.defaultBlockState());
 			return;
 		}
 		if (!realBlock.canSurvive(level, getBlockPos())) {
 			List<ItemStack> drops = Block.getDrops(realBlock, (ServerLevel) level, getBlockPos(), null);
 			for (ItemStack returnedItem : drops) {
-				ItemEntity itementity = new ItemEntity(level, getBlockPos().getX(), getBlockPos().getY(),
-						getBlockPos().getZ(), returnedItem);
+				ItemEntity itementity = new ItemEntity(level, getBlockPos().getX(), getBlockPos().getY(), getBlockPos().getZ(), returnedItem);
 				itementity.setPickUpDelay(40);
 				level.addFreshEntity(itementity);
 				level.setBlockAndUpdate(this.getBlockPos(), Blocks.AIR.defaultBlockState());
 				return;
 			}
 		}
-		BlockState adjustedState = Block.updateFromNeighbourShapes(realBlock, level, getBlockPos()); // Ensure double
-																										// chests are
-																										// placed as
-																										// single chests
-																										// if only 1
-																										// chest
-																										// available in
-																										// copy/paste,
-																										// for example,
-																										// or fixes
-																										// fences
+		BlockState adjustedState = Block.updateFromNeighbourShapes(realBlock, level, getBlockPos()); //Ensure double chests are placed as single chests if only 1 chest available in copy/paste, for example, or fixes fences
 		level.setBlockAndUpdate(this.getBlockPos(), adjustedState);
 	}
 
@@ -84,7 +73,7 @@ public class EclipseGateBE extends BlockEntity {
 	@Override
 	public void load(CompoundTag tag) {
 		super.load(tag);
-		this.sourceBlock = NbtUtils.readBlockState(BuiltInRegistries.BLOCK.asLookup(), tag.getCompound("sourceBlock"));
+		this.sourceBlock = NbtUtils.readBlockState(tag.getCompound("sourceBlock"));
 		this.lifetime = tag.getByte("lifetime");
 	}
 
@@ -99,15 +88,8 @@ public class EclipseGateBE extends BlockEntity {
 
 	@Override
 	public ClientboundBlockEntityDataPacket getUpdatePacket() {
-		// Vanilla uses the type parameter to indicate which type of tile entity
-		// (command block, skull, or beacon?) is receiving the packet, but it seems like
-		// Forge has overridden this behavior
+		// Vanilla uses the type parameter to indicate which type of tile entity (command block, skull, or beacon?) is receiving the packet, but it seems like Forge has overridden this behavior
 		return ClientboundBlockEntityDataPacket.create(this);
-	}
-
-	@Override
-	public void handleUpdateTag(CompoundTag tag) {
-		this.load(tag);
 	}
 
 	@Override
@@ -118,10 +100,9 @@ public class EclipseGateBE extends BlockEntity {
 	}
 
 	@Override
-	public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt) {
-		if (pkt.getTag() == null)
-			return;
-		this.load(pkt.getTag());
+	public AABB getRenderBoundingBox() {
+		// Same reach as the machines
+		return new AABB(getBlockPos()).inflate(10);
 	}
 
 	public void markDirtyClient() {

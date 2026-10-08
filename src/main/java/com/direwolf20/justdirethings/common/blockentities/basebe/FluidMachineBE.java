@@ -1,9 +1,10 @@
 package com.direwolf20.justdirethings.common.blockentities.basebe;
 
-import com.direwolf20.justdirethings.common.capabilities.JustDireFluidTank;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.templates.FluidTank;
 
 public interface FluidMachineBE {
 	default int getMaxMB() {
@@ -12,7 +13,7 @@ public interface FluidMachineBE {
 
 	ContainerData getFluidContainerData();
 
-	JustDireFluidTank getFluidTank();
+	FluidTank getFluidTank();
 
 	default FluidStack getFluidStack() {
 		return getFluidTank().getFluid();
@@ -27,8 +28,9 @@ public interface FluidMachineBE {
 	}
 
 	default void setAmountStored(int value) {
+		// Skip the empty stack. The fluid syncs separately.
 		FluidStack fluid = getFluidTank().getFluid();
-		if (!fluid.isEmpty())
+		if (fluid.getRawFluid() != Fluids.EMPTY)
 			fluid.setAmount(value);
 	}
 

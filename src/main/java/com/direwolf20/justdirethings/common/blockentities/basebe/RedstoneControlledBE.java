@@ -18,23 +18,20 @@ public interface RedstoneControlledBE {
 			baseMachineBE.markDirtyClient();
 		BlockState blockState = getBlockEntity().getBlockState();
 		if (blockState.hasProperty(BlockBreakerT1.ACTIVE)) {
-			getBlockEntity().getLevel().setBlockAndUpdate(getBlockEntity().getBlockPos(),
-					blockState.setValue(BlockBreakerT1.ACTIVE, isActiveRedstoneTestOnly()));
+			getBlockEntity().getLevel().setBlockAndUpdate(getBlockEntity().getBlockPos(), blockState.setValue(BlockBreakerT1.ACTIVE, isActiveRedstoneTestOnly()));
 		}
 	}
 
 	default void evaluateRedstone() {
 		if (!getRedstoneControlData().checkedRedstone) {
 			boolean newRedstoneSignal = getBlockEntity().getLevel().hasNeighborSignal(getBlockEntity().getBlockPos());
-			if (getRedstoneControlData().redstoneMode.equals(MiscHelpers.RedstoneMode.PULSE)
-					&& !getRedstoneControlData().receivingRedstone && newRedstoneSignal)
+			if (getRedstoneControlData().redstoneMode.equals(MiscHelpers.RedstoneMode.PULSE) && !getRedstoneControlData().receivingRedstone && newRedstoneSignal)
 				getRedstoneControlData().pulsed = true;
 			getRedstoneControlData().receivingRedstone = newRedstoneSignal;
 			getRedstoneControlData().checkedRedstone = true;
 			BlockState blockState = getBlockEntity().getBlockState();
 			if (blockState.hasProperty(BlockBreakerT1.ACTIVE)) {
-				getBlockEntity().getLevel().setBlockAndUpdate(getBlockEntity().getBlockPos(),
-						blockState.setValue(BlockBreakerT1.ACTIVE, isActiveRedstoneTestOnly()));
+				getBlockEntity().getLevel().setBlockAndUpdate(getBlockEntity().getBlockPos(), blockState.setValue(BlockBreakerT1.ACTIVE, isActiveRedstoneTestOnly()));
 			}
 		}
 	}
@@ -46,8 +43,7 @@ public interface RedstoneControlledBE {
 			return !getRedstoneControlData().receivingRedstone;
 		if (getRedstoneControlData().redstoneMode.equals(MiscHelpers.RedstoneMode.HIGH))
 			return getRedstoneControlData().receivingRedstone;
-		if (getRedstoneControlData().redstoneMode.equals(MiscHelpers.RedstoneMode.PULSE)
-				&& getRedstoneControlData().pulsed) {
+		if (getRedstoneControlData().redstoneMode.equals(MiscHelpers.RedstoneMode.PULSE) && getRedstoneControlData().pulsed) {
 			return true;
 		}
 		return false;
@@ -60,8 +56,7 @@ public interface RedstoneControlledBE {
 			return !getRedstoneControlData().receivingRedstone;
 		if (getRedstoneControlData().redstoneMode.equals(MiscHelpers.RedstoneMode.HIGH))
 			return getRedstoneControlData().receivingRedstone;
-		if (getRedstoneControlData().redstoneMode.equals(MiscHelpers.RedstoneMode.PULSE)
-				&& getRedstoneControlData().pulsed) {
+		if (getRedstoneControlData().redstoneMode.equals(MiscHelpers.RedstoneMode.PULSE) && getRedstoneControlData().pulsed) {
 			getRedstoneControlData().pulsed = false;
 			return true;
 		}

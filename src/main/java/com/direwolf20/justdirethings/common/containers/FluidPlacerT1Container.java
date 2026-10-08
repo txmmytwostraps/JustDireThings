@@ -21,8 +21,14 @@ public class FluidPlacerT1Container extends BaseMachineContainer {
 	}
 
 	@Override
+	public void addMachineSlots() {
+		machineHandler = baseMachineBE.getMachineHandler();
+		addSlotRange(machineHandler, 0, 80, 13, 1, 18);
+	}
+
+	@Override
 	public boolean stillValid(Player playerIn) {
-		return stillValid(ContainerLevelAccess.create(player.level(), pos), player, Registration.FluidPlacerT1.get());
+		return stillValid(ContainerLevelAccess.create(player.level, pos), player, Registration.FluidPlacerT1.get());
 	}
 
 	@Override

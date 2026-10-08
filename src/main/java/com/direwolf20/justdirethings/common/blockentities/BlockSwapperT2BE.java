@@ -8,11 +8,10 @@ import com.direwolf20.justdirethings.util.interfacehelpers.AreaAffectingData;
 import com.direwolf20.justdirethings.util.interfacehelpers.FilterData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -25,14 +24,13 @@ import java.util.stream.Collectors;
 
 public class BlockSwapperT2BE extends BlockSwapperT1BE implements PoweredMachineBE, AreaAffectingBE, FilterableBE {
 	public FilterData filterData = new FilterData();
-	public AreaAffectingData areaAffectingData = new AreaAffectingData();
+	public AreaAffectingData areaAffectingData = new AreaAffectingData(getBlockState().getValue(BlockStateProperties.FACING));
 	public final PoweredMachineContainerData poweredMachineData;
 	private final MachineEnergyStorage energyStorage;
 	private final FilterBasicHandler filterHandler;
 
 	public BlockSwapperT2BE(BlockPos pPos, BlockState pBlockState) {
 		super(Registration.BlockSwapperT2BE.get(), pPos, pBlockState);
-		areaAffectingData = new AreaAffectingData(pBlockState.getValue(BlockStateProperties.FACING));
 		poweredMachineData = new PoweredMachineContainerData(this);
 		energyStorage = new MachineEnergyStorage(getMaxEnergy());
 		filterHandler = new FilterBasicHandler(9);
@@ -50,7 +48,7 @@ public class BlockSwapperT2BE extends BlockSwapperT1BE implements PoweredMachine
 
 	@Override
 	public int getStandardEnergyCost() {
-		return 50; // Todo Config?
+		return 50;
 	}
 
 	public int getEnergyCost(int numBlocks) {
@@ -89,8 +87,7 @@ public class BlockSwapperT2BE extends BlockSwapperT1BE implements PoweredMachine
 	public void updatePartnerArea() {
 		BlockEntity partnerBE = getPartnerBE();
 		if (partnerBE instanceof BlockSwapperT2BE blockSwapperT2BE) {
-			blockSwapperT2BE.setAreaOnly(getAreaAffectingData().xRadius, getAreaAffectingData().yRadius,
-					getAreaAffectingData().zRadius);
+			blockSwapperT2BE.setAreaOnly(getAreaAffectingData().xRadius, getAreaAffectingData().yRadius, getAreaAffectingData().zRadius);
 		}
 	}
 
@@ -121,26 +118,24 @@ public class BlockSwapperT2BE extends BlockSwapperT1BE implements PoweredMachine
 	}
 
 	public BlockPos getStartingPoint() {
-		return getBlockPos().offset(getAreaAffectingData().xOffset, getAreaAffectingData().yOffset,
-				getAreaAffectingData().zOffset);
+		return getBlockPos().offset(getAreaAffectingData().xOffset, getAreaAffectingData().yOffset, getAreaAffectingData().zOffset);
 	}
 
 	public boolean isInBothAreas(BlockPos blockPos) {
 		BlockEntity partnerBE = getPartnerBE();
 		if (!level.equals(partnerBE.getLevel()))
-			return false; // If my level is different than my partners we are not overlapping of course!
+			return false; //If my level is different than my partners we are not overlapping of course!
 		if (partnerBE instanceof BlockSwapperT2BE partnerSwapper) {
 			AABB thisAABB = getAABB(getBlockPos());
 			AABB thatAABB = partnerSwapper.getAABB(partnerSwapper.getBlockPos());
-			return (thisAABB.contains(blockPos.getX(), blockPos.getY(), blockPos.getZ())
-					&& thatAABB.contains(blockPos.getX(), blockPos.getY(), blockPos.getZ()));
+			return (thisAABB.contains(blockPos.getX(), blockPos.getY(), blockPos.getZ()) && thatAABB.contains(blockPos.getX(), blockPos.getY(), blockPos.getZ()));
 		}
 		return false;
 	}
 
 	public boolean isInBothAreas(Vec3 vec3) {
 		if (!isSameLevel())
-			return false; // If my level is different than my partners we are not overlapping of course!
+			return false; //If my level is different than my partners we are not overlapping of course!
 		if (getPartnerBE() instanceof BlockSwapperT2BE partnerSwapper) {
 			AABB thisAABB = getAABB(getBlockPos());
 			AABB thatAABB = partnerSwapper.getAABB(partnerSwapper.getBlockPos());
@@ -152,12 +147,11 @@ public class BlockSwapperT2BE extends BlockSwapperT1BE implements PoweredMachine
 	@Override
 	public boolean isBlockPosValid(ServerLevel serverLevel, BlockPos blockPos) {
 		if (!super.isBlockPosValid(serverLevel, blockPos))
-			return false; // Do the same checks as normal, then check the filters
+			return false; //Do the same checks as normal, then check the filters
 		if (isInBothAreas(blockPos))
 			return false;
 		BlockState blockState = serverLevel.getBlockState(blockPos);
-		if (blockState.isAir())
-			return true; // Don't need to filter AIR either way
+		if (blockState.isAir()) return true; //Don't need to filter AIR either way
 		ItemStack blockItemStack = blockState.getBlock().getCloneItemStack(serverLevel, blockPos, blockState);
 		return isStackValidFilter(blockItemStack);
 	}
@@ -170,11 +164,11 @@ public class BlockSwapperT2BE extends BlockSwapperT1BE implements PoweredMachine
 	@Override
 	public List<BlockPos> findSpotsToSwap() {
 		AABB area = getAABB(getBlockPos());
-		return BlockPos
-				.betweenClosedStream((int) area.minX, (int) area.minY, (int) area.minZ, (int) area.maxX - 1,
-						(int) area.maxY - 1, (int) area.maxZ - 1)
-				.filter(blockPos -> isBlockPosValid((ServerLevel) level, blockPos)).map(BlockPos::immutable)
-				.sorted(Comparator.comparingDouble(x -> x.distSqr(getBlockPos()))).collect(Collectors.toList());
+		return BlockPos.betweenClosedStream((int) area.minX, (int) area.minY, (int) area.minZ, (int) area.maxX - 1, (int) area.maxY - 1, (int) area.maxZ - 1)
+				.filter(blockPos -> isBlockPosValid((ServerLevel) level, blockPos))
+				.map(BlockPos::immutable)
+				.sorted(Comparator.comparingDouble(x -> x.distSqr(getBlockPos())))
+				.collect(Collectors.toList());
 	}
 
 	@Override
@@ -183,23 +177,17 @@ public class BlockSwapperT2BE extends BlockSwapperT1BE implements PoweredMachine
 			return false;
 		if (isInBothAreas(entity.position()))
 			return false;
-		Item eggItem = SpawnEggItem.byId(entity.getType());
-		ItemStack eggItemStack;
-		if (eggItem == null)
-			eggItemStack = ItemStack.EMPTY;
-		else
-			eggItemStack = new ItemStack(eggItem);
-		return isStackValidFilter(eggItemStack);
+		return isEntityValidFilter(entity, this.level);
 	}
 
 	@Override
-	public void saveAdditional(net.minecraft.nbt.CompoundTag tag) {
+	public void saveAdditional(CompoundTag tag) {
 		super.saveAdditional(tag);
 		tag.putInt("energy", energyStorage.getEnergyStored());
 	}
 
 	@Override
-	public void load(net.minecraft.nbt.CompoundTag tag) {
+	public void load(CompoundTag tag) {
 		if (tag.contains("energy"))
 			energyStorage.setEnergy(tag.getInt("energy"));
 		super.load(tag);

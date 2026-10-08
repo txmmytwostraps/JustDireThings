@@ -27,7 +27,7 @@ public class SensorT1Container extends BaseMachineContainer {
 
 	@Override
 	public boolean stillValid(Player playerIn) {
-		return stillValid(ContainerLevelAccess.create(player.level(), pos), player, Registration.SensorT1.get());
+		return stillValid(ContainerLevelAccess.create(player.level, pos), player, Registration.SensorT1.get());
 	}
 
 	@Override

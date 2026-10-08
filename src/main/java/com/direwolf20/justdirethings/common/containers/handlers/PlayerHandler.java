@@ -4,6 +4,7 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraftforge.items.ItemStackHandler;
 
 public class PlayerHandler extends ItemStackHandler {
@@ -11,7 +12,9 @@ public class PlayerHandler extends ItemStackHandler {
 	public final InventoryType inventoryType;
 
 	public enum InventoryType {
-		Inventory, Armor, Offhand;
+		Inventory,
+		Armor,
+		Offhand;
 
 		public InventoryType next() {
 			InventoryType[] values = values();
@@ -21,18 +24,13 @@ public class PlayerHandler extends ItemStackHandler {
 	}
 
 	public PlayerHandler(Player player, InventoryType inventoryType) {
-		super(inventoryType.equals(InventoryType.Inventory)
-				? player.getInventory().items
-				: inventoryType.equals(InventoryType.Armor)
-						? player.getInventory().armor
-						: player.getInventory().offhand);
+		super(inventoryType.equals(InventoryType.Inventory) ? player.getInventory().items : inventoryType.equals(InventoryType.Armor) ? player.getInventory().armor : player.getInventory().offhand);
 		this.player = player;
 		this.inventoryType = inventoryType;
 	}
 
 	public Inventory getInventory() {
-		if (player == null)
-			return null;
+		if (player == null) return null;
 		return player.getInventory();
 	}
 
@@ -42,15 +40,13 @@ public class PlayerHandler extends ItemStackHandler {
 
 	@Override
 	public void setStackInSlot(int slot, ItemStack stack) {
-		if (isPlayerInvalid())
-			return;
+		if (isPlayerInvalid()) return;
 		super.setStackInSlot(slot, stack);
 	}
 
 	@Override
 	public ItemStack getStackInSlot(int slot) {
-		if (isPlayerInvalid())
-			return ItemStack.EMPTY;
+		if (isPlayerInvalid()) return ItemStack.EMPTY;
 		return super.getStackInSlot(slot);
 	}
 
@@ -63,15 +59,15 @@ public class PlayerHandler extends ItemStackHandler {
 
 	@Override
 	public ItemStack extractItem(int slot, int amount, boolean simulate) {
-		if (isPlayerInvalid())
+		if (isPlayerInvalid()) return ItemStack.EMPTY;
+		if (inventoryType == InventoryType.Armor && EnchantmentHelper.hasBindingCurse(super.getStackInSlot(slot)))
 			return ItemStack.EMPTY;
 		return super.extractItem(slot, amount, simulate);
 	}
 
 	@Override
 	public boolean isItemValid(int slot, ItemStack stack) {
-		if (isPlayerInvalid())
-			return false;
+		if (isPlayerInvalid()) return false;
 		if (inventoryType.equals(InventoryType.Inventory))
 			return true;
 		if (inventoryType.equals(InventoryType.Armor)) {

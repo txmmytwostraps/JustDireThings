@@ -2,6 +2,7 @@ package com.direwolf20.justdirethings.common.containers;
 
 import com.direwolf20.justdirethings.common.containers.basecontainers.BaseContainer;
 import com.direwolf20.justdirethings.common.containers.handlers.PotionCanisterHandler;
+import com.direwolf20.justdirethings.common.items.PotionCanister;
 import com.direwolf20.justdirethings.setup.Registration;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -25,26 +26,31 @@ public class PotionCanisterContainer extends BaseContainer {
 	public PotionCanisterContainer(int windowId, Inventory playerInventory, Player player, ItemStack potionCanister) {
 		super(Registration.PotionCanister_Container.get(), windowId);
 		playerEntity = player;
+		handler = new PotionCanisterHandler(potionCanister, PotionCanister.TOOL_CONTENTS, 1);
 		this.potionCanister = potionCanister;
-		this.handler = new PotionCanisterHandler(potionCanister);
-		addItemSlots(handler, 80, 35, 1);
+		if (handler != null)
+			addItemSlots(handler, 0, 80, 35, 1, 18);
+
 		addPlayerSlots(playerInventory, 8, 84);
 	}
 
 	@Override
 	public boolean stillValid(Player playerIn) {
-		return playerIn.getMainHandItem().equals(potionCanister) || playerIn.getOffhandItem().equals(potionCanister);
+		return playerIn.getMainHandItem().equals(potionCanister);
 	}
 
-	private void addItemSlots(IItemHandler h, int x, int y, int amount) {
+	protected int addItemSlots(IItemHandler handler, int index, int x, int y, int amount, int dx) {
 		for (int i = 0; i < amount; i++) {
-			addSlot(new SlotItemHandler(h, i, x + i * 18, y) {
+			addSlot(new SlotItemHandler(handler, i, x, y) {
 				@Override
 				public boolean mayPlace(ItemStack stack) {
 					return stack.getItem() instanceof PotionItem;
 				}
 			});
+			x += dx;
+			index++;
 		}
+		return index;
 	}
 
 	@Override
@@ -53,21 +59,36 @@ public class PotionCanisterContainer extends BaseContainer {
 		Slot slot = this.slots.get(index);
 		if (slot.hasItem()) {
 			ItemStack currentStack = slot.getItem();
-			if (index < SLOTS) {
-				if (!this.moveItemStackTo(currentStack, SLOTS, Inventory.INVENTORY_SIZE + SLOTS, true))
+			if (index < SLOTS) { //Slot to Player Inventory
+				if (!this.moveItemStackTo(currentStack, SLOTS, Inventory.INVENTORY_SIZE + SLOTS, true)) {
 					return ItemStack.EMPTY;
-			} else {
-				if (!this.moveItemStackTo(currentStack, 0, SLOTS, false))
-					return ItemStack.EMPTY;
+				}
 			}
-			if (currentStack.isEmpty())
+			if (index >= SLOTS) { //Player Inventory to Slots
+				// Without this, bottles merge into a copy and vanish
+				if (!this.slots.get(0).mayPlace(currentStack) || !this.moveItemStackTo(currentStack, 0, SLOTS, false)) {
+					return ItemStack.EMPTY;
+				}
+			}
+
+			if (currentStack.isEmpty()) {
 				slot.set(ItemStack.EMPTY);
-			else
+			} else {
+				slot.set(currentStack);
 				slot.setChanged();
-			if (currentStack.getCount() == itemstack.getCount())
+			}
+
+			if (currentStack.getCount() == itemstack.getCount()) {
 				return ItemStack.EMPTY;
+			}
+
 			slot.onTake(playerIn, currentStack);
 		}
 		return itemstack;
+	}
+
+	@Override
+	public void removed(Player playerIn) {
+		super.removed(playerIn);
 	}
 }

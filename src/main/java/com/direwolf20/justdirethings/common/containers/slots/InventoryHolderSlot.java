@@ -9,13 +9,10 @@ import net.minecraftforge.items.SlotItemHandler;
 
 public class InventoryHolderSlot extends SlotItemHandler {
 	private final InventoryHolderBE inventoryHolderBE;
-	private final int handlerSlotIndex;
 
-	public InventoryHolderSlot(IItemHandler itemHandler, int index, int xPosition, int yPosition,
-			InventoryHolderBE inventoryHolderBE) {
+	public InventoryHolderSlot(IItemHandler itemHandler, int index, int xPosition, int yPosition, InventoryHolderBE inventoryHolderBE) {
 		super(itemHandler, index, xPosition, yPosition);
 		this.inventoryHolderBE = inventoryHolderBE;
-		this.handlerSlotIndex = index;
 	}
 
 	@Override
@@ -38,32 +35,28 @@ public class InventoryHolderSlot extends SlotItemHandler {
 	}
 
 	public boolean mayPlaceFiltered(ItemStack currentStack) {
-		if (this.inventoryHolderBE == null)
-			return false;
+		if (this.inventoryHolderBE == null) return false;
 		ItemStackKey key = new ItemStackKey(currentStack, inventoryHolderBE.compareNBT);
 
 		FilterBasicHandler filteredItems = inventoryHolderBE.filterBasicHandler;
-		ItemStack stack = filteredItems.getStackInSlot(this.handlerSlotIndex);
-		if (stack.isEmpty())
-			return !inventoryHolderBE.filtersOnly;
+		ItemStack stack = filteredItems.getStackInSlot(getSlotIndex());
+		if (stack.isEmpty()) return !inventoryHolderBE.filtersOnly;
 		return key.equals(new ItemStackKey(stack, inventoryHolderBE.compareNBT));
 	}
 
 	public int getFilterStackSize() {
-		if (this.inventoryHolderBE == null)
-			return 0;
+		if (this.inventoryHolderBE == null) return 0;
 		FilterBasicHandler filteredItems = inventoryHolderBE.filterBasicHandler;
-		ItemStack filterStack = filteredItems.getStackInSlot(this.handlerSlotIndex);
+		ItemStack filterStack = filteredItems.getStackInSlot(getSlotIndex());
 		if (filterStack.isEmpty())
 			return super.getMaxStackSize();
 		return filterStack.getCount();
 	}
 
 	public int getFilterStackSize(ItemStack stack) {
-		if (this.inventoryHolderBE == null)
-			return 0;
+		if (this.inventoryHolderBE == null) return 0;
 		FilterBasicHandler filteredItems = inventoryHolderBE.filterBasicHandler;
-		ItemStack filterStack = filteredItems.getStackInSlot(this.handlerSlotIndex);
+		ItemStack filterStack = filteredItems.getStackInSlot(getSlotIndex());
 		if (filterStack.isEmpty())
 			return super.getMaxStackSize(stack);
 		return filterStack.getCount();

@@ -10,6 +10,7 @@ import com.direwolf20.justdirethings.setup.Registration;
 import com.direwolf20.justdirethings.util.interfacehelpers.AreaAffectingData;
 import com.direwolf20.justdirethings.util.interfacehelpers.FilterData;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
@@ -25,14 +26,13 @@ import java.util.stream.Collectors;
 
 public class BlockPlacerT2BE extends BlockPlacerT1BE implements PoweredMachineBE, AreaAffectingBE, FilterableBE {
 	public FilterData filterData = new FilterData();
-	public AreaAffectingData areaAffectingData = new AreaAffectingData();
+	public AreaAffectingData areaAffectingData = new AreaAffectingData(getBlockState().getValue(BlockStateProperties.FACING));
 	public final PoweredMachineContainerData poweredMachineData;
 	private final MachineEnergyStorage energyStorage;
 	private final FilterBasicHandler filterHandler;
 
 	public BlockPlacerT2BE(BlockPos pPos, BlockState pBlockState) {
 		super(Registration.BlockPlacerT2BE.get(), pPos, pBlockState);
-		areaAffectingData = new AreaAffectingData(pBlockState.getValue(BlockStateProperties.FACING));
 		poweredMachineData = new PoweredMachineContainerData(this);
 		energyStorage = new MachineEnergyStorage(getMaxEnergy());
 		filterHandler = new FilterBasicHandler(9);
@@ -50,7 +50,7 @@ public class BlockPlacerT2BE extends BlockPlacerT1BE implements PoweredMachineBE
 
 	@Override
 	public int getStandardEnergyCost() {
-		return 500; // Todo Config?
+		return 500;
 	}
 
 	@Override
@@ -83,37 +83,30 @@ public class BlockPlacerT2BE extends BlockPlacerT1BE implements PoweredMachineBE
 
 	@Override
 	public List<BlockPos> findSpotsToPlace(FakePlayer fakePlayer) {
-		if (isEmptyScanOnCooldown())
-			return List.of();
 		AABB area = getAABB(getBlockPos());
-		List<BlockPos> result = BlockPos
-				.betweenClosedStream((int) area.minX, (int) area.minY, (int) area.minZ, (int) area.maxX - 1,
-						(int) area.maxY - 1, (int) area.maxZ - 1)
-				.filter(blockPos -> isBlockPosValid(fakePlayer, blockPos)).map(BlockPos::immutable)
-				.sorted(Comparator.comparingDouble(x -> x.distSqr(getBlockPos()))).collect(Collectors.toList());
-		if (result.isEmpty())
-			setEmptyScanCooldown(20);
-		return result;
+		return BlockPos.betweenClosedStream((int) area.minX, (int) area.minY, (int) area.minZ, (int) area.maxX - 1, (int) area.maxY - 1, (int) area.maxZ - 1)
+				.filter(blockPos -> isBlockPosValid(fakePlayer, blockPos))
+				.map(BlockPos::immutable)
+				.sorted(Comparator.comparingDouble(x -> x.distSqr(getBlockPos())))
+				.collect(Collectors.toList());
 	}
 
 	@Override
 	public boolean isBlockPosValid(FakePlayer fakePlayer, BlockPos blockPos) {
 		if (!super.isBlockPosValid(fakePlayer, blockPos))
-			return false; // Do the same checks as normal, then check the filters
-		BlockPos adjacentPos = blockPos.relative(getDirectionValue());
-		ItemStack blockItemStack = level.getBlockState(adjacentPos).getCloneItemStack(
-				new BlockHitResult(Vec3.ZERO, getDirectionValue(), adjacentPos, false), level, adjacentPos, fakePlayer);
+			return false; //Do the same checks as normal, then check the filters
+		ItemStack blockItemStack = level.getBlockState(blockPos.relative(getDirectionValue())).getCloneItemStack(new BlockHitResult(Vec3.ZERO, getDirectionValue(), blockPos, false), level, blockPos, fakePlayer);
 		return isStackValidFilter(blockItemStack);
 	}
 
 	@Override
-	public void saveAdditional(net.minecraft.nbt.CompoundTag tag) {
+	public void saveAdditional(CompoundTag tag) {
 		super.saveAdditional(tag);
 		tag.putInt("energy", energyStorage.getEnergyStored());
 	}
 
 	@Override
-	public void load(net.minecraft.nbt.CompoundTag tag) {
+	public void load(CompoundTag tag) {
 		if (tag.contains("energy"))
 			energyStorage.setEnergy(tag.getInt("energy"));
 		super.load(tag);

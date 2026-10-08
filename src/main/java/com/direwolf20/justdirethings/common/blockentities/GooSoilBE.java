@@ -7,11 +7,13 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandler;
 
 public class GooSoilBE extends BlockEntity {
 	private NBTHelpers.BoundInventory boundInventory;
+	protected LazyOptional<IItemHandler> attachedInventory = LazyOptional.empty();
 
 	public GooSoilBE(BlockPos pos, BlockState state) {
 		super(Registration.GooSoilBE.get(), pos, state);
@@ -23,15 +25,21 @@ public class GooSoilBE extends BlockEntity {
 	}
 
 	public IItemHandler getAttachedInventory(ServerLevel serverLevel) {
-		if (boundInventory == null)
-			return null;
-		ServerLevel boundLevel = serverLevel.getServer().getLevel(boundInventory.globalPos().dimension());
-		if (boundLevel == null)
-			return null;
-		BlockEntity be = boundLevel.getBlockEntity(boundInventory.globalPos().pos());
-		if (be == null)
-			return null;
-		return be.getCapability(ForgeCapabilities.ITEM_HANDLER, boundInventory.direction()).orElse(null);
+		if (boundInventory == null) return null;
+		if (!attachedInventory.isPresent()) {
+			ServerLevel boundLevel = serverLevel.getServer().getLevel(boundInventory.globalPos().dimension());
+			if (boundLevel == null) return null;
+			BlockPos boundPos = boundInventory.globalPos().pos();
+			if (!boundLevel.isLoaded(boundPos)) return null; //Don't load a chunk just for drops
+			BlockEntity blockEntity = boundLevel.getBlockEntity(boundPos);
+			if (blockEntity == null) return null;
+			attachedInventory = blockEntity.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, boundInventory.direction());
+		}
+		return attachedInventory.orElse(null);
+	}
+
+	public void invalidateHandler() {
+		attachedInventory = LazyOptional.empty();
 	}
 
 	@Override

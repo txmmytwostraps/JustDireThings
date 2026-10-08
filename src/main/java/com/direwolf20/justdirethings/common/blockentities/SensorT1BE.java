@@ -16,17 +16,15 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.Item;
+import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.SpawnEggItem;
-import net.minecraftforge.fluids.FluidUtil;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.Property;
-import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.AABB;
 
 import java.util.*;
@@ -34,7 +32,7 @@ import java.util.*;
 public class SensorT1BE extends BaseMachineBE implements FilterableBE {
 	public FilterData filterData = new FilterData();
 	protected List<BlockPos> positions = new ArrayList<>();
-	protected FilterBasicHandler filterHandler;
+	private final FilterBasicHandler filterHandler;
 	public SENSE_TARGET sense_target = SENSE_TARGET.BLOCK;
 	public boolean emitRedstone = false;
 	public boolean strongSignal = false;
@@ -42,10 +40,18 @@ public class SensorT1BE extends BaseMachineBE implements FilterableBE {
 	public Map<Integer, Map<Property<?>, Comparable<?>>> blockStateProperties = new HashMap<>();
 	public final Map<BlockState, Boolean> blockStateFilterCache = new Object2BooleanOpenHashMap<>();
 	public int senseAmount = 0;
-	public int equality = 0; // greaterthan, lessthan, equals
+	public int equality = 0; //greaterthan, lessthan, equals
 
 	public enum SENSE_TARGET {
-		BLOCK, AIR, HOSTILE, PASSIVE, ADULT, CHILD, PLAYER, LIVING, ITEM;
+		BLOCK,
+		AIR,
+		HOSTILE,
+		PASSIVE,
+		ADULT,
+		CHILD,
+		PLAYER,
+		LIVING,
+		ITEM;
 
 		public SENSE_TARGET next() {
 			SENSE_TARGET[] values = values();
@@ -73,13 +79,8 @@ public class SensorT1BE extends BaseMachineBE implements FilterableBE {
 		markDirtyClient();
 	}
 
-	public Map<Property<?>, Comparable<?>> getBlockStateProperties(int slot) {
-		return blockStateProperties.getOrDefault(slot, new HashMap<>());
-	}
-
 	@SuppressWarnings("unchecked")
-	// Suppress the unchecked cast warning -- This is done this way in vanilla all
-	// over the place, so I guess its safe?
+	// Suppress the unchecked cast warning -- This is done this way in vanilla all over the place, so I guess its safe?
 	private static <T extends Comparable<T>> String getName(Property<T> pProperty, Comparable<?> pValue) {
 		return pProperty.getName((T) pValue);
 	}
@@ -110,27 +111,24 @@ public class SensorT1BE extends BaseMachineBE implements FilterableBE {
 
 	public static Map<Property<?>, Comparable<?>> loadBlockStateProperty(ListTag listTag, ItemStack stateStack) {
 		Map<Property<?>, Comparable<?>> propertiesMap = new HashMap<>();
-		Block block = null;
-		if (stateStack.getItem() instanceof BlockItem blockItem) {
+		Block block;
+		if (stateStack.getItem() instanceof BlockItem blockItem)
 			block = blockItem.getBlock();
-		} else {
-			var fluid = FluidUtil.getFluidContained(stateStack);
-			if (fluid.isPresent())
-				block = fluid.get().getFluid().defaultFluidState().createLegacyBlock().getBlock();
-		}
-		if (block != null) {
-			for (int i = 0; i < listTag.size(); i++) {
-				CompoundTag propertiesTag = listTag.getCompound(i);
-				for (String propertyName : propertiesTag.getAllKeys()) {
-					Property<?> property = block.getStateDefinition().getProperty(propertyName);
-					if (property != null) {
-						String valueStr = propertiesTag.getString(propertyName);
-						Comparable<?> value = getValue(property, valueStr);
-						if (value != null)
-							propertiesMap.put(property, value);
-					}
+		else if (stateStack.getItem() instanceof BucketItem bucketItem)
+			block = bucketItem.getFluid().defaultFluidState().createLegacyBlock().getBlock();
+		else
+			return propertiesMap;
+		for (int i = 0; i < listTag.size(); i++) {
+			CompoundTag propertiesTag = listTag.getCompound(i);
+			propertiesTag.getAllKeys().forEach(propertyName -> {
+				Property<?> property = block.getStateDefinition().getProperty(propertyName);
+				if (property != null) {
+					String valueStr = propertiesTag.getString(propertyName);
+					Comparable<?> value = getValue(property, valueStr);
+					if (value != null)
+						propertiesMap.put(property, value);
 				}
-			}
+			});
 		}
 		return propertiesMap;
 	}
@@ -150,12 +148,6 @@ public class SensorT1BE extends BaseMachineBE implements FilterableBE {
 	}
 
 	@Override
-	public void setFilterSettings(FilterData filterData) {
-		FilterableBE.super.setFilterSettings(filterData);
-		blockStateFilterCache.clear();
-	}
-
-	@Override
 	public FilterBasicHandler getFilterHandler() {
 		return filterHandler;
 	}
@@ -172,10 +164,10 @@ public class SensorT1BE extends BaseMachineBE implements FilterableBE {
 
 	public void setSensorSettings(int senseTarget, boolean strongSignal, int senseAmount, int equality) {
 		this.sense_target = SENSE_TARGET.values()[senseTarget];
-		setRedstone(emitRedstone, strongSignal); // Gonna wanna update the neighbors if strongSignal changed
+		setRedstone(emitRedstone, strongSignal); //Gonna wanna update the neighbors if strongSignal changed
 		this.senseAmount = senseAmount;
 		this.equality = equality;
-		positions.clear(); // Clear any clicks we have queue'd up
+		positions.clear(); //Clear any clicks we have queue'd up
 		blockStateFilterCache.clear();
 		markDirtyClient();
 	}
@@ -189,10 +181,8 @@ public class SensorT1BE extends BaseMachineBE implements FilterableBE {
 		super.tickServer();
 		if (newlyLoaded && level != null) {
 			for (Direction direction : Direction.values()) {
-				level.neighborChanged(getBlockPos().relative(direction), this.getBlockState().getBlock(),
-						getBlockPos());
-				level.updateNeighborsAtExceptFromFacing(getBlockPos().relative(direction),
-						this.getBlockState().getBlock(), direction.getOpposite());
+				level.neighborChanged(getBlockPos().relative(direction), this.getBlockState().getBlock(), getBlockPos());
+				level.updateNeighborsAtExceptFromFacing(getBlockPos().relative(direction), this.getBlockState().getBlock(), direction.getOpposite());
 			}
 			newlyLoaded = false;
 		}
@@ -204,14 +194,12 @@ public class SensorT1BE extends BaseMachineBE implements FilterableBE {
 	}
 
 	public void setRedstone(boolean emit, boolean strong) {
-		if (emit != emitRedstone || strong != strongSignal) {
+		if (emit != emitRedstone || strong != strongSignal || newlyLoaded) {
 			emitRedstone = emit;
 			strongSignal = strong;
 			for (Direction direction : Direction.values()) {
-				level.neighborChanged(getBlockPos().relative(direction), this.getBlockState().getBlock(),
-						getBlockPos());
-				level.updateNeighborsAtExceptFromFacing(getBlockPos().relative(direction),
-						this.getBlockState().getBlock(), direction.getOpposite());
+				level.neighborChanged(getBlockPos().relative(direction), this.getBlockState().getBlock(), getBlockPos());
+				level.updateNeighborsAtExceptFromFacing(getBlockPos().relative(direction), this.getBlockState().getBlock(), direction.getOpposite());
 			}
 		}
 	}
@@ -219,18 +207,16 @@ public class SensorT1BE extends BaseMachineBE implements FilterableBE {
 	public boolean checkCount(int found) {
 		if (equality == 0) // Greater Than
 			return found > senseAmount;
-		if (equality == 1) // Less Than
+		if (equality == 1) //Less Than
 			return found < senseAmount;
-		if (equality == 2) // Equals
+		if (equality == 2) //Equals
 			return found == senseAmount;
-		return found > senseAmount; // Fallback
+		return found > senseAmount; //Fallback
 	}
 
 	public void sense() {
-		if (!canRun())
-			return;
-		if (!canSense())
-			return;
+		if (!canRun()) return;
+		if (!canSense()) return;
 		if ((sense_target.equals(SENSE_TARGET.BLOCK) || sense_target.equals(SENSE_TARGET.AIR))) {
 			if (positions.isEmpty())
 				positions = findPositions();
@@ -261,8 +247,7 @@ public class SensorT1BE extends BaseMachineBE implements FilterableBE {
 	public boolean isValidEntity(Entity entity) {
 		if (sense_target.equals(SENSE_TARGET.HOSTILE) && !(entity instanceof Monster))
 			return false;
-		if (((sense_target.equals(SENSE_TARGET.PASSIVE)) || (sense_target.equals(SENSE_TARGET.ADULT))
-				|| (sense_target.equals(SENSE_TARGET.CHILD))) && !(entity instanceof Animal))
+		if (((sense_target.equals(SENSE_TARGET.PASSIVE)) || (sense_target.equals(SENSE_TARGET.ADULT)) || (sense_target.equals(SENSE_TARGET.CHILD))) && !(entity instanceof Animal))
 			return false;
 		if (sense_target.equals(SENSE_TARGET.ADULT) && (entity instanceof Animal animal) && (animal.isBaby()))
 			return false;
@@ -272,13 +257,7 @@ public class SensorT1BE extends BaseMachineBE implements FilterableBE {
 			return false;
 		if (sense_target.equals(SENSE_TARGET.ITEM) && !(entity instanceof ItemEntity))
 			return false;
-		Item eggItem = SpawnEggItem.byId(entity.getType());
-		ItemStack eggItemStack;
-		if (eggItem == null)
-			eggItemStack = ItemStack.EMPTY;
-		else
-			eggItemStack = new ItemStack(eggItem);
-		return isStackValidFilter(eggItemStack);
+		return isEntityValidFilter(entity, this.level);
 	}
 
 	public boolean senseEntity(List<Entity> entityList) {
@@ -290,27 +269,30 @@ public class SensorT1BE extends BaseMachineBE implements FilterableBE {
 		BlockState blockState = level.getBlockState(blockPos);
 		if (sense_target.equals(SENSE_TARGET.AIR))
 			return blockState.isAir();
-		if (blockState.isAir()) // Checked above if we're sensing for air, so if its air, false!
+		if (blockState.isAir()) //Checked above if we're sensing for air, so if its air, false!
 			return false;
+		if (blockState.getBlock() instanceof LiquidBlock liquidBlock)
+			return handleBlockStates(blockPos, blockState, liquidBlock);
 		return handleBlockStates(blockPos, blockState);
 	}
 
+	public boolean handleBlockStates(BlockPos blockPos, BlockState blockState, LiquidBlock liquidBlock) {
+		return handleBlockStates(blockState, new ItemStack(liquidBlock.getFluid().getBucket()));
+	}
+
 	public boolean handleBlockStates(BlockPos blockPos, BlockState blockState) {
+		return handleBlockStates(blockState, blockState.getBlock().getCloneItemStack(level, blockPos, blockState));
+	}
+
+	private boolean handleBlockStates(BlockState blockState, ItemStack blockItemStack) {
+		boolean allowList = filterData.allowlist;
 		if (blockStateFilterCache.containsKey(blockState))
 			return blockStateFilterCache.get(blockState);
-		ItemStack blockItemStack = blockState.getBlock().getCloneItemStack(level, blockPos, blockState);
-		if (blockItemStack.isEmpty()) {
-			FluidState fluidState = blockState.getFluidState();
-			if (!fluidState.isEmpty())
-				blockItemStack = new ItemStack(fluidState.getType().getBucket());
-		}
-		boolean allowList = filterData.allowlist;
 		boolean returnValue = isStackValidFilter(blockItemStack);
-		outerLoop : for (Map.Entry<Integer, Map<Property<?>, Comparable<?>>> propertyValues : blockStateProperties
-				.entrySet()) {
+		outerLoop:
+		for (Map.Entry<Integer, Map<Property<?>, Comparable<?>>> propertyValues : blockStateProperties.entrySet()) {
 			ItemStack filterStack = getFilterHandler().getStackInSlot(propertyValues.getKey());
-			if (!ItemStack.isSameItemSameTags(filterStack, blockItemStack)) // If the itemstack we are comparing in this
-																			// slot doesn't match the blockItem
+			if (!ItemStack.isSameItemSameTags(filterStack, blockItemStack)) //If the itemstack we are comparing in this slot doesn't match the blockItem
 				continue;
 			for (Map.Entry<Property<?>, Comparable<?>> prop : propertyValues.getValue().entrySet()) {
 				Comparable<?> comparable = blockState.getValue(prop.getKey());
@@ -374,7 +356,6 @@ public class SensorT1BE extends BaseMachineBE implements FilterableBE {
 		this.senseAmount = tag.getInt("senseAmount");
 		this.equality = tag.getInt("equality");
 		super.load(tag);
-		loadBlockStateProperties(tag.getCompound("blockStateProps")); // Do this after the filter data comes in, so we
-																		// know the itemstack in the filter
+		loadBlockStateProperties(tag.getCompound("blockStateProps")); //Do this after the filter data comes in, so we know the itemstack in the filter
 	}
 }

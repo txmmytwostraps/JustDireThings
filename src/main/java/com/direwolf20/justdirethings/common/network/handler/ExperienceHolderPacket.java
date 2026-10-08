@@ -10,18 +10,24 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
 
 public class ExperienceHolderPacket {
-	public static void handle(final ExperienceHolderPayload payload, final Supplier<NetworkEvent.Context> ctx) {
+	public static final ExperienceHolderPacket INSTANCE = new ExperienceHolderPacket();
+
+	public static ExperienceHolderPacket get() {
+		return INSTANCE;
+	}
+
+	public void handle(final ExperienceHolderPayload payload, final Supplier<NetworkEvent.Context> ctx) {
 		ctx.get().enqueueWork(() -> {
 			ServerPlayer sender = ctx.get().getSender();
 			if (sender == null)
 				return;
 			AbstractContainerMenu container = sender.containerMenu;
-			if (container instanceof ExperienceHolderContainer experienceHolderContainer
-					&& experienceHolderContainer.baseMachineBE instanceof ExperienceHolderBE be) {
+
+			if (container instanceof ExperienceHolderContainer experienceHolderContainer && experienceHolderContainer.baseMachineBE instanceof ExperienceHolderBE experienceHolderBE) {
 				if (payload.add())
-					be.storeExp(sender, payload.levels());
+					experienceHolderBE.storeExp(sender, payload.levels());
 				else
-					be.extractExp(sender, payload.levels());
+					experienceHolderBE.extractExp(sender, payload.levels());
 			}
 		});
 		ctx.get().setPacketHandled(true);

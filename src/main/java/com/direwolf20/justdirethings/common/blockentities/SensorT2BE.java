@@ -20,17 +20,16 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class SensorT2BE extends SensorT1BE implements AreaAffectingBE, PoweredMachineBE {
-	public AreaAffectingData areaAffectingData = new AreaAffectingData();
+	public AreaAffectingData areaAffectingData = new AreaAffectingData(getBlockState().getValue(BlockStateProperties.FACING));
 	public final PoweredMachineContainerData poweredMachineData;
-	private final FilterBasicHandler filterHandler;
 	private final MachineEnergyStorage energyStorage;
+	private final FilterBasicHandler filterHandler;
 
 	public SensorT2BE(BlockEntityType<?> pType, BlockPos pPos, BlockState pBlockState) {
 		super(pType, pPos, pBlockState);
-		areaAffectingData = new AreaAffectingData(pBlockState.getValue(BlockStateProperties.FACING));
 		poweredMachineData = new PoweredMachineContainerData(this);
-		filterHandler = new FilterBasicHandler(9);
 		energyStorage = new MachineEnergyStorage(getMaxEnergy());
+		filterHandler = new FilterBasicHandler(9);
 	}
 
 	public SensorT2BE(BlockPos pPos, BlockState pBlockState) {
@@ -59,7 +58,7 @@ public class SensorT2BE extends SensorT1BE implements AreaAffectingBE, PoweredMa
 
 	@Override
 	public int getStandardEnergyCost() {
-		return 2; // Todo Config?
+		return 2;
 	}
 
 	public int getEnergyCost() {
@@ -73,47 +72,39 @@ public class SensorT2BE extends SensorT1BE implements AreaAffectingBE, PoweredMa
 	@Override
 	public boolean canSense() {
 		int cost = getEnergyCost();
-		return extractEnergy(cost, false) >= cost; // Really extract because if we pass this we'll be scanning!
+		return extractEnergy(cost, false) >= cost; //Really extract because if we pass this we'll be scanning!
 	}
 
+	@Override
 	public List<Entity> findEntities(AABB aabb) {
 		return level.getEntitiesOfClass(Entity.class, getAABB(getBlockPos()), this::isValidEntity);
 	}
 
+	@Override
 	public AABB getAABB() {
 		return getAABB(getBlockPos());
 	}
 
+	@Override
 	public List<BlockPos> findPositions() {
 		AABB area = getAABB(getBlockPos());
-		return BlockPos
-				.betweenClosedStream((int) area.minX, (int) area.minY, (int) area.minZ, (int) area.maxX - 1,
-						(int) area.maxY - 1, (int) area.maxZ - 1)
-				.filter(this::isBlockPosValid).map(BlockPos::immutable)
-				.sorted(Comparator.comparingDouble(x -> x.distSqr(getBlockPos()))).collect(Collectors.toList());
-	}
-
-	@Override
-	public boolean isDefaultSettings() {
-		if (!super.isDefaultSettings())
-			return false;
-		return true;
+		return BlockPos.betweenClosedStream((int) area.minX, (int) area.minY, (int) area.minZ, (int) area.maxX - 1, (int) area.maxY - 1, (int) area.maxZ - 1)
+				.filter(this::isBlockPosValid)
+				.map(BlockPos::immutable)
+				.sorted(Comparator.comparingDouble(x -> x.distSqr(getBlockPos())))
+				.collect(Collectors.toList());
 	}
 
 	@Override
 	public void saveAdditional(CompoundTag tag) {
 		super.saveAdditional(tag);
-		tag.putInt("senseTarget", sense_target.ordinal());
-		tag.putBoolean("strongSignal", strongSignal);
-		tag.put("blockStateProps", saveBlockStateProperties());
+		tag.putInt("energy", energyStorage.getEnergyStored());
 	}
 
 	@Override
 	public void load(CompoundTag tag) {
-		this.sense_target = SENSE_TARGET.values()[tag.getInt("senseTarget")];
-		this.strongSignal = tag.getBoolean("strongSignal");
+		if (tag.contains("energy"))
+			energyStorage.setEnergy(tag.getInt("energy"));
 		super.load(tag);
-		loadBlockStateProperties(tag.getCompound("blockStateProps")); // Do this after the filter data comes in, so we
-																		// know the itemstack in the filter
 	}
 }

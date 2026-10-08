@@ -4,15 +4,15 @@ import com.direwolf20.justdirethings.common.blockentities.SensorT1BE;
 import com.direwolf20.justdirethings.common.containers.basecontainers.BaseMachineContainer;
 import com.direwolf20.justdirethings.common.network.data.BlockStateFilterPayload;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraftforge.network.NetworkEvent;
 
 import java.util.Map;
-
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
+
 public class BlockStateFilterPacket {
 	public static final BlockStateFilterPacket INSTANCE = new BlockStateFilterPacket();
 
@@ -20,15 +20,14 @@ public class BlockStateFilterPacket {
 		return INSTANCE;
 	}
 
-	public static void handle(final BlockStateFilterPayload payload, final Supplier<NetworkEvent.Context> ctx) {
+	public void handle(final BlockStateFilterPayload payload, final Supplier<NetworkEvent.Context> ctx) {
 		ctx.get().enqueueWork(() -> {
 			ServerPlayer sender = ctx.get().getSender();
 			if (sender == null)
 				return;
 			AbstractContainerMenu container = sender.containerMenu;
 
-			if (container instanceof BaseMachineContainer baseMachineContainer
-					&& baseMachineContainer.baseMachineBE instanceof SensorT1BE sensor) {
+			if (container instanceof BaseMachineContainer baseMachineContainer && baseMachineContainer.baseMachineBE instanceof SensorT1BE sensor) {
 				ListTag listTag = payload.compoundTag().getList("tagList", 10); // 10 for CompoundTag type
 				ItemStack stateStack = sensor.getFilterHandler().getStackInSlot(payload.slot());
 				Map<Property<?>, Comparable<?>> propertiesList = SensorT1BE.loadBlockStateProperty(listTag, stateStack);

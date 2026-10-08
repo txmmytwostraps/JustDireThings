@@ -1,13 +1,10 @@
 package com.direwolf20.justdirethings.common.network.data;
 
-import com.direwolf20.justdirethings.JustDireThings;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
 
-@SuppressWarnings("removal")
-public record TickSpeedPayload(int tickSpeed) {
-	public static final ResourceLocation ID = new ResourceLocation(JustDireThings.MODID, "tick_speed_packet");
-
+public record TickSpeedPayload(
+		int tickSpeed
+) {
 	public TickSpeedPayload(final FriendlyByteBuf buffer) {
 		this(buffer.readInt());
 	}
@@ -15,5 +12,4 @@ public record TickSpeedPayload(int tickSpeed) {
 	public void write(FriendlyByteBuf buffer) {
 		buffer.writeInt(tickSpeed);
 	}
-
 }

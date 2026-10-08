@@ -2,9 +2,14 @@ package com.direwolf20.justdirethings.common.blocks.resources;
 
 import net.minecraft.world.level.block.AmethystBlock;
 import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.material.Material;
+import net.minecraft.world.level.material.MaterialColor;
 
 public class TimeCrystalBlock extends AmethystBlock {
 	public TimeCrystalBlock() {
-		super(Properties.of().sound(SoundType.AMETHYST).requiresCorrectToolForDrops().strength(1.5F));
+		super(Properties.of(Material.CLAY, MaterialColor.NONE)
+				.sound(SoundType.AMETHYST)
+				.requiresCorrectToolForDrops()
+				.strength(1.5F));
 	}
 }

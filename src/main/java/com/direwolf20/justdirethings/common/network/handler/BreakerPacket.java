@@ -16,15 +16,14 @@ public class BreakerPacket {
 		return INSTANCE;
 	}
 
-	public static void handle(final BreakerPayload payload, final Supplier<NetworkEvent.Context> ctx) {
+	public void handle(final BreakerPayload payload, final Supplier<NetworkEvent.Context> ctx) {
 		ctx.get().enqueueWork(() -> {
 			ServerPlayer sender = ctx.get().getSender();
 			if (sender == null)
 				return;
 			AbstractContainerMenu container = sender.containerMenu;
 
-			if (container instanceof BaseMachineContainer baseMachineContainer
-					&& baseMachineContainer.baseMachineBE instanceof BlockBreakerT1BE breaker) {
+			if (container instanceof BaseMachineContainer baseMachineContainer && baseMachineContainer.baseMachineBE instanceof BlockBreakerT1BE breaker) {
 				breaker.setBreakerSettings(payload.sneaking());
 			}
 		});

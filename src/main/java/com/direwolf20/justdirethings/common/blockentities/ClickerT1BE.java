@@ -7,6 +7,7 @@ import com.direwolf20.justdirethings.setup.Config;
 import com.direwolf20.justdirethings.setup.Registration;
 import com.direwolf20.justdirethings.util.FakePlayerUtil;
 import com.direwolf20.justdirethings.util.MiscHelpers;
+import com.direwolf20.justdirethings.util.MiscTools;
 import com.direwolf20.justdirethings.util.UsefulFakePlayer;
 import com.direwolf20.justdirethings.util.interfacehelpers.RedstoneControlData;
 import net.minecraft.core.BlockPos;
@@ -20,6 +21,7 @@ import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -34,7 +36,7 @@ public class ClickerT1BE extends BaseMachineBE implements RedstoneControlledBE {
 	public RedstoneControlData redstoneControlData = new RedstoneControlData();
 	protected List<BlockPos> positionsToClick = new ArrayList<>();
 	protected List<? extends LivingEntity> entitiesToClick = new ArrayList<>();
-	public int clickType = 0; // RightClick, 1 == Left Click
+	public int clickType = 0; //RightClick, 1 == Left Click
 	public CLICK_TARGET clickTarget = CLICK_TARGET.BLOCK;
 	public boolean sneaking = false;
 	public boolean showFakePlayer = false;
@@ -42,7 +44,14 @@ public class ClickerT1BE extends BaseMachineBE implements RedstoneControlledBE {
 	private long lastClickGameTime = Long.MIN_VALUE;
 
 	public enum CLICK_TARGET {
-		BLOCK, AIR, HOSTILE, PASSIVE, ADULT, CHILD, PLAYER, LIVING;
+		BLOCK,
+		AIR,
+		HOSTILE,
+		PASSIVE,
+		ADULT,
+		CHILD,
+		PLAYER,
+		LIVING;
 
 		public CLICK_TARGET next() {
 			CLICK_TARGET[] values = values();
@@ -53,21 +62,20 @@ public class ClickerT1BE extends BaseMachineBE implements RedstoneControlledBE {
 
 	public ClickerT1BE(BlockEntityType<?> pType, BlockPos pPos, BlockState pBlockState) {
 		super(pType, pPos, pBlockState);
-		MACHINE_SLOTS = 1; // Slot for tool
+		MACHINE_SLOTS = 1; //Slot for tool
 	}
 
 	public ClickerT1BE(BlockPos pPos, BlockState pBlockState) {
 		this(Registration.ClickerT1BE.get(), pPos, pBlockState);
 	}
 
-	public void setClickerSettings(int clickType, int clickTarget, boolean sneaking, boolean showFakePlayer,
-			int maxHoldTicks) {
+	public void setClickerSettings(int clickType, int clickTarget, boolean sneaking, boolean showFakePlayer, int maxHoldTicks) {
 		this.clickType = clickType;
 		this.clickTarget = CLICK_TARGET.values()[clickTarget];
 		this.sneaking = sneaking;
 		this.showFakePlayer = showFakePlayer;
 		this.maxHoldTicks = maxHoldTicks;
-		positionsToClick.clear(); // Clear any clicks we have queue'd up
+		positionsToClick.clear(); //Clear any clicks we have queue'd up
 		entitiesToClick.clear();
 		markDirtyClient();
 	}
@@ -89,7 +97,9 @@ public class ClickerT1BE extends BaseMachineBE implements RedstoneControlledBE {
 	@Override
 	public void tickServer() {
 		super.tickServer();
-		if (Config.CLICKER_LIMIT_TICK_ACCELERATION.get() && level != null) {
+		if (MiscTools.isRestrictedDimension(level.dimension(), Config.RESTRICT_CLICKERS)) return;
+		// Tick accelerators would click several times a tick
+		if (Config.CLICKER_LIMIT_TICK_ACCELERATION.get()) {
 			long gameTime = level.getGameTime();
 			if (gameTime == lastClickGameTime)
 				return;
@@ -138,8 +148,7 @@ public class ClickerT1BE extends BaseMachineBE implements RedstoneControlledBE {
 			entitiesToClick.clear();
 			return;
 		}
-		if (!canClick())
-			return;
+		if (!canClick()) return;
 		UsefulFakePlayer fakePlayer = getUsefulFakePlayer((ServerLevel) level);
 		if ((clickTarget.equals(CLICK_TARGET.BLOCK) || clickTarget.equals(CLICK_TARGET.AIR))) {
 			if (isActiveRedstone() && canRun() && positionsToClick.isEmpty())
@@ -147,7 +156,6 @@ public class ClickerT1BE extends BaseMachineBE implements RedstoneControlledBE {
 			if (positionsToClick.isEmpty())
 				return;
 			if (canRun()) {
-				// System.out.println("Running");
 				BlockPos blockPos = positionsToClick.remove(0);
 				clickBlock(placeStack, fakePlayer, blockPos);
 			}
@@ -166,10 +174,8 @@ public class ClickerT1BE extends BaseMachineBE implements RedstoneControlledBE {
 	public InteractionResult clickEntity(ItemStack itemStack, UsefulFakePlayer fakePlayer, LivingEntity entity) {
 		fakePlayer.setReach(0.9);
 		Direction placing = Direction.values()[direction];
-		FakePlayerUtil.setupFakePlayerForUse(fakePlayer, entity.blockPosition(), placing, entity.position(), itemStack,
-				sneaking);
-		if (showFakePlayer && level instanceof ServerLevel serverLevel) { // Temp (maybe) for showing where the fake
-																			// player is...
+		FakePlayerUtil.setupFakePlayerForUse(fakePlayer, entity.blockPosition(), placing, entity.position(), itemStack, sneaking);
+		if (showFakePlayer && level instanceof ServerLevel serverLevel && !itemStack.isEmpty()) {
 			fakePlayer.drawParticles(serverLevel, itemStack);
 		}
 		FakePlayerUtil.FakePlayerResult fakePlayerResult;
@@ -182,12 +188,11 @@ public class ClickerT1BE extends BaseMachineBE implements RedstoneControlledBE {
 	public InteractionResult clickBlock(ItemStack itemStack, UsefulFakePlayer fakePlayer, BlockPos blockPos) {
 		Direction placing = Direction.values()[direction];
 		FakePlayerUtil.setupFakePlayerForUse(fakePlayer, blockPos, placing, itemStack, sneaking);
-		if (showFakePlayer && level instanceof ServerLevel serverLevel) { // Temp (maybe) for showing where the fake
-																			// player is...
-			fakePlayer.drawParticles(serverLevel, itemStack);
+		if (showFakePlayer && level instanceof ServerLevel serverLevel) {
+			ItemStack showStack = itemStack.isEmpty() ? new ItemStack(Items.COBBLESTONE) : itemStack;
+			fakePlayer.drawParticles(serverLevel, showStack);
 		}
-		FakePlayerUtil.FakePlayerResult fakePlayerResult = new FakePlayerUtil.FakePlayerResult(InteractionResult.FAIL,
-				itemStack);
+		FakePlayerUtil.FakePlayerResult fakePlayerResult = new FakePlayerUtil.FakePlayerResult(InteractionResult.FAIL, itemStack);
 		if (!level.getBlockState(blockPos).isAir() && clickTarget.equals(CLICK_TARGET.BLOCK)) {
 			fakePlayer.setReach(0.9);
 			fakePlayerResult = FakePlayerUtil.clickBlockInDirection(fakePlayer, level, clickType, maxHoldTicks);
@@ -209,6 +214,8 @@ public class ClickerT1BE extends BaseMachineBE implements RedstoneControlledBE {
 			return false;
 		if (level.getBlockState(blockPos).is(JustDireBlockTags.NO_AUTO_CLICK))
 			return false;
+		if (!canPlaceAt(level, blockPos, fakePlayer))
+			return false;
 		return true;
 	}
 
@@ -225,8 +232,7 @@ public class ClickerT1BE extends BaseMachineBE implements RedstoneControlledBE {
 	}
 
 	public List<? extends LivingEntity> findEntitiesToClick(AABB aabb) {
-		List<LivingEntity> returnList = new ArrayList<>(
-				level.getEntitiesOfClass(LivingEntity.class, aabb, this::isValidEntity));
+		List<LivingEntity> returnList = new ArrayList<>(level.getEntitiesOfClass(LivingEntity.class, aabb, this::isValidEntity));
 
 		return returnList;
 	}
@@ -234,8 +240,7 @@ public class ClickerT1BE extends BaseMachineBE implements RedstoneControlledBE {
 	public boolean isValidEntity(Entity entity) {
 		if (clickTarget.equals(CLICK_TARGET.HOSTILE) && !(entity instanceof Monster))
 			return false;
-		if (((clickTarget.equals(CLICK_TARGET.PASSIVE)) || (clickTarget.equals(CLICK_TARGET.ADULT))
-				|| (clickTarget.equals(CLICK_TARGET.CHILD))) && !(entity instanceof Animal))
+		if (((clickTarget.equals(CLICK_TARGET.PASSIVE)) || (clickTarget.equals(CLICK_TARGET.ADULT)) || (clickTarget.equals(CLICK_TARGET.CHILD))) && !(entity instanceof Animal))
 			return false;
 		if (clickTarget.equals(CLICK_TARGET.ADULT) && (entity instanceof Animal animal) && (animal.isBaby()))
 			return false;

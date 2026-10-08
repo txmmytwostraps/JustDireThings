@@ -33,7 +33,7 @@ public class BlockSwapperT2Container extends BaseMachineContainer {
 
 	@Override
 	public boolean stillValid(Player playerIn) {
-		return stillValid(ContainerLevelAccess.create(player.level(), pos), player, Registration.BlockSwapperT2.get());
+		return stillValid(ContainerLevelAccess.create(player.level, pos), player, Registration.BlockSwapperT2.get());
 	}
 
 	@Override

@@ -2,9 +2,11 @@ package com.direwolf20.justdirethings.common.blockentities;
 
 import com.direwolf20.justdirethings.common.blockentities.basebe.BaseMachineBE;
 import com.direwolf20.justdirethings.common.blockentities.basebe.RedstoneControlledBE;
+import com.direwolf20.justdirethings.setup.Config;
 import com.direwolf20.justdirethings.setup.Registration;
 import com.direwolf20.justdirethings.util.FakePlayerUtil;
 import com.direwolf20.justdirethings.util.MiscHelpers;
+import com.direwolf20.justdirethings.util.MiscTools;
 import com.direwolf20.justdirethings.util.UsefulFakePlayer;
 import com.direwolf20.justdirethings.util.interfacehelpers.RedstoneControlData;
 import net.minecraft.core.BlockPos;
@@ -32,7 +34,7 @@ public class BlockPlacerT1BE extends BaseMachineBE implements RedstoneControlled
 
 	public BlockPlacerT1BE(BlockEntityType<?> pType, BlockPos pPos, BlockState pBlockState) {
 		super(pType, pPos, pBlockState);
-		MACHINE_SLOTS = 1; // Slot for a pickaxe
+		MACHINE_SLOTS = 1; //Slot for a pickaxe
 	}
 
 	public BlockPlacerT1BE(BlockPos pPos, BlockState pBlockState) {
@@ -56,6 +58,7 @@ public class BlockPlacerT1BE extends BaseMachineBE implements RedstoneControlled
 	@Override
 	public void tickServer() {
 		super.tickServer();
+		if (MiscTools.isRestrictedDimension(level.dimension(), Config.RESTRICT_BLOCK_PLACERS)) return;
 		doBlockPlace();
 	}
 
@@ -89,14 +92,15 @@ public class BlockPlacerT1BE extends BaseMachineBE implements RedstoneControlled
 
 	public void doBlockPlace() {
 		ItemStack placeStack = getPlaceStack();
-		if (!isStackValid(placeStack))
+		if (!isStackValid(placeStack)) {
+			getRedstoneControlData().pulsed = false;
 			return;
+		}
 		if (clearTrackerIfNeeded(placeStack)) {
 			positionsToPlace.clear();
 			return;
 		}
-		if (!canPlace())
-			return;
+		if (!canPlace()) return;
 		UsefulFakePlayer fakePlayer = getUsefulFakePlayer((ServerLevel) level);
 		if (isActiveRedstone() && canRun() && positionsToPlace.isEmpty())
 			positionsToPlace = findSpotsToPlace(fakePlayer);
@@ -106,7 +110,6 @@ public class BlockPlacerT1BE extends BaseMachineBE implements RedstoneControlled
 			BlockPos blockPos = positionsToPlace.remove(0);
 			Direction placing = getDirectionValue();
 			FakePlayerUtil.setupFakePlayerForUse(fakePlayer, blockPos, placing, placeStack, false);
-			// setFakePlayerData(placeStack, fakePlayer, blockPos, getDirectionValue());
 			placeBlock(placeStack, fakePlayer, blockPos);
 			FakePlayerUtil.cleanupFakePlayerFromUse(fakePlayer, fakePlayer.getMainHandItem());
 		}
@@ -123,7 +126,9 @@ public class BlockPlacerT1BE extends BaseMachineBE implements RedstoneControlled
 	public boolean isBlockPosValid(FakePlayer fakePlayer, BlockPos blockPos) {
 		if (!level.mayInteract(fakePlayer, blockPos))
 			return false;
-		if (!level.getBlockState(blockPos).canBeReplaced())
+		if (!level.getBlockState(blockPos).getMaterial().isReplaceable())
+			return false;
+		if (!canPlaceAt(level, blockPos, fakePlayer))
 			return false;
 		return true;
 	}

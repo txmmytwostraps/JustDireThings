@@ -7,7 +7,7 @@ import com.direwolf20.justdirethings.common.blockentities.basebe.PoweredMachineB
 import com.direwolf20.justdirethings.common.containers.handlers.FilterBasicHandler;
 import com.direwolf20.justdirethings.common.containers.slots.FilterBasicSlot;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ClickType;
@@ -16,6 +16,8 @@ import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemStackHandler;
@@ -33,12 +35,11 @@ public abstract class BaseMachineContainer extends BaseContainer {
 	public ContainerData data;
 	public ContainerData fluidData;
 
-	public BaseMachineContainer(@Nullable MenuType<?> menuType, int windowId, Inventory playerInventory,
-			BlockPos blockPos) {
+	public BaseMachineContainer(@Nullable MenuType<?> menuType, int windowId, Inventory playerInventory, BlockPos blockPos) {
 		super(menuType, windowId);
 		this.pos = blockPos;
 		this.player = playerInventory.player;
-		BlockEntity blockEntity = player.level().getBlockEntity(pos);
+		BlockEntity blockEntity = player.level.getBlockEntity(pos);
 		if (blockEntity instanceof BaseMachineBE baseMachineBE) {
 			this.baseMachineBE = baseMachineBE;
 			this.MACHINE_SLOTS = baseMachineBE.MACHINE_SLOTS;
@@ -60,12 +61,12 @@ public abstract class BaseMachineContainer extends BaseContainer {
 		}
 	}
 
-	// Override this if you want the slot layout to be different...
+	//Override this if you want the slot layout to be different...
 	public void addFilterSlots() {
 		addFilterSlots(filterHandler, 0, 8, 54, FILTER_SLOTS, 18);
 	}
 
-	// Override this if you want the slot layout to be different...
+	//Override this if you want the slot layout to be different...
 	public void addMachineSlots() {
 		machineHandler = baseMachineBE.getMachineHandler();
 		addSlotRange(machineHandler, 0, 80, 35, MACHINE_SLOTS, 18);
@@ -76,15 +77,15 @@ public abstract class BaseMachineContainer extends BaseContainer {
 	}
 
 	public int getFluidAmount() {
-		if (fluidData == null)
-			return 0;
-		return ((fluidData.get(2) << 16) | fluidData.get(1));
+		return this.fluidData == null ? 0 : ((this.fluidData.get(2) << 16) | this.fluidData.get(1));
+	}
+
+	public Fluid getFluidType() {
+		return this.fluidData == null ? Fluids.EMPTY : Registry.FLUID.byId(this.fluidData.get(0));
 	}
 
 	public FluidStack getFluidStack() {
-		if (fluidData == null)
-			return FluidStack.EMPTY;
-		return new FluidStack(BuiltInRegistries.FLUID.byId(fluidData.get(0)), getFluidAmount());
+		return new FluidStack(getFluidType(), getFluidAmount());
 	}
 
 	@Override
@@ -92,7 +93,7 @@ public abstract class BaseMachineContainer extends BaseContainer {
 		// If the block entity at our position was replaced (e.g. by AE2 annihilation +
 		// formation planes), close this stale container before any slot interaction can
 		// duplicate items by draining the old BE while the new BE still holds the NBT.
-		if (baseMachineBE != null && player.level().getBlockEntity(pos) != baseMachineBE) {
+		if (baseMachineBE != null && player.level.getBlockEntity(pos) != baseMachineBE) {
 			player.closeContainer();
 			return;
 		}
@@ -101,10 +102,12 @@ public abstract class BaseMachineContainer extends BaseContainer {
 
 	@Override
 	public void clicked(int slotId, int dragType, ClickType clickTypeIn, Player player) {
-		if (baseMachineBE != null && player.level().getBlockEntity(pos) != baseMachineBE)
+		if (baseMachineBE != null && player.level.getBlockEntity(pos) != baseMachineBE)
 			return;
-		if (baseMachineBE instanceof FilterableBE && slotId >= MACHINE_SLOTS && slotId < MACHINE_SLOTS + FILTER_SLOTS)
+		// Ghost slots. A vanilla click here eats the item.
+		if (baseMachineBE instanceof FilterableBE && slotId >= MACHINE_SLOTS && slotId < MACHINE_SLOTS + FILTER_SLOTS) {
 			return;
+		}
 		super.clicked(slotId, dragType, clickTypeIn, player);
 	}
 
@@ -115,15 +118,14 @@ public abstract class BaseMachineContainer extends BaseContainer {
 			Slot slot = this.slots.get(index);
 			if (slot.hasItem()) {
 				ItemStack currentStack = slot.getItem();
-				if (index < MACHINE_SLOTS) { // Machine Slots to Player Inventory
-					if (!this.moveItemStackTo(currentStack, MACHINE_SLOTS + FILTER_SLOTS,
-							MACHINE_SLOTS + FILTER_SLOTS + Inventory.INVENTORY_SIZE, true)) {
+				if (index < MACHINE_SLOTS) { //Machine Slots to Player Inventory
+					if (!this.moveItemStackTo(currentStack, MACHINE_SLOTS + FILTER_SLOTS, MACHINE_SLOTS + FILTER_SLOTS + Inventory.INVENTORY_SIZE, true)) {
 						return ItemStack.EMPTY;
 					}
 				}
-				if (index >= MACHINE_SLOTS + FILTER_SLOTS) { // Player Inventory to Machine Slots
+				if (index >= MACHINE_SLOTS + FILTER_SLOTS) { //Player Inventory to Machine Slots
 					if (!this.moveItemStackTo(currentStack, 0, MACHINE_SLOTS, false)) {
-						// No-Op, pass along to Filter Handler below
+						//No-Op, pass along to Filter Handler below
 					}
 				}
 
@@ -143,13 +145,10 @@ public abstract class BaseMachineContainer extends BaseContainer {
 		if (baseMachineBE instanceof FilterableBE) {
 			Slot slot = this.slots.get(index);
 			if (slot.hasItem()) {
-				if (index >= MACHINE_SLOTS + FILTER_SLOTS) { // Only do this if we click from the players inventory
+				if (index >= MACHINE_SLOTS + FILTER_SLOTS) { //Only do this if we click from the players inventory
 					ItemStack currentStack = slot.getItem().copy();
 					currentStack.setCount(1);
-					ItemStack result = quickMoveBasicFilter(currentStack, MACHINE_SLOTS, FILTER_SLOTS);
-					if (!result.isEmpty())
-						baseMachineBE.setChanged(); // clears filterCache and marks chunk dirty
-					return result;
+					return quickMoveBasicFilter(currentStack, MACHINE_SLOTS, FILTER_SLOTS);
 				}
 			}
 		}
@@ -158,7 +157,7 @@ public abstract class BaseMachineContainer extends BaseContainer {
 
 	protected int addFilterSlots(IItemHandler handler, int index, int x, int y, int amount, int dx) {
 		for (int i = 0; i < amount; i++) {
-			if (handler instanceof FilterBasicHandler) // This should always be true, but can't hurt to check!
+			if (handler instanceof FilterBasicHandler) //This should always be true, but can't hurt to check!
 				addSlot(new FilterBasicSlot(handler, index, x, y));
 			else
 				addSlot(new SlotItemHandler(handler, index, x, y));
