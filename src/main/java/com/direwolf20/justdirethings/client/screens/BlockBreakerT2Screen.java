@@ -9,8 +9,12 @@ import com.direwolf20.justdirethings.common.containers.BlockBreakerT2Container;
 import com.direwolf20.justdirethings.common.network.PacketHandler;
 import com.direwolf20.justdirethings.common.network.data.BreakerPayload;
 import com.direwolf20.justdirethings.common.network.data.DirectionSettingPayload;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 
 public class BlockBreakerT2Screen extends BaseMachineScreen<BlockBreakerT2Container> {
 	public boolean sneaking;
@@ -31,16 +35,26 @@ public class BlockBreakerT2Screen extends BaseMachineScreen<BlockBreakerT2Contai
 	@Override
 	public void init() {
 		super.init();
-		addRenderableWidget(
-				ToggleButtonFactory.DIRECTIONBUTTON(getGuiLeft() + 116, topSectionTop + 62, direction, b -> {
-					direction = ((ToggleButton) b).getTexturePosition();
-					PacketHandler.CHANNEL.sendToServer(new DirectionSettingPayload(direction));
-				}));
+		addRenderableWidget(ToggleButtonFactory.DIRECTIONBUTTON(getGuiLeft() + 116, topSectionTop + 62, direction, b -> {
+			direction = ((ToggleButton) b).getTexturePosition();
+			PacketHandler.CHANNEL.sendToServer(new DirectionSettingPayload(direction));
+		}));
 		addRenderableWidget(ToggleButtonFactory.SNEAKCLICKBUTTON(getGuiLeft() + 8, topSectionTop + 44, sneaking, b -> {
 			sneaking = !sneaking;
 			((GrayscaleButton) b).toggleActive();
 			saveSettings();
 		}));
+	}
+
+	@Override
+	protected void drawMachineSlot(PoseStack poseStack, Slot slot) {
+		ItemStack itemStack = slot.getItem();
+		if (itemStack.isEmpty()) {
+			RenderSystem.setShaderTexture(0, JUSTSLOT);
+			blit(poseStack, getGuiLeft() + slot.x - 1, getGuiTop() + slot.y - 1, 18, 0, 18, 18);
+		} else {
+			super.drawMachineSlot(poseStack, slot);
+		}
 	}
 
 	@Override

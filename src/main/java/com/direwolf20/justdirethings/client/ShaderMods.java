@@ -13,8 +13,7 @@ public class ShaderMods {
 	static {
 		try {
 			Class<?> clazz = Class.forName("net.irisshaders.iris.api.v0.IrisApi");
-			shaderAccess = MethodHandles.lookup().findVirtual(clazz, "isShaderPackInUse",
-					MethodType.methodType(boolean.class));
+			shaderAccess = MethodHandles.lookup().findVirtual(clazz, "isShaderPackInUse", MethodType.methodType(boolean.class));
 			instance = MethodHandles.lookup().findStatic(clazz, "getInstance", MethodType.methodType(clazz)).invoke();
 			usingIris = true;
 		} catch (Throwable ignored) {
@@ -22,8 +21,7 @@ public class ShaderMods {
 
 		if (shaderAccess == null) {
 			try {
-				shaderAccess = MethodHandles.lookup().findStatic(Class.forName("net.optifine.Config"), "isShaders",
-						MethodType.methodType(boolean.class));
+				shaderAccess = MethodHandles.lookup().findStatic(Class.forName("net.optifine.Config"), "isShaders", MethodType.methodType(boolean.class));
 				usingOptifine = true;
 			} catch (NoSuchMethodException | IllegalAccessException | ClassNotFoundException ignored) {
 			}

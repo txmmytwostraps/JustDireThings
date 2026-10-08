@@ -9,10 +9,6 @@ public interface OurSounds {
 		Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(sound, pitch, volume));
 	}
 
-	static void playSound(SoundEvent sound, float pitch) {
-		Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(sound, pitch));
-	}
-
 	static void playSound(SoundEvent sound) {
 		Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(sound, 1.0f));
 	}

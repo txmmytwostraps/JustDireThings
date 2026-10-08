@@ -8,12 +8,13 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.client.ClientRegistry;
 import net.minecraftforge.client.event.InputEvent;
-import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.client.settings.IKeyConflictContext;
 import net.minecraftforge.client.settings.KeyConflictContext;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,46 +26,36 @@ import java.util.List;
 public class KeyBindings {
 	private static final Logger LOGGER = LoggerFactory.getLogger(KeyBindings.class);
 	private static final KeyConflictContextGadget CONFLICT_CONTEXT_GADGET = new KeyConflictContextGadget();
+	private static final KeyConflictContextConfigScreen CONFLICT_CONTEXT_CONFIG = new KeyConflictContextConfigScreen();
 
 	private static final List<KeyMapping> keyMappings = new ArrayList<>();
 
 	public static KeyMapping toggleTool = createBinding("toggle_tool", GLFW.GLFW_KEY_V);
-	public static KeyMapping toolUI = createBindingInGame("tool_ui", -1);
-	/*
-	 * public static KeyMapping undo = createBinding("undo", GLFW.GLFW_KEY_U);
-	 * public static KeyMapping anchor = createBinding("anchor", GLFW.GLFW_KEY_H);
-	 * public static KeyMapping range = createBinding("range", GLFW.GLFW_KEY_R);
-	 */
+	public static KeyMapping toolUI = createBindingGUI("toolUI", -1);
 
 	private static KeyMapping createBinding(String name, int key) {
-		KeyMapping keyBinding = new KeyMapping(getKey(name), CONFLICT_CONTEXT_GADGET,
-				InputConstants.Type.KEYSYM.getOrCreate(key), getKey("category"));
+		KeyMapping keyBinding = new KeyMapping(getKey(name), CONFLICT_CONTEXT_GADGET, InputConstants.Type.KEYSYM.getOrCreate(key), getKey("category"));
 		keyMappings.add(keyBinding);
 		return keyBinding;
 	}
 
-	private static KeyMapping createBindingInGame(String name, int key) {
-		KeyMapping keyBinding = new KeyMapping(getKey(name), KeyConflictContext.IN_GAME,
-				InputConstants.Type.KEYSYM.getOrCreate(key), getKey("category"));
+	private static KeyMapping createBindingGUI(String name, int key) {
+		KeyMapping keyBinding = new KeyMapping(getKey(name), CONFLICT_CONTEXT_CONFIG, InputConstants.Type.KEYSYM.getOrCreate(key), getKey("category"));
 		keyMappings.add(keyBinding);
 		return keyBinding;
 	}
 
 	@SubscribeEvent
-	public static void registerKeyMappings(RegisterKeyMappingsEvent event) {
+	public static void registerKeyMappings(FMLClientSetupEvent event) {
 		LOGGER.debug("Registering {} keybinding for {}", keyMappings.size(), JustDireThings.MODID);
-		keyMappings.forEach(event::register);
+		keyMappings.forEach(ClientRegistry::registerKeyBinding);
 	}
 
 	private static String getKey(String name) {
 		return String.join(".", JustDireThings.MODID, "key", name);
 	}
 
-	public static void onClientInput(InputEvent.Key event) {
-		/*
-		 * if (menuSettings.consumeClick()) { PacketHandler.sendToServer(new
-		 * GadgetModeSwitchPacket(new ResourceLocation("x:x"), true)); }
-		 */
+	public static void onClientInput(InputEvent.KeyInputEvent event) {
 	}
 
 	public static class KeyConflictContextGadget implements IKeyConflictContext {
@@ -72,8 +63,20 @@ public class KeyBindings {
 		public boolean isActive() {
 			Player player = Minecraft.getInstance().player;
 			return !KeyConflictContext.GUI.isActive() && player != null
-					&& (!ToggleableItem.getToggleableItem(player).isEmpty()
-							|| !PortalGunV2.getPortalGunv2(player).isEmpty());
+					&& ((!ToggleableItem.getToggleableItem(player).isEmpty()) || (!PortalGunV2.getPortalGunv2(player).isEmpty()));
+		}
+
+		@Override
+		public boolean conflicts(IKeyConflictContext other) {
+			return other == this || other == KeyConflictContext.IN_GAME;
+		}
+	}
+
+	public static class KeyConflictContextConfigScreen implements IKeyConflictContext {
+		@Override
+		public boolean isActive() {
+			Player player = Minecraft.getInstance().player;
+			return !KeyConflictContext.GUI.isActive() && player != null;
 		}
 
 		@Override

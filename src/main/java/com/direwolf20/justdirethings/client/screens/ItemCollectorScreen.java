@@ -13,7 +13,6 @@ import net.minecraft.world.entity.player.Inventory;
 public class ItemCollectorScreen extends BaseMachineScreen<ItemCollectorContainer> {
 	public boolean respectPickupDelay = false;
 	public boolean showParticles = true;
-
 	public ItemCollectorScreen(ItemCollectorContainer container, Inventory inv, Component name) {
 		super(container, inv, name);
 		if (container.baseMachineBE instanceof ItemCollectorBE itemCollectorBE) {
@@ -25,18 +24,16 @@ public class ItemCollectorScreen extends BaseMachineScreen<ItemCollectorContaine
 	@Override
 	public void init() {
 		super.init();
-		addRenderableWidget(ToggleButtonFactory.RESPECTPICKUPDELAY(getGuiLeft() + 116, topSectionTop + 62,
-				respectPickupDelay, b -> {
-					respectPickupDelay = !respectPickupDelay;
-					((GrayscaleButton) b).toggleActive();
-					saveSettings();
-				}));
-		addRenderableWidget(
-				ToggleButtonFactory.SHOWPARTICLESBUTTON(getGuiLeft() + 98, topSectionTop + 62, showParticles, b -> {
-					showParticles = !showParticles;
-					((GrayscaleButton) b).toggleActive();
-					saveSettings();
-				}));
+		addRenderableWidget(ToggleButtonFactory.RESPECTPICKUPDELAY(getGuiLeft() + 116, topSectionTop + 62, respectPickupDelay, b -> {
+			respectPickupDelay = !respectPickupDelay;
+			((GrayscaleButton) b).toggleActive();
+			saveSettings();
+		}));
+		addRenderableWidget(ToggleButtonFactory.SHOWPARTICLESBUTTON(getGuiLeft() + 98, topSectionTop + 62, showParticles, b -> {
+			showParticles = !showParticles;
+			((GrayscaleButton) b).toggleActive();
+			saveSettings();
+		}));
 	}
 
 	@Override

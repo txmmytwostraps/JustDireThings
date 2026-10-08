@@ -20,7 +20,6 @@ public class FluidPlacerT2Screen extends BaseMachineScreen<FluidPlacerT2Containe
 		extraHeight = 0;
 	}
 
-	@Override
 	public int getFluidBarOffset() {
 		return 204;
 	}
@@ -28,10 +27,9 @@ public class FluidPlacerT2Screen extends BaseMachineScreen<FluidPlacerT2Containe
 	@Override
 	public void init() {
 		super.init();
-		addRenderableWidget(
-				ToggleButtonFactory.DIRECTIONBUTTON(getGuiLeft() + 116, topSectionTop + 62, direction, b -> {
-					direction = ((ToggleButton) b).getTexturePosition();
-					PacketHandler.CHANNEL.sendToServer(new DirectionSettingPayload(direction));
-				}));
+		addRenderableWidget(ToggleButtonFactory.DIRECTIONBUTTON(getGuiLeft() + 116, topSectionTop + 62, direction, b -> {
+			direction = ((ToggleButton) b).getTexturePosition();
+			PacketHandler.CHANNEL.sendToServer(new DirectionSettingPayload(direction));
+		}));
 	}
 }

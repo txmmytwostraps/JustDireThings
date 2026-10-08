@@ -2,10 +2,10 @@ package com.direwolf20.justdirethings.client.screens.widgets;
 
 import com.direwolf20.justdirethings.client.screens.standardbuttons.ToggleButtonFactory.TextureLocalization;
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
 
 import java.util.List;
 
@@ -14,57 +14,39 @@ public class ToggleButton extends BaseButton {
 	private int texturePosition;
 	private int maxValue = -1;
 
-	public ToggleButton(int x, int y, int width, int height, List<TextureLocalization> textureLocalizations,
-			int texturePosition, OnPress onPress) {
-		super(x, y, width, height, Component.empty(), onPress, Button.DEFAULT_NARRATION);
+	public ToggleButton(int x, int y, int width, int height, List<TextureLocalization> textureLocalizations, int texturePosition, OnPress onPress) {
+		super(x, y, width, height, TextComponent.EMPTY, onPress);
 
 		this.textureLocalizations = textureLocalizations;
 		setTexturePosition(texturePosition);
 	}
 
-	public ToggleButton(int x, int y, int width, int height, List<TextureLocalization> textureLocalizations,
-			int texturePosition, int maxValue, OnPress onPress) {
-		super(x, y, width, height, Component.empty(), onPress, Button.DEFAULT_NARRATION);
+	public ToggleButton(int x, int y, int width, int height, List<TextureLocalization> textureLocalizations, int texturePosition, int maxValue, OnPress onPress) {
+		super(x, y, width, height, TextComponent.EMPTY, onPress);
 
 		this.textureLocalizations = textureLocalizations;
 		setTexturePosition(texturePosition);
 		this.maxValue = maxValue;
 	}
 
-	public ToggleButton(int x, int y, int width, int height, List<TextureLocalization> textureLocalizations,
-			boolean texturePosition, OnPress onPress) {
-		super(x, y, width, height, Component.empty(), onPress, Button.DEFAULT_NARRATION);
+	public ToggleButton(int x, int y, int width, int height, List<TextureLocalization> textureLocalizations, boolean texturePosition, OnPress onPress) {
+		super(x, y, width, height, TextComponent.EMPTY, onPress);
 
 		this.textureLocalizations = textureLocalizations;
 		setTexturePosition(texturePosition);
 	}
 
 	@Override
-	public void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
+	public void renderButton(PoseStack poseStack, int mouseX, int mouseY, float partialTicks) {
 		RenderSystem.setShader(GameRenderer::getPositionTexShader);
 		RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
 		RenderSystem.setShaderTexture(0, textureLocalizations.get(getTexturePosition()).texture());
-		guiGraphics.blit(textureLocalizations.get(getTexturePosition()).texture(), this.getX(), this.getY(), 0, 0,
-				width, height, width, height);
+		blit(poseStack, this.x, this.y, 0, 0, width, height, width, height);
 	}
 
 	@Override
-	public void onClick(double p_onClick_1_, double p_onClick_3_) {
-		super.onClick(p_onClick_1_, p_onClick_3_);
-	}
-
-	@Override
-	public boolean mouseClicked(double x, double y, int button) {
-		if (isValidClickButton(button) && clicked(x, y)) {
-			if (button == 1)
-				previousTexturePosition();
-			else
-				nextTexturePosition();
-			onPress();
-			playDownSound(net.minecraft.client.Minecraft.getInstance().getSoundManager());
-			return true;
-		}
-		return false;
+	public void onClick(double mouseX, double mouseY) {
+		onClick(mouseX, mouseY, 0);
 	}
 
 	public int getTexturePosition() {
@@ -75,7 +57,13 @@ public class ToggleButton extends BaseButton {
 		setTexturePosition(texturePosition ? 1 : 0);
 	}
 
-	// onClick(double, double, int) removed - not in Forge 1.20.1 AbstractWidget
+	public void onClick(double mouseX, double mouseY, int button) {
+		if (button == 1)
+			previousTexturePosition();
+		else
+			nextTexturePosition();
+		onPress();
+	}
 
 	public void setTexturePosition(int texturePosition) {
 		if (texturePosition >= textureLocalizations.size())

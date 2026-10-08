@@ -7,28 +7,31 @@ import com.direwolf20.justdirethings.common.network.data.PortalGunFavoriteChange
 import com.direwolf20.justdirethings.util.MiscHelpers;
 import com.direwolf20.justdirethings.util.NBTHelpers;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.Direction;
-import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
+import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.client.gui.widget.ExtendedButton;
+
+import java.util.function.Predicate;
 
 public class AdvPortalEditMenu extends Screen {
-	private final int slotSelected;
-	private int ticksOpened;
-	private final ItemStack portalGun;
-
+	private int slotSelected = 0;
+	private int ticksOpened = 0;
+	private ItemStack portalGun;
 	private EditBox nameField;
 	private EditBox xPos;
 	private EditBox yPos;
 	private EditBox zPos;
+	// Define the predicate as a class-level variable
+	private final Predicate<String> doubleInputValidator = this::isValidDoubleInput;
 
 	protected AdvPortalEditMenu(ItemStack itemStack, int favoritePosition) {
-		super(Component.literal(""));
+		super(new TextComponent(""));
 		this.portalGun = itemStack;
 		this.slotSelected = favoritePosition;
 	}
@@ -36,61 +39,39 @@ public class AdvPortalEditMenu extends Screen {
 	@Override
 	public void init() {
 		super.init();
+		this.nameField = new EditBox(this.font, width / 2 - 75, height / 2 - 34, 200, this.font.lineHeight + 3, new TranslatableComponent("buildinggadgets2.screen.namefieldtext"));
+		this.xPos = new EditBox(this.font, width / 2 - 75, height / 2 - 20, 60, this.font.lineHeight + 3, new TranslatableComponent("buildinggadgets2.screen.namefieldtext"));
+		this.yPos = new EditBox(this.font, width / 2 - 5, height / 2 - 20, 60, this.font.lineHeight + 3, new TranslatableComponent("buildinggadgets2.screen.namefieldtext"));
+		this.zPos = new EditBox(this.font, width / 2 + 65, height / 2 - 20, 60, this.font.lineHeight + 3, new TranslatableComponent("buildinggadgets2.screen.namefieldtext"));
+		updateNameField();
 
-		this.nameField = new EditBox(this.font, width / 2 - 75, height / 2 - 34, 200, this.font.lineHeight + 3,
-				Component.empty());
-		this.xPos = new EditBox(this.font, width / 2 - 75, height / 2 - 20, 60, this.font.lineHeight + 3,
-				Component.empty());
-		this.yPos = new EditBox(this.font, width / 2 - 5, height / 2 - 20, 60, this.font.lineHeight + 3,
-				Component.empty());
-		this.zPos = new EditBox(this.font, width / 2 + 65, height / 2 - 20, 60, this.font.lineHeight + 3,
-				Component.empty());
+		ExtendedButton buttonSave = new ExtendedButton(width / 2 - 75, height / 2, 120, 16, new TranslatableComponent("justdirethings.screen.save_close"), (button) -> {
+			addFavorite();
+		});
+		addRenderableWidget(buttonSave);
 
-		updateFields();
+		ExtendedButton buttonCancel = new ExtendedButton(width / 2 + 60, height / 2, 65, 16, new TranslatableComponent("justdirethings.screen.cancel"), (button) -> {
+			onClose();
+		});
+		addRenderableWidget(buttonCancel);
 
 		this.nameField.setMaxLength(15);
-		addRenderableWidget(this.nameField);
-
+		this.nameField.setVisible(true);
+		addRenderableWidget(nameField);
+		this.xPos.setVisible(true);
+		this.xPos.setFilter(doubleInputValidator);
 		this.xPos.setEditable(false);
+		addRenderableWidget(xPos);
+		this.yPos.setVisible(true);
+		this.yPos.setFilter(doubleInputValidator);
 		this.yPos.setEditable(false);
+		addRenderableWidget(yPos);
+		this.zPos.setVisible(true);
+		this.zPos.setFilter(doubleInputValidator);
 		this.zPos.setEditable(false);
-		addRenderableWidget(this.xPos);
-		addRenderableWidget(this.yPos);
-		addRenderableWidget(this.zPos);
+		addRenderableWidget(zPos);
 
-		addRenderableWidget(
-				Button.builder(Component.translatable("justdirethings.screen.save_close"), b -> saveFavorite())
-						.pos(width / 2 - 75, height / 2).size(120, 16).build());
-
-		addRenderableWidget(Button.builder(Component.translatable("justdirethings.screen.cancel"), b -> onClose())
-				.pos(width / 2 + 60, height / 2).size(65, 16).build());
-	}
-
-	public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-	}
-
-	@Override
-	public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-		super.render(guiGraphics, mouseX, mouseY, partialTick);
-		guiGraphics.drawCenteredString(this.font, Component.translatable("justdirethings.screen.edit_favorite"),
-				width / 2, height / 2 - 52, 0xFFFFFF);
-	}
-
-	@Override
-	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-		if (ticksOpened < 20 && keyCode == KeyBindings.toggleTool.getKey().getValue()) {
-			return true;
-		}
-		if (keyCode == 256) {
-			onClose();
-			return true;
-		}
-		return super.keyPressed(keyCode, scanCode, modifiers);
-	}
-
-	@Override
-	public void tick() {
-		ticksOpened++;
+		this.setInitialFocus(this.nameField);
 	}
 
 	@Override
@@ -98,42 +79,73 @@ public class AdvPortalEditMenu extends Screen {
 		return false;
 	}
 
-	private void saveFavorite() {
-		NBTHelpers.PortalDestination destination = PortalGunV2.getFavorite(portalGun, slotSelected);
-		Vec3 coords;
-		if (destination == null) {
-			Player player = Minecraft.getInstance().player;
-			coords = player == null ? Vec3.ZERO : player.position();
-		} else {
-			coords = destination.position();
+	@Override
+	public boolean keyPressed(int p_keyPressed_1_, int p_keyPressed_2_, int p_keyPressed_3_) {
+		if (ticksOpened < 400 && p_keyPressed_1_ == KeyBindings.toggleTool.getKey().getValue()) return true;
+		if (p_keyPressed_1_ == 256) {
+			onClose();
+			return true;
 		}
 
-		PacketHandler.CHANNEL.sendToServer(
-				new PortalGunFavoriteChangePayload(slotSelected, true, nameField.getValue(), true, coords));
-		onClose();
+		return super.keyPressed(p_keyPressed_1_, p_keyPressed_2_, p_keyPressed_3_);
 	}
 
-	private void updateFields() {
-		NBTHelpers.PortalDestination destination = PortalGunV2.getFavorite(portalGun, slotSelected);
-		Player player = Minecraft.getInstance().player;
+	@Override
+	public void tick() {
+		ticksOpened++;
+		// Keeps the cursors blinking
+		this.nameField.tick();
+		this.xPos.tick();
+		this.yPos.tick();
+		this.zPos.tick();
+	}
 
-		if (destination == null && player != null) {
+	@Override
+	public boolean charTyped(char pCodePoint, int pModifiers) {
+		String toggleToolKeybind = KeyBindings.toggleTool.getKey().getName();
+		if (ticksOpened < 20 && toggleToolKeybind.charAt(toggleToolKeybind.length() - 1) == pCodePoint)
+			return false;
+		return this.getFocused() != null && this.getFocused().charTyped(pCodePoint, pModifiers);
+	}
+
+	public void addFavorite() {
+		NBTHelpers.PortalDestination portalDestination = PortalGunV2.getFavorite(portalGun, slotSelected);
+		if (portalDestination == null || portalDestination.equals(NBTHelpers.PortalDestination.EMPTY)) {
+			Player player = Minecraft.getInstance().player;
 			Vec3 position = player.position();
 			Direction facing = MiscHelpers.getFacingDirection(player);
-			destination = new NBTHelpers.PortalDestination(player.level().dimension(), position, facing, "UNNAMED");
+			portalDestination = new NBTHelpers.PortalDestination(new NBTHelpers.GlobalVec3(player.level.dimension(), position), facing, "UNNAMED");
 		}
+		Vec3 coords = portalDestination.globalVec3().position();
+		PacketHandler.CHANNEL.sendToServer(new PortalGunFavoriteChangePayload(slotSelected, true, nameField.getValue(), true, coords));
+		this.onClose();
+	}
 
-		if (destination == null) {
-			this.nameField.setValue("UNNAMED");
-			this.xPos.setValue("0.00");
-			this.yPos.setValue("0.00");
-			this.zPos.setValue("0.00");
-			return;
+	public void updateNameField() {
+		NBTHelpers.PortalDestination portalDestination = PortalGunV2.getFavorite(portalGun, slotSelected);
+		Player player = Minecraft.getInstance().player;
+		if (portalDestination == null || portalDestination.equals(NBTHelpers.PortalDestination.EMPTY)) {
+			Vec3 position = player.position();
+			Direction facing = MiscHelpers.getFacingDirection(player);
+			portalDestination = new NBTHelpers.PortalDestination(new NBTHelpers.GlobalVec3(player.level.dimension(), position), facing, "UNNAMED");
 		}
+		String favoriteName = portalDestination.name();
+		this.nameField.setValue(favoriteName);
+		Vec3 coords = portalDestination.globalVec3().position();
+		this.xPos.setValue(String.format("%.2f", coords.x));
+		this.yPos.setValue(String.format("%.2f", coords.y));
+		this.zPos.setValue(String.format("%.2f", coords.z));
+	}
 
-		this.nameField.setValue(destination.name());
-		this.xPos.setValue(String.format("%.2f", destination.position().x));
-		this.yPos.setValue(String.format("%.2f", destination.position().y));
-		this.zPos.setValue(String.format("%.2f", destination.position().z));
+
+	private boolean isValidDoubleInput(String input) {
+		if (input.isEmpty()) return true; // Allow empty input
+		try {
+			// Check if the input can be parsed to a double
+			Double.parseDouble(input);
+			return true;
+		} catch (NumberFormatException e) {
+			return false;
+		}
 	}
 }

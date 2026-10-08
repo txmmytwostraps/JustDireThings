@@ -4,11 +4,11 @@ import com.direwolf20.justdirethings.client.screens.basescreens.BaseMachineScree
 import com.direwolf20.justdirethings.client.screens.standardbuttons.ToggleButtonFactory;
 import com.direwolf20.justdirethings.client.screens.widgets.ToggleButton;
 import com.direwolf20.justdirethings.common.containers.BlockPlacerT2Container;
+import com.direwolf20.justdirethings.common.network.PacketHandler;
 import com.direwolf20.justdirethings.common.network.data.DirectionSettingPayload;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
-import com.direwolf20.justdirethings.common.network.PacketHandler;
 public class BlockPlacerT2Screen extends BaseMachineScreen<BlockPlacerT2Container> {
 	public BlockPlacerT2Screen(BlockPlacerT2Container container, Inventory inv, Component name) {
 		super(container, inv, name);
@@ -23,10 +23,9 @@ public class BlockPlacerT2Screen extends BaseMachineScreen<BlockPlacerT2Containe
 	@Override
 	public void init() {
 		super.init();
-		addRenderableWidget(
-				ToggleButtonFactory.DIRECTIONBUTTON(getGuiLeft() + 116, topSectionTop + 62, direction, b -> {
-					direction = ((ToggleButton) b).getTexturePosition();
-					PacketHandler.CHANNEL.sendToServer(new DirectionSettingPayload(direction));
-				}));
+		addRenderableWidget(ToggleButtonFactory.DIRECTIONBUTTON(getGuiLeft() + 116, topSectionTop + 62, direction, b -> {
+			direction = ((ToggleButton) b).getTexturePosition();
+			PacketHandler.CHANNEL.sendToServer(new DirectionSettingPayload(direction));
+		}));
 	}
 }

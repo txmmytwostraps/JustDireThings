@@ -6,7 +6,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
 public class FluidCollectorT2Screen extends BaseMachineScreen<FluidCollectorT2Container> {
-
 	public FluidCollectorT2Screen(FluidCollectorT2Container container, Inventory inv, Component name) {
 		super(container, inv, name);
 	}
@@ -17,7 +16,6 @@ public class FluidCollectorT2Screen extends BaseMachineScreen<FluidCollectorT2Co
 		extraHeight = 0;
 	}
 
-	@Override
 	public int getFluidBarOffset() {
 		return 204;
 	}

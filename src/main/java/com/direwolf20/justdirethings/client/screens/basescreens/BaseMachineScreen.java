@@ -10,6 +10,7 @@ import com.direwolf20.justdirethings.client.screens.widgets.ToggleButton;
 import com.direwolf20.justdirethings.common.blockentities.ItemCollectorBE;
 import com.direwolf20.justdirethings.common.blockentities.basebe.*;
 import com.direwolf20.justdirethings.common.containers.basecontainers.BaseMachineContainer;
+import com.direwolf20.justdirethings.common.containers.handlers.FilterBasicHandler;
 import com.direwolf20.justdirethings.common.containers.slots.FilterBasicSlot;
 import com.direwolf20.justdirethings.common.network.PacketHandler;
 import com.direwolf20.justdirethings.common.network.data.*;
@@ -20,35 +21,34 @@ import com.direwolf20.justdirethings.util.interfacehelpers.FilterData;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
-import net.minecraft.client.gui.components.Renderable;
+import net.minecraft.client.gui.components.Widget;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
+import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluid;
-import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.items.SlotItemHandler;
+import net.minecraftforge.items.wrapper.InvWrapper;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-@SuppressWarnings("removal")
 public abstract class BaseMachineScreen<T extends BaseMachineContainer> extends BaseScreen<T> {
-	protected final ResourceLocation JUSTSLOT = new ResourceLocation(JustDireThings.MODID, "textures/gui/justslot.png");
-	protected final ResourceLocation JUSTINV = new ResourceLocation(JustDireThings.MODID, "textures/gui/justinv.png");
-	protected final ResourceLocation POWERBAR = new ResourceLocation(JustDireThings.MODID, "textures/gui/powerbar.png");
-	protected final ResourceLocation FLUIDBAR = new ResourceLocation(JustDireThings.MODID, "textures/gui/fluidbar.png");
-	protected final ResourceLocation BACKGROUND_SPRITE = new ResourceLocation(JustDireThings.MODID,
-			"textures/gui/sprites/background.png");
+	protected final ResourceLocation JUSTSLOT = ResourceLocation.fromNamespaceAndPath(JustDireThings.MODID, "textures/gui/justslot.png");
+	protected final ResourceLocation POWERBAR = ResourceLocation.fromNamespaceAndPath(JustDireThings.MODID, "textures/gui/powerbar.png");
+	protected final ResourceLocation FLUIDBAR = ResourceLocation.fromNamespaceAndPath(JustDireThings.MODID, "textures/gui/fluidbar.png");
+	private static final ResourceLocation SOCIALBACKGROUND = ResourceLocation.fromNamespaceAndPath(JustDireThings.MODID, "textures/gui/sprites/background.png");
 	protected BaseMachineContainer container;
 	protected BaseMachineBE baseMachineBE;
 	protected double xRadius = 3, yRadius = 3, zRadius = 3;
@@ -97,7 +97,7 @@ public abstract class BaseMachineScreen<T extends BaseMachineContainer> extends 
 
 	public void calculateTopSection() {
 		topSectionWidth = imageWidth + extraWidth;
-		topSectionHeight = imageHeight + extraHeight - 64; // -64 for the inventory spots
+		topSectionHeight = imageHeight + extraHeight - 64; //-64 for the inventory spots
 		topSectionLeft = getGuiLeft() - extraWidth / 2;
 		topSectionTop = getGuiTop() - extraHeight - 26;
 	}
@@ -123,100 +123,83 @@ public abstract class BaseMachineScreen<T extends BaseMachineContainer> extends 
 	}
 
 	public void addTickSpeedButton() {
-		addRenderableWidget(
-				ToggleButtonFactory.TICKSPEEDBUTTON(getGuiLeft() + 144, topSectionTop + 40, tickSpeed, b -> {
-					tickSpeed = ((NumberButton) b).getValue(); // The value is updated in the mouseClicked method below
-					PacketHandler.CHANNEL.sendToServer(new TickSpeedPayload(tickSpeed));
-				}));
+		addRenderableWidget(ToggleButtonFactory.TICKSPEEDBUTTON(getGuiLeft() + 144, topSectionTop + 40, tickSpeed, b -> {
+			tickSpeed = ((NumberButton) b).getValue(); //The value is updated in the mouseClicked method below
+			PacketHandler.CHANNEL.sendToServer(new TickSpeedPayload(tickSpeed));
+		}));
 	}
 
 	public void addRedstoneButtons() {
-		addRenderableWidget(ToggleButtonFactory.REDSTONEBUTTON(getGuiLeft() + 134, topSectionTop + 62,
-				redstoneMode.ordinal(), b -> {
-					redstoneMode = MiscHelpers.RedstoneMode.values()[((ToggleButton) b).getTexturePosition()];
-					// ((ToggleButton) b).nextTexturePosition();
-					saveSettings();
-				}));
+		addRenderableWidget(ToggleButtonFactory.REDSTONEBUTTON(getGuiLeft() + 134, topSectionTop + 62, redstoneMode.ordinal(), b -> {
+			redstoneMode = MiscHelpers.RedstoneMode.values()[((ToggleButton) b).getTexturePosition()];
+			saveSettings();
+		}));
 	}
 
 	public void addFilterButtons() {
-		addRenderableWidget(
-				ToggleButtonFactory.ALLOWLISTBUTTON(getGuiLeft() + 8, topSectionTop + 62, filterData.allowlist, b -> {
-					filterData.allowlist = !filterData.allowlist;
-					// ((ToggleButton) b).toggleActive();
-					saveSettings();
-				}));
+		addRenderableWidget(ToggleButtonFactory.ALLOWLISTBUTTON(getGuiLeft() + 8, topSectionTop + 62, filterData.allowlist, b -> {
+			filterData.allowlist = !filterData.allowlist;
+			saveSettings();
+		}));
 
-		addRenderableWidget(ToggleButtonFactory.COMPARENBTBUTTON(getGuiLeft() + 26, topSectionTop + 62,
-				filterData.compareNBT, b -> {
-					filterData.compareNBT = !filterData.compareNBT;
-					((GrayscaleButton) b).toggleActive();
-					saveSettings();
-				}));
+		addRenderableWidget(ToggleButtonFactory.COMPARENBTBUTTON(getGuiLeft() + 26, topSectionTop + 62, filterData.compareNBT, b -> {
+			filterData.compareNBT = !filterData.compareNBT;
+			((GrayscaleButton) b).toggleActive();
+			saveSettings();
+		}));
 
 		if (filterData.blockItemFilter != -1) {
-			addRenderableWidget(ToggleButtonFactory.FILTERBLOCKITEMBUTTON(getGuiLeft() + 44, topSectionTop + 62,
-					filterData.blockItemFilter, b -> {
-						// ((ToggleButton) b).nextTexturePosition();
-						filterData.blockItemFilter = ((ToggleButton) b).getTexturePosition();
-						saveSettings();
-					}));
+			addRenderableWidget(ToggleButtonFactory.FILTERBLOCKITEMBUTTON(getGuiLeft() + 44, topSectionTop + 62, filterData.blockItemFilter, b -> {
+				filterData.blockItemFilter = ((ToggleButton) b).getTexturePosition();
+				saveSettings();
+			}));
 		}
 	}
 
 	public void addAreaButtons() {
-		addRenderableWidget(
-				ToggleButtonFactory.RENDERAREABUTTON(getGuiLeft() + 152, topSectionTop + 62, renderArea, b -> {
-					renderArea = !renderArea;
-					((GrayscaleButton) b).toggleActive();
-					saveSettings();
-				}));
+		addRenderableWidget(ToggleButtonFactory.RENDERAREABUTTON(getGuiLeft() + 152, topSectionTop + 62, renderArea, b -> {
+			renderArea = !renderArea;
+			((GrayscaleButton) b).toggleActive();
+			saveSettings();
+		}));
 
-		valueButtonsDoubleList.add(new ValueButtonsDouble(getGuiLeft() + 25, topSectionTop + 12, xRadius, 0,
-				ItemCollectorBE.maxRadius, font, (button, value) -> {
-					xRadius = value;
-					saveSettings();
-				}));
+		valueButtonsDoubleList.add(new ValueButtonsDouble(getGuiLeft() + 25, topSectionTop + 12, xRadius, 0, ItemCollectorBE.maxRadius, font, (button, value) -> {
+			xRadius = value;
+			saveSettings();
+		}));
 
-		valueButtonsDoubleList.add(new ValueButtonsDouble(getGuiLeft() + 75, topSectionTop + 12, yRadius, 0,
-				ItemCollectorBE.maxRadius, font, (button, value) -> {
-					yRadius = value;
-					saveSettings();
-				}));
+		valueButtonsDoubleList.add(new ValueButtonsDouble(getGuiLeft() + 75, topSectionTop + 12, yRadius, 0, ItemCollectorBE.maxRadius, font, (button, value) -> {
+			yRadius = value;
+			saveSettings();
+		}));
 
-		valueButtonsDoubleList.add(new ValueButtonsDouble(getGuiLeft() + 125, topSectionTop + 12, zRadius, 0,
-				ItemCollectorBE.maxRadius, font, (button, value) -> {
-					zRadius = value;
-					saveSettings();
-				}));
+		valueButtonsDoubleList.add(new ValueButtonsDouble(getGuiLeft() + 125, topSectionTop + 12, zRadius, 0, ItemCollectorBE.maxRadius, font, (button, value) -> {
+			zRadius = value;
+			saveSettings();
+		}));
 
-		valueButtonsList.add(new ValueButtons(getGuiLeft() + 25, topSectionTop + 27, xOffset,
-				-ItemCollectorBE.maxOffset, ItemCollectorBE.maxOffset, font, (button, value) -> {
-					xOffset = value;
-					saveSettings();
-				}));
+		valueButtonsList.add(new ValueButtons(getGuiLeft() + 25, topSectionTop + 27, xOffset, -ItemCollectorBE.maxOffset, ItemCollectorBE.maxOffset, font, (button, value) -> {
+			xOffset = value;
+			saveSettings();
+		}));
 
-		valueButtonsList.add(new ValueButtons(getGuiLeft() + 75, topSectionTop + 27, yOffset,
-				-ItemCollectorBE.maxOffset, ItemCollectorBE.maxOffset, font, (button, value) -> {
-					yOffset = value;
-					saveSettings();
-				}));
+		valueButtonsList.add(new ValueButtons(getGuiLeft() + 75, topSectionTop + 27, yOffset, -ItemCollectorBE.maxOffset, ItemCollectorBE.maxOffset, font, (button, value) -> {
+			yOffset = value;
+			saveSettings();
+		}));
 
-		valueButtonsList.add(new ValueButtons(getGuiLeft() + 125, topSectionTop + 27, zOffset,
-				-ItemCollectorBE.maxOffset, ItemCollectorBE.maxOffset, font, (button, value) -> {
-					zOffset = value;
-					saveSettings();
-				}));
+		valueButtonsList.add(new ValueButtons(getGuiLeft() + 125, topSectionTop + 27, zOffset, -ItemCollectorBE.maxOffset, ItemCollectorBE.maxOffset, font, (button, value) -> {
+			zOffset = value;
+			saveSettings();
+		}));
 
 		valueButtonsList.forEach(valueButtons -> valueButtons.widgetList.forEach(this::addRenderableWidget));
 		valueButtonsDoubleList.forEach(valueButtons -> valueButtons.widgetList.forEach(this::addRenderableWidget));
 	}
 
 	public int adjustNumberButton(int value, int change, int min, int max) {
-		if (Screen.hasShiftDown())
-			change *= 10;
-		if (Screen.hasControlDown())
-			change *= 64;
+		if (Screen.hasShiftDown()) change *= 10;
+		if (Screen.hasControlDown()) change *= 64;
 		if (change < 0) {
 			value = (Math.max(value + change, min));
 		} else {
@@ -233,90 +216,140 @@ public abstract class BaseMachineScreen<T extends BaseMachineContainer> extends 
 	}
 
 	@Override
-	protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+	protected void renderLabels(PoseStack poseStack, int mouseX, int mouseY) {
 		if (baseMachineBE != null) {
 			Component title = baseMachineBE.getBlockState().getBlock().getName();
 			int titleX = topSectionLeft - getGuiLeft() + 20 + ((topSectionWidth - 40) / 2) - this.font.width(title) / 2;
-			guiGraphics.drawString(this.font, title, titleX, topSectionTop - getGuiTop() - 14, 4210752, false);
+			this.font.draw(poseStack, title, titleX, topSectionTop - getGuiTop() - 14, 4210752);
 		}
 		if (baseMachineBE instanceof AreaAffectingBE) {
-			int areaWidth = 158; // The width of the area buttons is 157, including labels
+			int areaWidth = 158; //The width of the area buttons is 157, including labels
 			int xStart = topSectionLeft + (topSectionWidth / 2) - (areaWidth / 2) - getGuiLeft();
-			guiGraphics.drawString(this.font, Component.literal("Rad"), xStart - 4, topSectionTop - getGuiTop() + 14,
-					4210752, false);
-			guiGraphics.drawString(this.font, Component.literal("Off"), xStart - 4, topSectionTop - getGuiTop() + 29,
-					4210752, false);
-			guiGraphics.drawString(this.font, Component.literal("X"), xStart + 35, topSectionTop - getGuiTop() + 4,
-					4210752, false);
-			guiGraphics.drawString(this.font, Component.literal("Y"), xStart + 85, topSectionTop - getGuiTop() + 4,
-					4210752, false);
-			guiGraphics.drawString(this.font, Component.literal("Z"), xStart + 135, topSectionTop - getGuiTop() + 4,
-					4210752, false);
+			this.font.draw(poseStack, new TextComponent("Rad"), xStart - 4, topSectionTop - getGuiTop() + 14, 4210752);
+			this.font.draw(poseStack, new TextComponent("Off"), xStart - 4, topSectionTop - getGuiTop() + 29, 4210752);
+			this.font.draw(poseStack, new TextComponent("X"), xStart + 35, topSectionTop - getGuiTop() + 4, 4210752);
+			this.font.draw(poseStack, new TextComponent("Y"), xStart + 85, topSectionTop - getGuiTop() + 4, 4210752);
+			this.font.draw(poseStack, new TextComponent("Z"), xStart + 135, topSectionTop - getGuiTop() + 4, 4210752);
 		}
+	}
+
+	protected void drawSlot(PoseStack poseStack, Slot slot) {
+		if (slot instanceof SlotItemHandler slotItemHandler) {
+			if (slotItemHandler.getItemHandler() instanceof FilterBasicHandler)
+				drawFilterSlot(poseStack, slot);
+			else if (slotItemHandler.getItemHandler() instanceof InvWrapper)
+				drawInventorySlot(poseStack, slot);
+			else
+				drawMachineSlot(poseStack, slot);
+		} else {
+			drawBasicSlot(poseStack, slot);
+		}
+	}
+
+	protected void drawFilterSlot(PoseStack poseStack, Slot slot) {
+		RenderSystem.setShaderTexture(0, JUSTSLOT);
+		blit(poseStack, getGuiLeft() + slot.x - 1, getGuiTop() + slot.y - 1, 0, 0, 18, 18);
+	}
+
+	protected void drawMachineSlot(PoseStack poseStack, Slot slot) {
+		RenderSystem.setShaderTexture(0, JUSTSLOT);
+		blit(poseStack, getGuiLeft() + slot.x - 1, getGuiTop() + slot.y - 1, 0, 0, 18, 18);
+	}
+
+	protected void drawInventorySlot(PoseStack poseStack, Slot slot) {
+		RenderSystem.setShaderTexture(0, JUSTSLOT);
+		blit(poseStack, getGuiLeft() + slot.x - 1, getGuiTop() + slot.y - 1, 0, 0, 18, 18);
+	}
+
+	protected void drawBasicSlot(PoseStack poseStack, Slot slot) {
+		RenderSystem.setShaderTexture(0, JUSTSLOT);
+		blit(poseStack, getGuiLeft() + slot.x - 1, getGuiTop() + slot.y - 1, 0, 0, 18, 18);
+	}
+
+	public void renderInventorySection(PoseStack poseStack, int relX, int relY) {
+		blitNineSlice(poseStack, relX, relY + 83 - 8, this.imageWidth, this.imageHeight - 73); //Inventory Section
+	}
+
+	public void renderTitleSprite(PoseStack poseStack, int mouseX, int mouseY, float partialTicks) {
+		RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+		blitNineSlice(poseStack, topSectionLeft + 20, topSectionTop - 20, topSectionWidth - 40, 20);
+	}
+
+	public void renderMachineSprite(PoseStack poseStack, int mouseX, int mouseY, float partialTicks) {
+		RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+		blitNineSlice(poseStack, topSectionLeft, topSectionTop, topSectionWidth, topSectionHeight);
+	}
+
+	/**
+	 * Draws the panel background at any size. Its edges and center are flat colors,
+	 * so stretching looks like tiling.
+	 */
+	public static void blitNineSlice(PoseStack poseStack, int x, int y, int width, int height) {
+		int textureWidth = 236, textureHeight = 34;
+		int borderX = Math.min(8, width / 2), borderY = Math.min(8, height / 2);
+		int innerWidth = width - 2 * borderX, innerHeight = height - 2 * borderY;
+		int sourceWidth = textureWidth - 2 * borderX, sourceHeight = textureHeight - 2 * borderY;
+		RenderSystem.setShaderTexture(0, SOCIALBACKGROUND);
+		blit(poseStack, x, y, borderX, borderY, 0, 0, borderX, borderY, textureWidth, textureHeight);
+		blit(poseStack, x + borderX, y, innerWidth, borderY, borderX, 0, sourceWidth, borderY, textureWidth, textureHeight);
+		blit(poseStack, x + width - borderX, y, borderX, borderY, textureWidth - borderX, 0, borderX, borderY, textureWidth, textureHeight);
+		blit(poseStack, x, y + borderY, borderX, innerHeight, 0, borderY, borderX, sourceHeight, textureWidth, textureHeight);
+		blit(poseStack, x + borderX, y + borderY, innerWidth, innerHeight, borderX, borderY, sourceWidth, sourceHeight, textureWidth, textureHeight);
+		blit(poseStack, x + width - borderX, y + borderY, borderX, innerHeight, textureWidth - borderX, borderY, borderX, sourceHeight, textureWidth, textureHeight);
+		blit(poseStack, x, y + height - borderY, borderX, borderY, 0, textureHeight - borderY, borderX, borderY, textureWidth, textureHeight);
+		blit(poseStack, x + borderX, y + height - borderY, innerWidth, borderY, borderX, textureHeight - borderY, sourceWidth, borderY, textureWidth, textureHeight);
+		blit(poseStack, x + width - borderX, y + height - borderY, borderX, borderY, textureWidth - borderX, textureHeight - borderY, borderX, borderY, textureWidth, textureHeight);
+	}
+
+	public void renderPowerBar(PoseStack poseStack, int mouseX, int mouseY, float partialTicks) {
+		if (!(baseMachineBE instanceof PoweredMachineBE poweredMachineBE)) {
+			return;
+		}
+
+		RenderSystem.setShaderTexture(0, POWERBAR);
+		blit(poseStack, topSectionLeft + getEnergyBarOffset(), topSectionTop + 5, 0, 0, 18, 72, 36, 72);
+		int maxEnergy = poweredMachineBE.getMaxEnergy(), height = 70;
+		if (maxEnergy > 0) {
+			int remaining = (this.container.getEnergy() * height) / maxEnergy;
+			blit(poseStack, topSectionLeft + getEnergyBarOffset() + 1, topSectionTop + getEnergyBarOffset() + 72 - 2 - remaining, 19, 69 - remaining, 17, remaining + 1, 36, 72);
+		}
+	}
+
+	public void renderFluidTank(PoseStack poseStack, int mouseX, int mouseY, float partialTicks) {
+		if (!(baseMachineBE instanceof FluidMachineBE fluidMachineBE)) {
+			return;
+		}
+
+		int offset = getFluidBarOffset();
+		RenderSystem.setShaderTexture(0, FLUIDBAR);
+		blit(poseStack, topSectionLeft + offset, topSectionTop + 5, 0, 0, 18, 72, 36, 72);
+		int maxMB = fluidMachineBE.getMaxMB(), height = 70;
+		if (maxMB > 0) {
+			int remaining = (this.container.getFluidAmount() * height) / maxMB;
+			renderFluid(poseStack, topSectionLeft + offset + 1, topSectionTop + 5 + 72 - 1, 16, remaining);
+		}
+		RenderSystem.setShaderTexture(0, FLUIDBAR);
+		blit(poseStack, topSectionLeft + offset, topSectionTop + 5, 18, 0, 18, 72, 36, 72);
 	}
 
 	@Override
-	protected void renderBg(GuiGraphics guiGraphics, float partialTicks, int mouseX, int mouseY) {
+	protected void renderBg(PoseStack poseStack, float partialTicks, int mouseX, int mouseY) {
 		int relX = (this.width - this.imageWidth) / 2;
 		int relY = (this.height - this.imageHeight) / 2;
-		RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-		blitNineSlice(guiGraphics, topSectionLeft, topSectionTop, topSectionWidth, topSectionHeight);
-		blitNineSlice(guiGraphics, topSectionLeft + 20, topSectionTop - 20, topSectionWidth - 40, 20);
-		renderInventoryBackground(guiGraphics, relX, relY);
+
+		renderTitleSprite(poseStack, mouseX, mouseY, partialTicks);
+		renderMachineSprite(poseStack, mouseX, mouseY, partialTicks);
+
+		renderInventorySection(poseStack, relX, relY);
 		for (Slot slot : container.slots) {
-			// Some machines park ghost/filter slots off-screen; do not render their slot
-			// chrome.
-			if (slot instanceof FilterBasicSlot && (slot.x < 0 || slot.y < 0))
-				continue;
-			guiGraphics.blit(JUSTSLOT, getGuiLeft() + slot.x - 1, getGuiTop() + slot.y - 1, 0, 0, 18, 18);
+			drawSlot(poseStack, slot);
 		}
-		if (baseMachineBE instanceof PoweredMachineBE poweredMachineBE) {
-			guiGraphics.blit(POWERBAR, topSectionLeft + getEnergyBarOffset(), topSectionTop + 5, 0, 0, 18, 72, 36, 72);
-			int maxEnergy = poweredMachineBE.getMaxEnergy(), height = 70;
-			if (maxEnergy > 0) {
-				int remaining = (this.container.getEnergy() * height) / maxEnergy;
-				guiGraphics.blit(POWERBAR, topSectionLeft + getEnergyBarOffset() + 1,
-						topSectionTop + 5 + 72 - 2 - remaining, 19, 69 - remaining, 17, remaining + 1, 36, 72);
-			}
-		}
-		if (baseMachineBE instanceof FluidMachineBE fluidMachineBE) {
-			int offset = getFluidBarOffset();
-			guiGraphics.blit(FLUIDBAR, topSectionLeft + offset, topSectionTop + 5, 0, 0, 18, 72, 36, 72);
-			int maxMB = fluidMachineBE.getMaxMB(), height = 70;
-			if (maxMB > 0) {
-				int remaining = (container.getFluidAmount() * height) / maxMB;
-				renderFluid(guiGraphics, topSectionLeft + offset + 1, topSectionTop + 5 + 72 - 1, 16, remaining);
-			}
-			guiGraphics.blit(FLUIDBAR, topSectionLeft + offset, topSectionTop + 5, 18, 0, 18, 72, 36, 72);
-		}
+
+		renderPowerBar(poseStack, mouseX, mouseY, partialTicks);
+		renderFluidTank(poseStack, mouseX, mouseY, partialTicks);
+
 		if (renderablesChanged)
 			updateRenderables();
-	}
-
-	protected void renderInventoryBackground(GuiGraphics guiGraphics, int relX, int relY) {
-		guiGraphics.blit(JUSTINV, relX, relY + 83 - 8, 0, 0, this.imageWidth, this.imageHeight - 73); // Inventory
-																										// Section
-	}
-
-	public void powerBarTooltip(GuiGraphics pGuiGraphics, int pX, int pY) {
-		if (baseMachineBE instanceof PoweredMachineBE poweredMachineBE) {
-			if (MiscTools.inBounds(topSectionLeft + getEnergyBarOffset(), topSectionTop + 5, 18, 72, pX, pY)) {
-				if (hasShiftDown())
-					pGuiGraphics.renderTooltip(font,
-							Language.getInstance()
-									.getVisualOrder(Arrays.asList(Component.translatable("justdirethings.screen.energy",
-											MagicHelpers.formatted(this.container.getEnergy()),
-											MagicHelpers.formatted(poweredMachineBE.getMaxEnergy())))),
-							pX, pY);
-				else
-					pGuiGraphics.renderTooltip(font,
-							Language.getInstance()
-									.getVisualOrder(Arrays.asList(Component.translatable("justdirethings.screen.energy",
-											MagicHelpers.withSuffix(this.container.getEnergy()),
-											MagicHelpers.withSuffix(poweredMachineBE.getMaxEnergy())))),
-							pX, pY);
-			}
-		}
 	}
 
 	public int getEnergyBarOffset() {
@@ -327,19 +360,14 @@ public abstract class BaseMachineScreen<T extends BaseMachineContainer> extends 
 		return baseMachineBE instanceof PoweredMachineBE ? 24 : getEnergyBarOffset();
 	}
 
-	public void renderFluid(GuiGraphics guiGraphics, int startX, int startY, int width, int height) {
+	public void renderFluid(PoseStack poseStack, int startX, int startY, int width, int height) {
 		FluidStack fluidStack = container.getFluidStack();
-		if (fluidStack.isEmpty() || height <= 0)
-			return;
+		if (fluidStack.isEmpty() || height <= 0) return;
 
 		Fluid fluid = fluidStack.getFluid();
-		IClientFluidTypeExtensions fluidExt = IClientFluidTypeExtensions.of(fluid);
-		ResourceLocation fluidStill = fluidExt.getStillTexture(fluidStack);
-		if (fluidStill == null)
-			return;
-		TextureAtlasSprite fluidStillSprite = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
-				.apply(fluidStill);
-		int fluidColor = fluidExt.getTintColor(fluidStack);
+		ResourceLocation fluidStill = fluid.getAttributes().getStillTexture();
+		TextureAtlasSprite fluidStillSprite = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(fluidStill);
+		int fluidColor = fluid.getAttributes().getColor(fluidStack);
 
 		float red = (float) (fluidColor >> 16 & 255) / 255.0F;
 		float green = (float) (fluidColor >> 8 & 255) / 255.0F;
@@ -347,7 +375,6 @@ public abstract class BaseMachineScreen<T extends BaseMachineContainer> extends 
 		RenderSystem.setShader(GameRenderer::getPositionTexShader);
 		RenderSystem.setShaderTexture(0, InventoryMenu.BLOCK_ATLAS);
 
-		PoseStack poseStack = guiGraphics.pose();
 		poseStack.pushPose();
 		RenderSystem.setShaderColor(red, green, blue, 1.0f);
 
@@ -356,8 +383,8 @@ public abstract class BaseMachineScreen<T extends BaseMachineContainer> extends 
 		float uMax = fluidStillSprite.getU1();
 		float vMin = fluidStillSprite.getV0();
 		float vMax = fluidStillSprite.getV1();
-		int textureWidth = fluidStillSprite.contents().width();
-		int textureHeight = fluidStillSprite.contents().height();
+		int textureWidth = fluidStillSprite.getWidth();
+		int textureHeight = fluidStillSprite.getHeight();
 
 		Tesselator tesselator = Tesselator.getInstance();
 		BufferBuilder vertexBuffer = tesselator.getBuilder();
@@ -366,23 +393,20 @@ public abstract class BaseMachineScreen<T extends BaseMachineContainer> extends 
 		int yOffset = 0;
 		while (yOffset < height) {
 			int drawHeight = Math.min(textureHeight, height - yOffset);
-			int drawY = startY - yOffset - drawHeight;
+			int drawY = startY - yOffset - drawHeight; // Adjust for bottom-to-top drawing
 
 			float vMaxAdjusted = vMin + (vMax - vMin) * ((float) drawHeight / textureHeight);
 
 			int xOffset = 0;
 			while (xOffset < width) {
 				int drawWidth = Math.min(textureWidth, width - xOffset);
+
 				float uMaxAdjusted = uMin + (uMax - uMin) * ((float) drawWidth / textureWidth);
 
-				vertexBuffer.vertex(poseStack.last().pose(), startX + xOffset, drawY + drawHeight, zLevel)
-						.uv(uMin, vMaxAdjusted).endVertex();
-				vertexBuffer.vertex(poseStack.last().pose(), startX + xOffset + drawWidth, drawY + drawHeight, zLevel)
-						.uv(uMaxAdjusted, vMaxAdjusted).endVertex();
-				vertexBuffer.vertex(poseStack.last().pose(), startX + xOffset + drawWidth, drawY, zLevel)
-						.uv(uMaxAdjusted, vMin).endVertex();
-				vertexBuffer.vertex(poseStack.last().pose(), startX + xOffset, drawY, zLevel).uv(uMin, vMin)
-						.endVertex();
+				vertexBuffer.vertex(poseStack.last().pose(), startX + xOffset, drawY + drawHeight, zLevel).uv(uMin, vMaxAdjusted).endVertex();
+				vertexBuffer.vertex(poseStack.last().pose(), startX + xOffset + drawWidth, drawY + drawHeight, zLevel).uv(uMaxAdjusted, vMaxAdjusted).endVertex();
+				vertexBuffer.vertex(poseStack.last().pose(), startX + xOffset + drawWidth, drawY, zLevel).uv(uMaxAdjusted, vMin).endVertex();
+				vertexBuffer.vertex(poseStack.last().pose(), startX + xOffset, drawY, zLevel).uv(uMin, vMin).endVertex();
 
 				xOffset += drawWidth;
 			}
@@ -392,36 +416,44 @@ public abstract class BaseMachineScreen<T extends BaseMachineContainer> extends 
 		tesselator.end();
 		poseStack.popPose();
 		RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+		RenderSystem.applyModelViewMatrix();
 	}
 
-	public void fluidBarTooltip(GuiGraphics pGuiGraphics, int pX, int pY) {
+	public void powerBarTooltip(PoseStack poseStack, int pX, int pY) {
+		if (baseMachineBE instanceof PoweredMachineBE poweredMachineBE) {
+			if (MiscTools.inBounds(topSectionLeft + getEnergyBarOffset(), topSectionTop + 5, 18, 72, pX, pY)) {
+				if (hasShiftDown())
+					renderTooltip(poseStack, Language.getInstance().getVisualOrder(Arrays.asList(
+							new TranslatableComponent("justdirethings.screen.energy", MagicHelpers.formatted(this.container.getEnergy()), MagicHelpers.formatted(poweredMachineBE.getMaxEnergy()))
+					)), pX, pY);
+				else
+					renderTooltip(poseStack, Language.getInstance().getVisualOrder(Arrays.asList(
+							new TranslatableComponent("justdirethings.screen.energy", MagicHelpers.withSuffix(this.container.getEnergy()), MagicHelpers.withSuffix(poweredMachineBE.getMaxEnergy()))
+					)), pX, pY);
+			}
+		}
+	}
+
+	public void fluidBarTooltip(PoseStack poseStack, int pX, int pY) {
 		if (baseMachineBE instanceof FluidMachineBE fluidMachineBE) {
 			if (MiscTools.inBounds(topSectionLeft + getFluidBarOffset(), topSectionTop + 5, 18, 72, pX, pY)) {
-				FluidStack fluidStack = container.getFluidStack();
-				Component fluidName = fluidStack.isEmpty() ? Component.literal("Empty") : fluidStack.getDisplayName();
 				if (hasShiftDown())
-					pGuiGraphics.renderTooltip(font,
-							Language.getInstance()
-									.getVisualOrder(Arrays.asList(Component.translatable("justdirethings.screen.fluid",
-											fluidName, MagicHelpers.formatted(container.getFluidAmount()),
-											MagicHelpers.formatted(fluidMachineBE.getMaxMB())))),
-							pX, pY);
+					renderTooltip(poseStack, Language.getInstance().getVisualOrder(Arrays.asList(
+							new TranslatableComponent("justdirethings.screen.fluid", this.container.getFluidStack().getDisplayName(), MagicHelpers.formatted(this.container.getFluidAmount()), MagicHelpers.formatted(fluidMachineBE.getMaxMB()))
+					)), pX, pY);
 				else
-					pGuiGraphics.renderTooltip(font,
-							Language.getInstance()
-									.getVisualOrder(Arrays.asList(Component.translatable("justdirethings.screen.fluid",
-											fluidName, MagicHelpers.withSuffix(container.getFluidAmount()),
-											MagicHelpers.withSuffix(fluidMachineBE.getMaxMB())))),
-							pX, pY);
+					renderTooltip(poseStack, Language.getInstance().getVisualOrder(Arrays.asList(
+							new TranslatableComponent("justdirethings.screen.fluid", this.container.getFluidStack().getDisplayName(), MagicHelpers.withSuffix(this.container.getFluidAmount()), MagicHelpers.withSuffix(fluidMachineBE.getMaxMB()))
+					)), pX, pY);
 			}
 		}
 	}
 
 	@Override
-	protected void renderTooltip(GuiGraphics pGuiGraphics, int pX, int pY) {
-		super.renderTooltip(pGuiGraphics, pX, pY);
-		powerBarTooltip(pGuiGraphics, pX, pY);
-		fluidBarTooltip(pGuiGraphics, pX, pY);
+	protected void renderTooltip(PoseStack poseStack, int pX, int pY) {
+		super.renderTooltip(poseStack, pX, pY);
+		powerBarTooltip(poseStack, pX, pY);
+		fluidBarTooltip(poseStack, pX, pY);
 	}
 
 	@Override
@@ -432,34 +464,30 @@ public abstract class BaseMachineScreen<T extends BaseMachineContainer> extends 
 
 	@Override
 	public boolean mouseClicked(double x, double y, int btn) {
-		if (baseMachineBE instanceof FilterableBE filterableBE) {
+		if (baseMachineBE instanceof FilterableBE) {
 			if (hoveredSlot != null && (hoveredSlot instanceof FilterBasicSlot)) {
 				// By splitting the stack we can get air easily :) perfect removal basically
-				ItemStack stack = this.menu.getCarried();// getMinecraft().player.inventoryMenu.getCarried();
+				ItemStack stack = this.menu.getCarried();
 				stack = stack.copy().split(hoveredSlot.getMaxStackSize()); // Limit to slot limit
 				hoveredSlot.set(stack); // Temporarily update the client for continuity purposes
-				PacketHandler.CHANNEL
-						.sendToServer(new GhostSlotPayload(hoveredSlot.index, stack, stack.getCount(), -1));
+				PacketHandler.CHANNEL.sendToServer(new GhostSlotPayload(hoveredSlot.index, stack, stack.getCount(), -1));
 				return true;
 			}
 		}
-		for (Renderable renderable : this.renderables) {
-			if (renderable instanceof NumberButton numberButton && MiscTools.inBounds(numberButton.getX(),
-					numberButton.getY(), numberButton.getWidth(), numberButton.getHeight(), x, y)) {
+		for (Widget widget : this.renderables) {
+			if (widget instanceof NumberButton numberButton && MiscTools.inBounds(numberButton.x, numberButton.y, numberButton.getWidth(), numberButton.getHeight(), x, y)) {
 				if (btn == 0)
-					numberButton.setValue(
-							adjustNumberButton(numberButton.getValue(), 1, numberButton.min, numberButton.max));
+					numberButton.setValue(adjustNumberButton(numberButton.getValue(), 1, numberButton.min, numberButton.max));
 				else if (btn == 1)
-					numberButton.setValue(
-							adjustNumberButton(numberButton.getValue(), -1, numberButton.min, numberButton.max));
+					numberButton.setValue(adjustNumberButton(numberButton.getValue(), -1, numberButton.min, numberButton.max));
 				numberButton.onPress();
 				numberButton.playDownSound(Minecraft.getInstance().getSoundManager());
 				return true;
 			}
-			if (renderable instanceof ToggleButton toggleButton && MiscTools.inBounds(toggleButton.getX(),
-					toggleButton.getY(), toggleButton.getWidth(), toggleButton.getHeight(), x, y)) {
+			if (widget instanceof ToggleButton toggleButton && MiscTools.inBounds(toggleButton.x, toggleButton.y, toggleButton.getWidth(), toggleButton.getHeight(), x, y)) {
 				if (btn == 1) {
-					toggleButton.mouseClicked(x, y, btn);
+					toggleButton.onClick(x, y, btn);
+					toggleButton.playDownSound(Minecraft.getInstance().getSoundManager());
 				}
 			}
 		}
@@ -484,26 +512,10 @@ public abstract class BaseMachineScreen<T extends BaseMachineContainer> extends 
 
 	public void saveSettings() {
 		if (baseMachineBE instanceof AreaAffectingBE)
-			PacketHandler.CHANNEL.sendToServer(
-					new AreaAffectingPayload(xRadius, yRadius, zRadius, xOffset, yOffset, zOffset, renderArea));
+			PacketHandler.CHANNEL.sendToServer(new AreaAffectingPayload(xRadius, yRadius, zRadius, xOffset, yOffset, zOffset, renderArea));
 		if (baseMachineBE instanceof FilterableBE)
-			PacketHandler.CHANNEL.sendToServer(
-					new FilterSettingPayload(filterData.allowlist, filterData.compareNBT, filterData.blockItemFilter));
+			PacketHandler.CHANNEL.sendToServer(new FilterSettingPayload(filterData.allowlist, filterData.compareNBT, filterData.blockItemFilter));
 		if (baseMachineBE instanceof RedstoneControlledBE)
 			PacketHandler.CHANNEL.sendToServer(new RedstoneSettingPayload(redstoneMode.ordinal()));
-	}
-
-	protected void blitNineSlice(GuiGraphics guiGraphics, int x, int y, int w, int h) {
-		final int texW = 236, texH = 34, b = 8;
-		final int innerW = texW - 2 * b, innerH = texH - 2 * b;
-		guiGraphics.blit(BACKGROUND_SPRITE, x, y, b, b, 0f, 0f, b, b, texW, texH);
-		guiGraphics.blit(BACKGROUND_SPRITE, x + w - b, y, b, b, texW - b, 0f, b, b, texW, texH);
-		guiGraphics.blit(BACKGROUND_SPRITE, x, y + h - b, b, b, 0f, texH - b, b, b, texW, texH);
-		guiGraphics.blit(BACKGROUND_SPRITE, x + w - b, y + h - b, b, b, texW - b, texH - b, b, b, texW, texH);
-		guiGraphics.blit(BACKGROUND_SPRITE, x + b, y, w - 2 * b, b, b, 0f, innerW, b, texW, texH);
-		guiGraphics.blit(BACKGROUND_SPRITE, x + b, y + h - b, w - 2 * b, b, b, texH - b, innerW, b, texW, texH);
-		guiGraphics.blit(BACKGROUND_SPRITE, x, y + b, b, h - 2 * b, 0f, b, b, innerH, texW, texH);
-		guiGraphics.blit(BACKGROUND_SPRITE, x + w - b, y + b, b, h - 2 * b, texW - b, b, b, innerH, texW, texH);
-		guiGraphics.blit(BACKGROUND_SPRITE, x + b, y + b, w - 2 * b, h - 2 * b, b, b, innerW, innerH, texW, texH);
 	}
 }
