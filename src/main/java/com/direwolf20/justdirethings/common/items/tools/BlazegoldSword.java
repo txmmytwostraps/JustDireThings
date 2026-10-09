@@ -1,18 +1,20 @@
 package com.direwolf20.justdirethings.common.items.tools;
 
 import com.direwolf20.justdirethings.common.items.interfaces.Ability;
+import com.direwolf20.justdirethings.common.items.interfaces.AbilityParams;
 import com.direwolf20.justdirethings.common.items.interfaces.Helpers;
 import com.direwolf20.justdirethings.common.items.tools.basetools.BaseSword;
 import com.direwolf20.justdirethings.common.items.tools.utils.GooTier;
+import com.direwolf20.justdirethings.setup.ModSetup;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 
 public class BlazegoldSword extends BaseSword {
 	public BlazegoldSword() {
-		super(GooTier.BLAZEGOLD, 3, -2.0F, new Properties().fireResistant());
+		super(GooTier.BLAZEGOLD, 3, -2.0F, new Properties().tab(ModSetup.TAB_JUSTDIRETHINGS).fireResistant());
 		registerAbility(Ability.MOBSCANNER);
 		registerAbility(Ability.LAVAREPAIR);
-		registerAbility(Ability.CAUTERIZEWOUNDS);
+		registerAbility(Ability.CAUTERIZEWOUNDS, new AbilityParams(1, 1, 1, 1, 0, 1200));
 		registerAbility(Ability.SMOKER);
 	}
 

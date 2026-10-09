@@ -1,43 +1,55 @@
 package com.direwolf20.justdirethings.common.items.interfaces;
 
 import com.direwolf20.justdirethings.client.particles.itemparticle.ItemFlowParticleData;
+import com.direwolf20.justdirethings.common.events.BlockEvents;
+import com.direwolf20.justdirethings.datagen.JustDireBlockTags;
 import com.direwolf20.justdirethings.datagen.JustDireItemTags;
 import com.direwolf20.justdirethings.setup.Registration;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
+import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.stats.Stats;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.stats.Stats;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MoverType;
-import net.minecraft.world.entity.ai.attributes.Attribute;
-import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.item.crafting.*;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.FallingBlock;
+import net.minecraft.world.level.block.GameMasterBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.Tags;
+import net.minecraftforge.energy.CapabilityEnergy;
 import net.minecraftforge.energy.IEnergyStorage;
-import net.minecraftforge.event.level.BlockEvent;
+import net.minecraftforge.event.ForgeEventFactory;
+import net.minecraftforge.event.world.BlockEvent;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemHandlerHelper;
 
@@ -48,99 +60,193 @@ import java.util.stream.Collectors;
 import static com.direwolf20.justdirethings.common.items.interfaces.ToggleableTool.getInstantRFCost;
 
 public class Helpers {
-	public static final Predicate<BlockState> oreCondition = s -> s.is(Tags.Blocks.ORES);
+	public static final Predicate<BlockState> oreCondition = s -> s.is(Tags.Blocks.ORES) || s.is(JustDireBlockTags.CLUSTERS);
 	public static final Predicate<BlockState> fallingBlockCondition = s -> s.getBlock() instanceof FallingBlock;
 	public static final Predicate<BlockState> logCondition = s -> s.is(BlockTags.LOGS);
 
-	public static void breakBlocks(ServerLevel level, BlockPos pos) {
-		level.destroyBlock(pos, true);
-	}
-
-	public static List<ItemStack> breakBlocks(Level level, BlockPos pos, LivingEntity pPlayer, ItemStack pStack,
-			boolean damageTool, boolean instaBreak) {
-		List<ItemStack> drops = new ArrayList<>();
-		if (pPlayer instanceof Player player) {
-			BlockEvent.BreakEvent event = new BlockEvent.BreakEvent(level, pos, level.getBlockState(pos), player);
-			if (MinecraftForge.EVENT_BUS.post(event))
-				return drops;
-
+	public static void breakBlocksNew(Level level, BlockPos pos, LivingEntity pPlayer, ItemStack pStack, boolean damageTool, boolean instaBreak) {
+		if (pPlayer instanceof ServerPlayer player && level instanceof ServerLevel serverLevel) {
 			BlockState state = level.getBlockState(pos);
+			GameType type = player.getAbilities().instabuild ? GameType.CREATIVE : GameType.SURVIVAL;
+			ItemStack mainHand = player.getMainHandItem();
+			BlockEvent.BreakEvent exp = new BlockEvent.BreakEvent(level, pos, state, player);
+			exp.setCanceled((!mainHand.isEmpty() && !mainHand.getItem().canAttackBlock(state, level, pos, player))
+					|| player.blockActionRestricted(level, pos, type)
+					|| (state.getBlock() instanceof GameMasterBlock && !player.canUseGameMasterBlocks()));
+			exp.setExpToDrop(state.getExpDrop(level, pos, EnchantmentHelper.getItemEnchantmentLevel(Enchantments.BLOCK_FORTUNE, pStack), EnchantmentHelper.getItemEnchantmentLevel(Enchantments.SILK_TOUCH, pStack)));
+			if (MinecraftForge.EVENT_BUS.post(exp)) {
+				player.connection.send(new ClientboundBlockUpdatePacket(pos, state));
+				return;
+			}
 			BlockEntity blockEntity = level.getBlockEntity(pos);
-			// This is how vanilla does it?
+			Block block = state.getBlock();
+			//This is how vanilla does it? With assistance from Shadows!
+			if (block instanceof GameMasterBlock && !player.canUseGameMasterBlocks()) {
+				level.sendBlockUpdated(pos, state, state, 3);
+				return;
+			}
+			if (player.blockActionRestricted(level, pos, type)) {
+				return;
+			}
 			float destroySpeed = state.getDestroySpeed(level, pos);
-			boolean removed = state.onDestroyedByPlayer(level, pos, player, true, level.getFluidState(pos));
-			if (removed) {
-				if (level instanceof ServerLevel serverLevel)
-					drops.addAll(Block.getDrops(state, serverLevel, pos, blockEntity, pPlayer, pStack));
-				state.getBlock().destroy(level, pos, state);
-				player.awardStat(Stats.BLOCK_MINED.get(state.getBlock()));
-				player.causeFoodExhaustion(0.005F);
-				if (damageTool && destroySpeed != 0.0F) {
-					damageTool(pStack, pPlayer);
-					if (instaBreak) {
-						damageTool(pStack, pPlayer, getInstantRFCost(destroySpeed));
-					}
+			//removeBlock calls playerWillDestroy
+			if (player.getAbilities().instabuild) {
+				removeBlock(serverLevel, player, pos, state, false);
+				return;
+			}
+			boolean canHarvest = state.canHarvestBlock(level, pos, player);
+			//No mineBlock. The tool is damaged below.
+			boolean removed = removeBlock(serverLevel, player, pos, state, canHarvest);
+			if (canHarvest && removed) {
+				BlockEvents.harvestPos = pos;
+				BlockEvents.harvestExperience = exp.getExpToDrop();
+				try {
+					block.playerDestroy(level, player, pos, state, blockEntity, pStack);
+				} finally {
+					BlockEvents.harvestPos = null;
 				}
-
-				return drops;
+				//Routed drops carry their experience with them
+				if (exp.getExpToDrop() > 0 && !BlockEvents.routesDrops(player, pStack))
+					block.popExperience(serverLevel, pos, exp.getExpToDrop());
+			}
+			if (damageTool && destroySpeed != 0.0F) {
+				damageTool(pStack, pPlayer);
+				if (instaBreak) {
+					damageTool(pStack, pPlayer, getInstantRFCost(destroySpeed, level, pStack));
+				}
 			}
 		}
-		return new ArrayList<>();
+	}
+
+	public static boolean removeBlock(ServerLevel level, ServerPlayer player, BlockPos pos, BlockState state, boolean canHarvest) {
+		boolean removed = state.onDestroyedByPlayer(level, pos, player, canHarvest, level.getFluidState(pos));
+		if (removed) {
+			state.getBlock().destroy(level, pos, state);
+		}
+		return removed;
 	}
 
 	public static void damageTool(ItemStack stack, LivingEntity player) {
+		if (player instanceof ServerPlayer serverPlayer && (serverPlayer.gameMode.getGameModeForPlayer() == GameType.CREATIVE || serverPlayer.gameMode.getGameModeForPlayer() == GameType.SPECTATOR))
+			return;
 		if (stack.getItem() instanceof PoweredTool poweredTool) {
-			stack.hurtAndBreak(poweredTool.getBlockBreakFECost(), player,
-					pOnBroken -> pOnBroken.broadcastBreakEvent(EquipmentSlot.MAINHAND));
+			stack.hurtAndBreak(poweredTool.getBlockBreakFECost(), player, p -> p.broadcastBreakEvent(InteractionHand.MAIN_HAND));
 		} else {
-			stack.hurtAndBreak(1, player, pOnBroken -> pOnBroken.broadcastBreakEvent(EquipmentSlot.MAINHAND));
+			ItemStack cloneStack = stack.copy();
+			stack.hurtAndBreak(1, player, p -> p.broadcastBreakEvent(InteractionHand.MAIN_HAND));
+			if (stack.isEmpty() && !cloneStack.isEmpty() && player instanceof Player player1)
+				ForgeEventFactory.onPlayerDestroyItem(player1, cloneStack, InteractionHand.MAIN_HAND);
 		}
 	}
 
 	public static void damageTool(ItemStack stack, LivingEntity player, int amount) {
-		if (stack.getItem() instanceof PoweredItem poweredTool) {
-			stack.hurtAndBreak(amount, player, pOnBroken -> pOnBroken.broadcastBreakEvent(EquipmentSlot.MAINHAND));
+		if (player instanceof ServerPlayer serverPlayer && (serverPlayer.gameMode.getGameModeForPlayer() == GameType.CREATIVE || serverPlayer.gameMode.getGameModeForPlayer() == GameType.SPECTATOR))
+			return;
+		if (stack.getItem() instanceof PoweredItem) {
+			stack.hurtAndBreak(amount, player, p -> p.broadcastBreakEvent(InteractionHand.MAIN_HAND));
 		} else {
-			stack.hurtAndBreak(amount, player, pOnBroken -> pOnBroken.broadcastBreakEvent(EquipmentSlot.MAINHAND));
+			ItemStack cloneStack = stack.copy();
+			stack.hurtAndBreak(amount, player, p -> p.broadcastBreakEvent(InteractionHand.MAIN_HAND));
+			if (stack.isEmpty() && !cloneStack.isEmpty() && player instanceof Player player1)
+				ForgeEventFactory.onPlayerDestroyItem(player1, cloneStack, InteractionHand.MAIN_HAND);
 		}
 	}
 
 	public static void damageTool(ItemStack stack, LivingEntity player, Ability ability) {
+		if (player instanceof ServerPlayer serverPlayer && (serverPlayer.gameMode.getGameModeForPlayer() == GameType.CREATIVE || serverPlayer.gameMode.getGameModeForPlayer() == GameType.SPECTATOR))
+			return;
 		if (stack.getItem() instanceof PoweredItem) {
-			stack.hurtAndBreak(ability.getFeCost(), player,
-					pOnBroken -> pOnBroken.broadcastBreakEvent(EquipmentSlot.MAINHAND));
+			stack.hurtAndBreak(ability.getFeCost(), player, p -> p.broadcastBreakEvent(InteractionHand.MAIN_HAND));
 		} else {
-			stack.hurtAndBreak(ability.getDurabilityCost(), player,
-					pOnBroken -> pOnBroken.broadcastBreakEvent(EquipmentSlot.MAINHAND));
+			ItemStack cloneStack = stack.copy();
+			stack.hurtAndBreak(ability.getDurabilityCost(), player, p -> p.broadcastBreakEvent(InteractionHand.MAIN_HAND));
+			if (stack.isEmpty() && !cloneStack.isEmpty() && player instanceof Player player1)
+				ForgeEventFactory.onPlayerDestroyItem(player1, cloneStack, InteractionHand.MAIN_HAND);
 		}
 	}
 
 	public static void damageTool(ItemStack stack, LivingEntity player, Ability ability, int multiplier) {
+		if (player instanceof ServerPlayer serverPlayer && (serverPlayer.gameMode.getGameModeForPlayer() == GameType.CREATIVE || serverPlayer.gameMode.getGameModeForPlayer() == GameType.SPECTATOR))
+			return;
 		if (stack.getItem() instanceof PoweredItem) {
-			stack.hurtAndBreak(ability.getFeCost() * multiplier, player,
-					pOnBroken -> pOnBroken.broadcastBreakEvent(EquipmentSlot.MAINHAND));
+			stack.hurtAndBreak(ability.getFeCost() * multiplier, player, p -> p.broadcastBreakEvent(InteractionHand.MAIN_HAND));
 		} else {
-			stack.hurtAndBreak(ability.getDurabilityCost() * multiplier, player,
-					pOnBroken -> pOnBroken.broadcastBreakEvent(EquipmentSlot.MAINHAND));
+			ItemStack cloneStack = stack.copy();
+			stack.hurtAndBreak(ability.getDurabilityCost() * multiplier, player, p -> p.broadcastBreakEvent(InteractionHand.MAIN_HAND));
+			if (stack.isEmpty() && !cloneStack.isEmpty() && player instanceof Player player1)
+				ForgeEventFactory.onPlayerDestroyItem(player1, cloneStack, InteractionHand.MAIN_HAND);
 		}
+	}
+
+	// hurtAndBreak skips creative players, but powered items still pay energy
+	public static void damageItemInCreative(ItemStack stack, int amount, LivingEntity entity) {
+		if (!entity.level.isClientSide && entity instanceof Player player && player.getAbilities().instabuild && stack.isDamageableItem())
+			stack.getItem().damageItem(stack, amount, player, p -> {});
+	}
+
+	public static boolean playerHasShieldUseIntent(UseOnContext context) {
+		Player player = context.getPlayer();
+		return context.getHand().equals(InteractionHand.MAIN_HAND) && player.getOffhandItem().is(Items.SHIELD) && !player.isSecondaryUseActive();
+	}
+
+	// CONSUME means the block changed
+	// useOn posts no game event, and creative players skip the energy cost
+	public static InteractionResult finishToolAction(UseOnContext context, InteractionResult result) {
+		if (result == InteractionResult.CONSUME) {
+			Player player = context.getPlayer();
+			context.getLevel().gameEvent(player, GameEvent.BLOCK_CHANGE, context.getClickedPos());
+			if (player != null)
+				damageItemInCreative(context.getItemInHand(), 1, player);
+		}
+		return result;
+	}
+
+	// ArmorItem.use only equips into an empty slot, so swap here
+	public static InteractionResultHolder<ItemStack> swapWithEquipmentSlot(Item item, Level level, Player player, InteractionHand hand) {
+		ItemStack heldStack = player.getItemInHand(hand);
+		EquipmentSlot equipmentSlot = LivingEntity.getEquipmentSlotForItem(heldStack);
+		ItemStack wornStack = player.getItemBySlot(equipmentSlot);
+		if ((!EnchantmentHelper.hasBindingCurse(wornStack) || player.isCreative()) && !ItemStack.matches(heldStack, wornStack)) {
+			if (!level.isClientSide())
+				player.awardStat(Stats.ITEM_USED.get(item));
+
+			ItemStack returnedStack = heldStack;
+			if (!wornStack.isEmpty()) {
+				returnedStack = wornStack.copy();
+				wornStack.setCount(0);
+			}
+			ItemStack equippedStack = heldStack.copy();
+			if (!player.isCreative())
+				heldStack.setCount(0);
+			player.setItemSlot(equipmentSlot, equippedStack);
+			if (player.isCreative() && returnedStack != heldStack) {
+				// useItem would give it the held piece's count and damage
+				// Returning the held stack skips useItem's sync, so sync here
+				player.setItemInHand(hand, returnedStack);
+				if (!level.isClientSide())
+					player.inventoryMenu.sendAllDataToRemote();
+				return InteractionResultHolder.sidedSuccess(heldStack, level.isClientSide());
+			}
+			return InteractionResultHolder.sidedSuccess(returnedStack, level.isClientSide());
+		}
+		return InteractionResultHolder.fail(heldStack);
 	}
 
 	public static int testUseTool(ItemStack stack) {
 		if (stack.getItem() instanceof PoweredTool poweredTool) {
-			IEnergyStorage energyStorage = stack.getCapability(ForgeCapabilities.ENERGY).orElse(null);
-			if (energyStorage == null)
-				return -1; // Shouldn't Happen!
+			IEnergyStorage energyStorage = stack.getCapability(CapabilityEnergy.ENERGY).orElse(null);
+			if (energyStorage == null) return -1; //Shouldn't Happen!
 			return energyStorage.getEnergyStored() - poweredTool.getBlockBreakFECost();
 		} else {
+			if (!stack.isDamageableItem()) return 1;
 			return stack.getMaxDamage() - stack.getDamageValue() - 1;
 		}
 	}
 
 	public static int testUseTool(ItemStack stack, int cost) {
 		if (stack.getItem() instanceof PoweredItem) {
-			IEnergyStorage energyStorage = stack.getCapability(ForgeCapabilities.ENERGY).orElse(null);
-			if (energyStorage == null)
-				return -1; // Shouldn't Happen!
+			IEnergyStorage energyStorage = stack.getCapability(CapabilityEnergy.ENERGY).orElse(null);
+			if (energyStorage == null) return -1; //Shouldn't Happen!
 			return energyStorage.getEnergyStored() - cost;
 		} else {
 			return stack.getMaxDamage() - stack.getDamageValue() - cost;
@@ -149,9 +255,8 @@ public class Helpers {
 
 	public static int testUseTool(ItemStack stack, Ability ability) {
 		if (stack.getItem() instanceof PoweredItem) {
-			IEnergyStorage energyStorage = stack.getCapability(ForgeCapabilities.ENERGY).orElse(null);
-			if (energyStorage == null)
-				return -1; // Shouldn't Happen!
+			IEnergyStorage energyStorage = stack.getCapability(CapabilityEnergy.ENERGY).orElse(null);
+			if (energyStorage == null) return -1; //Shouldn't Happen!
 			return energyStorage.getEnergyStored() - ability.getFeCost();
 		} else {
 			return stack.getMaxDamage() - stack.getDamageValue() - ability.getDurabilityCost();
@@ -160,95 +265,44 @@ public class Helpers {
 
 	public static int testUseTool(ItemStack stack, Ability ability, int multiplier) {
 		if (stack.getItem() instanceof PoweredItem) {
-			IEnergyStorage energyStorage = stack.getCapability(ForgeCapabilities.ENERGY).orElse(null);
-			if (energyStorage == null)
-				return -1; // Shouldn't Happen!
+			IEnergyStorage energyStorage = stack.getCapability(CapabilityEnergy.ENERGY).orElse(null);
+			if (energyStorage == null) return -1; //Shouldn't Happen!
 			return energyStorage.getEnergyStored() - (ability.getFeCost() * multiplier);
 		} else {
 			return stack.getMaxDamage() - stack.getDamageValue() - (ability.getDurabilityCost() * multiplier);
 		}
 	}
 
-	public static void combineDrops(List<ItemStack> drops, List<ItemStack> newDrops) {
-		for (ItemStack newDrop : newDrops) {
-			// Attempt to find a matching ItemStack in 'drops' that can be merged with
-			// 'newDrop'
-			Optional<ItemStack> match = drops.stream().filter(drop -> ItemStack.isSameItemSameTags(drop, newDrop))
-					.findFirst();
-
-			if (match.isPresent()) {
-				// Found a match, try to add the counts together
-				ItemStack existingDrop = match.get();
-				// Calculate how much of the 'newDrop' stack can actually be moved over
-				int transferableAmount = Math.min(newDrop.getCount(),
-						existingDrop.getMaxStackSize() - existingDrop.getCount());
-
-				if (transferableAmount > 0) {
-					// Increase the count of the existing stack
-					existingDrop.grow(transferableAmount);
-					// Decrease the count of the new stack accordingly
-					newDrop.shrink(transferableAmount);
-				}
-
-				// If after transferring, the newDrop still has items left, add it as a new
-				// entry.
-				if (!newDrop.isEmpty()) {
-					drops.add(newDrop);
-				}
-			} else {
-				// No existing ItemStack could be found or modified, so add 'newDrop' directly
-				drops.add(newDrop);
-			}
-		}
-	}
-
 	public static ItemStack getSmeltedItem(Level level, ItemStack itemStack) {
-		RegistryAccess registryAccess = level.registryAccess();
 		RecipeManager recipeManager = level.getRecipeManager();
 		ItemStack returnStack = ItemStack.EMPTY;
-		Optional<SmeltingRecipe> smeltingRecipe = recipeManager.getRecipeFor(RecipeType.SMELTING,
-				new SimpleContainer(itemStack), level);
+		Optional<SmeltingRecipe> smeltingRecipe = recipeManager.getRecipeFor(RecipeType.SMELTING, new SimpleContainer(itemStack), level);
 		if (smeltingRecipe.isPresent() && !itemStack.is(JustDireItemTags.AUTO_SMELT_DENY))
-			returnStack = smeltingRecipe.get().getResultItem(registryAccess);
-		if (returnStack.isEmpty())
-			return itemStack;
+			returnStack = smeltingRecipe.get().getResultItem();
+		if (returnStack.isEmpty()) return itemStack;
 		return returnStack;
 	}
 
-	public static List<ItemStack> smeltDrops(ServerLevel level, List<ItemStack> drops, ItemStack tool,
-			LivingEntity entityLiving, boolean[] didISmelt) {
+	public static List<ItemStack> smeltDrops(ServerLevel level, List<ItemStack> drops, ItemStack tool, LivingEntity entityLiving, boolean[] didISmelt) {
 		List<ItemStack> returnList = new ArrayList<>();
-		RegistryAccess registryAccess = level.registryAccess();
 		RecipeManager recipeManager = level.getRecipeManager();
 		didISmelt[0] = false;
 		for (ItemStack drop : drops) {
-			Optional<SmeltingRecipe> smeltingRecipe = recipeManager.getRecipeFor(RecipeType.SMELTING,
-					new SimpleContainer(drop), level);
+			// Check if there's a smelting recipe for the drop
+			Optional<SmeltingRecipe> smeltingRecipe = recipeManager.getRecipeFor(RecipeType.SMELTING, new SimpleContainer(drop), level);
 
 			if (smeltingRecipe.isPresent() && !drop.is(JustDireItemTags.AUTO_SMELT_DENY)) {
-				ItemStack smeltedResult = smeltingRecipe.get().getResultItem(registryAccess);
+				// Get the result of the smelting recipe
+				ItemStack smeltedResult = smeltingRecipe.get().getResultItem();
 
-				if (!smeltedResult.isEmpty()) {
-					// Find how many we can smelt with available energy (allows partial smelting of
-					// Fortune stacks)
-					int count = drop.getCount();
-					int canSmelt = count;
-					while (canSmelt > 0 && testUseTool(tool, Ability.SMELTER, canSmelt) < 0) {
-						canSmelt--;
-					}
-					if (canSmelt > 0) {
-						ItemStack resultStack = smeltedResult.copy();
-						resultStack.setCount(canSmelt);
-						if (!tool.isEmpty())
-							damageTool(tool, entityLiving, Ability.SMELTER, canSmelt);
-						returnList.add(resultStack);
-						didISmelt[0] = true;
-					}
-					if (canSmelt < count) {
-						ItemStack remainder = drop.copy();
-						remainder.setCount(count - canSmelt);
-						returnList.add(remainder);
-					}
+				if (!smeltedResult.isEmpty() && (testUseTool(tool, Ability.SMELTER, drop.getCount()) >= 0)) {
+					// If the smelting result is valid, prepare to replace the original drop with the smelted result
+					ItemStack resultStack = smeltedResult.copy();
+					resultStack.setCount(drop.getCount()); // Assume all items in the stack are smelted
+					if (!tool.isEmpty())
+						damageTool(tool, entityLiving, Ability.SMELTER, drop.getCount());
+					returnList.add(resultStack);
+					didISmelt[0] = true;
 				} else {
 					returnList.add(drop);
 				}
@@ -259,25 +313,21 @@ public class Helpers {
 		return returnList;
 	}
 
-	public static void smokeDrop(ServerLevel level, ItemEntity drop, ItemStack tool, LivingEntity entityLiving,
-			boolean[] didISmoke) {
-		RegistryAccess registryAccess = level.registryAccess();
+	public static void smokeDrop(ServerLevel level, ItemEntity drop, ItemStack tool, LivingEntity entityLiving, boolean[] didISmoke) {
 		RecipeManager recipeManager = level.getRecipeManager();
 		didISmoke[0] = false;
 
 		// Check if there's a smoking recipe for the drop
-		Optional<SmokingRecipe> smokingRecipe = recipeManager.getRecipeFor(RecipeType.SMOKING,
-				new SimpleContainer(drop.getItem()), level);
+		Optional<SmokingRecipe> smokingRecipe = recipeManager.getRecipeFor(RecipeType.SMOKING, new SimpleContainer(drop.getItem()), level);
 
 		if (smokingRecipe.isPresent() && !drop.getItem().is(JustDireItemTags.AUTO_SMOKE_DENY)) {
 			// Get the result of the smoking recipe
-			ItemStack smokedResults = smokingRecipe.get().getResultItem(registryAccess);
+			ItemStack smokedResults = smokingRecipe.get().getResultItem();
 
 			if (!smokedResults.isEmpty() && (testUseTool(tool, Ability.SMOKER, drop.getItem().getCount()) >= 0)) {
 				didISmoke[0] = true;
 				smokedResults.setCount(drop.getItem().getCount()); // Assume all items in the stack are smoked
-				// If the smoking result is valid, replace the original drop with the smoked
-				// result
+				// If the smoking result is valid, replace the original drop with the smoked result
 				drop.setItem(smokedResults.copy());
 				if (!tool.isEmpty())
 					damageTool(tool, entityLiving, Ability.SMOKER, drop.getItem().getCount());
@@ -287,8 +337,7 @@ public class Helpers {
 
 	public static void dropDrops(List<ItemStack> drops, ServerLevel level, BlockPos dropAtPos) {
 		for (ItemStack drop : drops) {
-			ItemEntity itemEntity = new ItemEntity(level, dropAtPos.getX() + 0.5f, dropAtPos.getY() + 0.5f,
-					dropAtPos.getZ() + 0.5f, drop);
+			ItemEntity itemEntity = new ItemEntity(level, dropAtPos.getX() + 0.5f, dropAtPos.getY() + 0.5f, dropAtPos.getZ() + 0.5f, drop);
 			level.addFreshEntity(itemEntity);
 		}
 	}
@@ -333,48 +382,37 @@ public class Helpers {
 		drops.addAll(leftovers);
 	}
 
-	public static Set<BlockPos> findLikeBlocks(Level pLevel, BlockState pState, BlockPos pPos, Direction direction,
-			int maxBreak, int range) {
-		if (direction == null)
-			return findBlocks(pLevel, pState, pPos, maxBreak, range);
-		else
-			return findBlocks(pLevel, pState, pPos, maxBreak, direction, maxBreak);
+	public static Set<BlockPos> findLikeBlocks(Level pLevel, BlockState pState, BlockPos pPos, int maxBreak, int range) {
+		return findBlocks(pLevel, pState, pPos, maxBreak, range);
 	}
-
-	// Hard backstop on how many BFS nodes a vein search can expand to, independent
-	// of maxBreak/radius, so a large config value can't spike the tick.
-	private static final int MAX_VEIN_SEARCH_NODES = 200;
 
 	/**
 	 * Basically a veinminer
 	 */
 	private static Set<BlockPos> findBlocks(Level pLevel, BlockState pState, BlockPos pPos, int maxBreak, int radius) {
-		Set<BlockPos> foundBlocks = new HashSet<>(); // The matching Blocks
-		Queue<BlockPos> blocksToCheck = new LinkedList<>(); // A list of blocks to check around
-		Set<BlockPos> checkedBlocks = new HashSet<>(); // A list of blocks we already checked
+		Set<BlockPos> foundBlocks = new HashSet<>(); //The matching Blocks
+		Queue<BlockPos> blocksToCheck = new LinkedList<>(); //A list of blocks to check around
+		Set<BlockPos> checkedBlocks = new HashSet<>(); //A list of blocks we already checked
 
-		foundBlocks.add(pPos); // Obviously the block we broke is included in the return!
-		blocksToCheck.add(pPos); // Start scanning around the block we broke
+		foundBlocks.add(pPos); //Obviously the block we broke is included in the return!
+		blocksToCheck.add(pPos); //Start scanning around the block we broke
 
-		while (!blocksToCheck.isEmpty() && checkedBlocks.size() < MAX_VEIN_SEARCH_NODES) {
-			BlockPos posToCheck = blocksToCheck.poll(); // Get the next blockPos to scan around
+		while (!blocksToCheck.isEmpty()) {
+			BlockPos posToCheck = blocksToCheck.poll(); //Get the next blockPos to scan around
 
 			if (!checkedBlocks.add(posToCheck))
-				continue; // Don't check blockPos we've checked before
+				continue; //Don't check blockPos we've checked before
 
-			Set<BlockPos> matchingBlocks = BlockPos
-					.betweenClosedStream(posToCheck.offset(-radius, -radius, -radius),
-							posToCheck.offset(radius, radius, radius))
-					.filter(blockPos -> !checkedBlocks.contains(blockPos)) // skip cells a neighboring node already
-																			// scanned
-					.filter(blockPos -> pLevel.getBlockState(blockPos).is(pState.getBlock())).map(BlockPos::immutable)
+			Set<BlockPos> matchingBlocks = BlockPos.betweenClosedStream(posToCheck.offset(-radius, -radius, -radius), posToCheck.offset(radius, radius, radius))
+					.filter(blockPos -> pLevel.getBlockState(blockPos).is(pState.getBlock()))
+					.map(BlockPos::immutable)
 					.collect(Collectors.toSet());
 
-			for (BlockPos toAdd : matchingBlocks) { // Ensure we don't go beyond maxBreak
+			for (BlockPos toAdd : matchingBlocks) { //Ensure we don't go beyond maxBreak
 				if (foundBlocks.size() < maxBreak) {
-					foundBlocks.add(toAdd); // Add all the blocks we found to our set of found blocks
+					foundBlocks.add(toAdd); //Add all the blocks we found to our set of found blocks
 					if (!checkedBlocks.contains(toAdd))
-						blocksToCheck.add(toAdd); // Add all the blocks we found to be checked as well
+						blocksToCheck.add(toAdd); //Add all the blocks we found to be checked as well
 				} else
 					return foundBlocks;
 			}
@@ -383,18 +421,16 @@ public class Helpers {
 	}
 
 	/**
-	 * Looks in a specified direction for similar blocks - used by shovels to clear
-	 * all like blocks above them
+	 * Looks in a specified direction for similar blocks - used by shovels to clear all like blocks above them
 	 */
-	private static Set<BlockPos> findBlocks(Level pLevel, BlockState pState, BlockPos pPos, int maxBreak,
-			Direction direction, int range) {
-		Set<BlockPos> foundBlocks = new HashSet<>(); // The matching Blocks
-		foundBlocks.add(pPos); // Obviously the block we broke is included in the return!
+	public static Set<BlockPos> findBlocksSkyfall(Level pLevel, BlockPos pPos, int maxBreak, Direction direction, int range) {
+		Set<BlockPos> foundBlocks = new HashSet<>(); //The matching Blocks
+		foundBlocks.add(pPos); //Obviously the block we broke is included in the return!
 
 		for (int i = 1; i < range; i++) {
-			BlockPos posToCheck = pPos.relative(direction, i); // The next blockPos to check
+			BlockPos posToCheck = pPos.relative(direction, i); //The next blockPos to check
 			BlockState blockState = pLevel.getBlockState(posToCheck);
-			if (blockState.is(pState.getBlock())) {
+			if (fallingBlockCondition.test(blockState)) {
 				foundBlocks.add(posToCheck);
 			} else {
 				break;
@@ -408,33 +444,29 @@ public class Helpers {
 	/**
 	 * Basically a veinminer
 	 */
-	public static Set<BlockPos> findTaggedBlocks(Level pLevel, List<TagKey<Block>> tags, BlockPos pPos, int maxBreak,
-			int radius) {
-		Set<BlockPos> foundBlocks = new HashSet<>(); // The matching Blocks
-		Queue<BlockPos> blocksToCheck = new LinkedList<>(); // A list of blocks to check around
-		Set<BlockPos> checkedBlocks = new HashSet<>(); // A list of blocks we already checked
+	public static Set<BlockPos> findTaggedBlocks(Level pLevel, List<TagKey<Block>> tags, BlockPos pPos, int maxBreak, int radius) {
+		Set<BlockPos> foundBlocks = new HashSet<>(); //The matching Blocks
+		Queue<BlockPos> blocksToCheck = new LinkedList<>(); //A list of blocks to check around
+		Set<BlockPos> checkedBlocks = new HashSet<>(); //A list of blocks we already checked
 
-		blocksToCheck.add(pPos); // Start scanning around the block we broke
+		blocksToCheck.add(pPos); //Start scanning around the block we broke
 
-		while (!blocksToCheck.isEmpty() && checkedBlocks.size() < MAX_VEIN_SEARCH_NODES) {
-			BlockPos posToCheck = blocksToCheck.poll(); // Get the next blockPos to scan around
+		while (!blocksToCheck.isEmpty()) {
+			BlockPos posToCheck = blocksToCheck.poll(); //Get the next blockPos to scan around
 
 			if (!checkedBlocks.add(posToCheck))
-				continue; // Don't check blockPos we've checked before
+				continue; //Don't check blockPos we've checked before
 
-			Set<BlockPos> matchingBlocks = BlockPos
-					.betweenClosedStream(posToCheck.offset(-radius, -radius, -radius),
-							posToCheck.offset(radius, radius, radius))
-					.filter(blockPos -> !checkedBlocks.contains(blockPos)) // skip cells a neighboring node already
-																			// scanned
+			Set<BlockPos> matchingBlocks = BlockPos.betweenClosedStream(posToCheck.offset(-radius, -radius, -radius), posToCheck.offset(radius, radius, radius))
 					.filter(blockPos -> tags.stream().anyMatch(pLevel.getBlockState(blockPos)::is))
-					.map(BlockPos::immutable).collect(Collectors.toSet());
+					.map(BlockPos::immutable)
+					.collect(Collectors.toSet());
 
-			for (BlockPos toAdd : matchingBlocks) { // Ensure we don't go beyond maxBreak
+			for (BlockPos toAdd : matchingBlocks) { //Ensure we don't go beyond maxBreak
 				if (foundBlocks.size() < maxBreak) {
-					foundBlocks.add(toAdd); // Add all the blocks we found to our set of found blocks
+					foundBlocks.add(toAdd); //Add all the blocks we found to our set of found blocks
 					if (!checkedBlocks.contains(toAdd))
-						blocksToCheck.add(toAdd); // Add all the blocks we found to be checked as well
+						blocksToCheck.add(toAdd); //Add all the blocks we found to be checked as well
 				} else
 					return foundBlocks;
 			}
@@ -442,77 +474,20 @@ public class Helpers {
 		return foundBlocks;
 	}
 
-	/**
-	 * Same as above, but you can pass in extra block tags to break - for example,
-	 * if you wanna also break all leaves when blockstate is a log
-	 */
-
-	public static Set<BlockPos> findLikeBlocks(Level pLevel, BlockState pState, BlockPos pPos, int maxBreak, int radius,
-			List<TagKey<Block>> extraTags) {
-		Set<BlockPos> foundBlocks = new HashSet<>(); // The matching Blocks
-		Queue<BlockPos> blocksToCheck = new LinkedList<>(); // A list of blocks to check around
-		Queue<BlockPos> secondaryBlocksToCheck = new LinkedList<>(); // Matching states will always iterate first,
-																		// extraTags will be scanned second!
-		Set<BlockPos> checkedBlocks = new HashSet<>(); // A list of blocks we already checked
-
-		foundBlocks.add(pPos); // Obviously the block we broke is included in the return!
-		blocksToCheck.add(pPos); // Start scanning around the block we broke
-
-		while ((!blocksToCheck.isEmpty() || !secondaryBlocksToCheck.isEmpty())
-				&& checkedBlocks.size() < MAX_VEIN_SEARCH_NODES) {
-			if (foundBlocks.size() >= maxBreak)
-				break; // Already hit the cap, stop scanning entirely instead of wasting cube scans
-			boolean isPrimaryPhase = !blocksToCheck.isEmpty(); // Primary first!
-			BlockPos posToCheck = isPrimaryPhase ? blocksToCheck.poll() : secondaryBlocksToCheck.poll(); // Get the next
-																											// blockPos
-																											// to scan
-																											// around
-
-			if (!checkedBlocks.add(posToCheck))
-				continue; // Don't check blockPos we've checked before
-
-			for (BlockPos blockPos : BlockPos.betweenClosed(posToCheck.offset(-radius, -radius, -radius),
-					posToCheck.offset(radius, radius, radius))) {
-				if (foundBlocks.size() >= maxBreak)
-					break; // Reached the cap - stop scanning the rest of this cube too
-				if (checkedBlocks.contains(blockPos))
-					continue; // Skip cells a neighboring node already scanned
-				BlockState foundState = pLevel.getBlockState(blockPos);
-				boolean isPrimaryBlock = foundState.is(pState.getBlock());
-				boolean isSecondaryBlock = extraTags.stream().anyMatch(foundState::is);
-
-				if (isPrimaryBlock || isSecondaryBlock) {
-					BlockPos immutable = blockPos.immutable();
-					foundBlocks.add(immutable);
-
-					if (!checkedBlocks.contains(immutable)) {
-						// Decide which queue to add the found block to
-						if (isPrimaryBlock) {
-							blocksToCheck.add(immutable);
-						} else {
-							secondaryBlocksToCheck.add(immutable);
-						}
-					}
-				}
-			}
-		}
-		return foundBlocks;
-	}
-
 	public static boolean doLavaRepair(ItemStack stack, ItemEntity entity) {
-		CompoundTag tag = stack.getOrCreateTag();
 		if (isInLava(entity)) {
-			tag.putInt("floatingTicks", 0);
-			tag.put("lavaBlockLoc", NbtUtils.writeBlockPos(entity.blockPosition()));
+			stack.getOrCreateTag().putInt("floatingTicks", 0);
+			stack.addTagElement("lavaBlockLoc", NbtUtils.writeBlockPos(entity.blockPosition()));
 			entity.setPickUpDelay(85);
 			entity.setOnGround(true);
 		}
 		if (!validateLava(stack, entity)) {
-			tag.remove("floatingTicks");
-			tag.remove("lavaBlockLoc");
+			stack.removeTagKey("floatingTicks");
+			stack.removeTagKey("lavaBlockLoc");
 			entity.setOnGround(false);
 		}
-		if (tag.contains("floatingTicks")) {
+		CompoundTag tag = stack.getTag();
+		if (tag != null && tag.contains("floatingTicks")) {
 			if (entity.position().y - getLavaPos(stack).getY() < 3)
 				entity.setDeltaMovement(new Vec3(0, 0.05, 0)); // Slower floating effect
 			else
@@ -523,36 +498,36 @@ public class Helpers {
 			if (tag.getInt("floatingTicks") >= 80) {
 				turnLavaIntoObsidian(stack, entity);
 				repairItem(stack);
-				tag.remove("floatingTicks"); // Reset the counter
-				tag.remove("lavaBlockLoc");
+				stack.removeTagKey("floatingTicks");
+				stack.removeTagKey("lavaBlockLoc");
 				entity.setOnGround(false);
 			}
-			if (!entity.level().isClientSide && tag.getInt("floatingTicks") < 40)
+			if (!entity.level.isClientSide && tag.getInt("floatingTicks") < 40)
 				doParticles(stack, entity);
 		}
 		return false; // Return false to allow normal item update processing
 	}
 
 	private static BlockPos getLavaPos(ItemStack stack) {
-		CompoundTag tag = stack.getOrCreateTag();
-		return NbtUtils.readBlockPos(tag.getCompound("lavaBlockLoc"));
+		CompoundTag lavaPos = stack.getTagElement("lavaBlockLoc");
+		return lavaPos == null ? BlockPos.ZERO : NbtUtils.readBlockPos(lavaPos);
 	}
 
 	private static void doParticles(ItemStack itemStack, ItemEntity entity) {
 		Random random = new Random();
 		BlockPos pos = getLavaPos(itemStack);
-		ItemFlowParticleData data = new ItemFlowParticleData(new ItemStack(Registration.GooBlock_Tier2.get()),
-				entity.getX(), entity.getY() + 0.75, entity.getZ(), 3);
+		ItemFlowParticleData data = new ItemFlowParticleData(new ItemStack(Registration.GooBlock_Tier2.get()), entity.getX(), entity.getY() + 0.75, entity.getZ(), 3);
 		for (int i = 0; i < 5; i++) {
 			double d0 = (double) pos.getX() + random.nextDouble();
 			double d1 = (double) pos.getY() + 0.95;
 			double d2 = (double) pos.getZ() + random.nextDouble();
-			((ServerLevel) entity.level()).sendParticles(data, d0, d1, d2, 1, 0, 0, 0, 0);
+			((ServerLevel) entity.level).sendParticles(data, d0, d1, d2, 1, 0, 0, 0, 0);
 		}
 	}
 
 	private static boolean isInLava(ItemEntity entity) {
-		return entity.level().getBlockState(entity.blockPosition()).is(Blocks.LAVA);
+		BlockState blockState = entity.level.getBlockState(entity.blockPosition());
+		return blockState.is(Blocks.LAVA) && blockState.getValue(BlockStateProperties.LEVEL) == 0;
 	}
 
 	private static void repairItem(ItemStack stack) {
@@ -560,20 +535,13 @@ public class Helpers {
 	}
 
 	private static boolean validateLava(ItemStack stack, ItemEntity entity) {
-		return entity.level().getBlockState(getLavaPos(stack)).is(Blocks.LAVA);
+		BlockState blockState = entity.level.getBlockState(getLavaPos(stack));
+		return blockState.is(Blocks.LAVA) && blockState.getValue(BlockStateProperties.LEVEL) == 0;
 	}
 
 	private static void turnLavaIntoObsidian(ItemStack stack, ItemEntity entity) {
 		BlockPos lavaPos = getLavaPos(stack);
-		entity.level().setBlock(lavaPos, Blocks.OBSIDIAN.defaultBlockState(), 3); // Remove the lava block
-		entity.level().playSound(null, lavaPos, SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS, 1F, 1.0F);
-	}
-
-	public static Multimap<Attribute, AttributeModifier> addAttributeToModifiers(
-			Multimap<Attribute, AttributeModifier> originalModifiers, Attribute attributeToAdd,
-			AttributeModifier attributeModifier) {
-		Multimap<Attribute, AttributeModifier> modifiers = ArrayListMultimap.create(originalModifiers);
-		modifiers.put(attributeToAdd, attributeModifier);
-		return modifiers;
+		entity.level.setBlock(lavaPos, Blocks.OBSIDIAN.defaultBlockState(), 3); // Remove the lava block
+		entity.level.playSound(null, lavaPos, SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS, 1F, 1.0F);
 	}
 }

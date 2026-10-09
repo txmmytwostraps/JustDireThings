@@ -1,5 +1,6 @@
 package com.direwolf20.justdirethings.common.items.abilityupgrades;
 
+import com.direwolf20.justdirethings.setup.ModSetup;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
@@ -15,13 +16,20 @@ import static com.direwolf20.justdirethings.util.TooltipHelpers.appendUpgradeDet
 
 public class Upgrade extends Item {
 	public Upgrade() {
-		super(new Properties().stacksTo(1));
+		super(new Properties()
+				.tab(ModSetup.TAB_JUSTDIRETHINGS)
+				.stacksTo(1));
 	}
 
 	@Override
 	public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flagIn) {
 		super.appendHoverText(stack, level, tooltip, flagIn);
-		if (Screen.hasShiftDown()) {
+		if (level == null) {
+			return;
+		}
+
+		boolean sneakPressed = Screen.hasShiftDown();
+		if (sneakPressed) {
 			appendUpgradeDetails(stack, tooltip);
 		} else {
 			appendShiftForInfo(stack, tooltip);

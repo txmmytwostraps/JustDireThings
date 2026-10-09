@@ -5,13 +5,13 @@ import com.direwolf20.justdirethings.common.items.armors.utils.ArmorTiers;
 import com.direwolf20.justdirethings.common.items.interfaces.Ability;
 import com.direwolf20.justdirethings.common.items.interfaces.AbilityParams;
 import com.direwolf20.justdirethings.common.items.interfaces.Helpers;
+import com.direwolf20.justdirethings.setup.ModSetup;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 public class BlazegoldBoots extends BaseBoots {
 	public BlazegoldBoots() {
-		super(ArmorTiers.BLAZEGOLD, new Item.Properties().fireResistant());
+		super(ArmorTiers.BLAZEGOLD, new Properties().tab(ModSetup.TAB_JUSTDIRETHINGS).fireResistant());
 		registerAbility(Ability.STEPHEIGHT);
 		registerAbility(Ability.JUMPBOOST, new AbilityParams(1, 2, 1, 2));
 		registerAbility(Ability.LAVAREPAIR);

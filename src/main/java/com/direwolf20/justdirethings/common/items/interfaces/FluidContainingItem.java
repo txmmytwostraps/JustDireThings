@@ -9,10 +9,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.CapabilityFluidHandler;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.fluids.capability.IFluidHandlerItem;
 
@@ -21,45 +20,47 @@ public interface FluidContainingItem {
 		return 8000;
 	}
 
-	static int getAvailableFluid(ItemStack stack) {
-		IFluidHandlerItem handler = stack.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM, null).orElse(null);
-		if (handler == null)
-			return -1;
-		return handler.getFluidInTank(0).getAmount();
-	}
-
 	default boolean isFluidBarVisible(ItemStack stack) {
-		return stack.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM, null).orElse(null) != null;
+		IFluidHandlerItem fluidHandler = stack.getCapability(CapabilityFluidHandler.FLUID_HANDLER_ITEM_CAPABILITY).orElse(null);
+		if (fluidHandler == null) {
+			return false;
+		}
+		return (fluidHandler.getFluidInTank(0).getAmount() < fluidHandler.getTankCapacity(0));
 	}
 
 	default int getFluidBarWidth(ItemStack stack) {
-		IFluidHandlerItem handler = stack.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM, null).orElse(null);
-		if (handler == null)
+		IFluidHandlerItem fluidHandler = stack.getCapability(CapabilityFluidHandler.FLUID_HANDLER_ITEM_CAPABILITY).orElse(null);
+		if (fluidHandler == null) {
 			return 13;
-		return Math.min(
-				Math.round((float) handler.getFluidInTank(0).getAmount() * 13.0F / (float) handler.getTankCapacity(0)),
-				13);
+		}
+		return Math.min(Math.round((float) fluidHandler.getFluidInTank(0).getAmount() * 13.0F / (float) fluidHandler.getTankCapacity(0)), 13);
 	}
 
 	default int getFluidBarColor(ItemStack stack) {
-		IFluidHandlerItem handler = stack.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM, null).orElse(null);
-		if (handler == null)
-			return -1;
-		return Mth.hsvToRgb(0.55F, 1.0F, 1.0F);
+		IFluidHandlerItem fluidHandler = stack.getCapability(CapabilityFluidHandler.FLUID_HANDLER_ITEM_CAPABILITY).orElse(null);
+		if (fluidHandler == null) {
+			return -1; //Tell caller to call super
+		}
+		float hue = 0.55F;
+		float saturation = 1.0F;
+
+		return Mth.hsvToRgb(hue, saturation, 1.0F);
 	}
 
 	static boolean hasEnoughFluid(ItemStack itemStack, int amt) {
-		IFluidHandlerItem handler = itemStack.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM, null).orElse(null);
-		if (handler == null)
+		IFluidHandlerItem fluidHandler = itemStack.getCapability(CapabilityFluidHandler.FLUID_HANDLER_ITEM_CAPABILITY).orElse(null);
+		if (fluidHandler == null) {
 			return false;
-		return handler.getFluidInTank(0).getAmount() >= amt;
+		}
+		return fluidHandler.getFluidInTank(0).getAmount() >= amt;
 	}
 
 	static void consumeFluid(ItemStack itemStack, int amt) {
-		IFluidHandlerItem handler = itemStack.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM, null).orElse(null);
-		if (handler == null)
+		IFluidHandlerItem fluidHandler = itemStack.getCapability(CapabilityFluidHandler.FLUID_HANDLER_ITEM_CAPABILITY).orElse(null);
+		if (fluidHandler == null) {
 			return;
-		handler.drain(amt, IFluidHandler.FluidAction.EXECUTE);
+		}
+		fluidHandler.drain(amt, IFluidHandler.FluidAction.EXECUTE);
 	}
 
 	static LiquidBlock getLiquidBlockAt(Level level, BlockPos blockPos) {
@@ -71,19 +72,15 @@ public interface FluidContainingItem {
 	static boolean pickupFluid(Level level, Player player, ItemStack itemStack, BlockHitResult blockhitresult) {
 		BlockPos blockpos = blockhitresult.getBlockPos();
 		BlockState blockstate1 = level.getBlockState(blockpos);
-		LiquidBlock liquidBlock = getLiquidBlockAt(player.level(), blockpos);
-		if (liquidBlock == null)
-			return false;
-		IFluidHandlerItem fluidHandler = itemStack.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM, null)
-				.orElse(null);
-		if (fluidHandler == null)
-			return false;
-		Fluid fluid = blockstate1.getFluidState().getType();
-		int filledAmt = fluidHandler.fill(new FluidStack(fluid, 1000), IFluidHandler.FluidAction.SIMULATE);
+		LiquidBlock liquidBlock = getLiquidBlockAt(player.level, blockpos);
+		if (liquidBlock == null) return false;
+		IFluidHandlerItem fluidHandler = itemStack.getCapability(CapabilityFluidHandler.FLUID_HANDLER_ITEM_CAPABILITY).orElse(null);
+		if (fluidHandler == null) return false;
+		int filledAmt = fluidHandler.fill(new FluidStack(liquidBlock.getFluid(), 1000), IFluidHandler.FluidAction.SIMULATE);
 		if (filledAmt == 1000) {
 			ItemStack itemstack2 = liquidBlock.pickupBlock(level, blockpos, blockstate1);
-			fluidHandler.fill(new FluidStack(fluid, 1000), IFluidHandler.FluidAction.EXECUTE);
-			liquidBlock.getPickupSound().ifPresent(sound -> player.playSound(sound, 1.0F, 1.0F));
+			fluidHandler.fill(new FluidStack(liquidBlock.getFluid(), 1000), IFluidHandler.FluidAction.EXECUTE);
+			liquidBlock.getPickupSound(blockstate1).ifPresent(p_150709_ -> player.playSound(p_150709_, 1.0F, 1.0F));
 			if (!level.isClientSide) {
 				CriteriaTriggers.FILLED_BUCKET.trigger((ServerPlayer) player, itemstack2);
 			}

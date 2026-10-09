@@ -3,18 +3,19 @@ package com.direwolf20.justdirethings.common.items.tools;
 import com.direwolf20.justdirethings.common.items.interfaces.Ability;
 import com.direwolf20.justdirethings.common.items.interfaces.PoweredTool;
 import com.direwolf20.justdirethings.common.items.tools.basetools.BaseBow;
-import net.minecraft.world.item.Item;
+import com.direwolf20.justdirethings.setup.ModSetup;
 import net.minecraft.world.item.ItemStack;
 
 public class CelestigemBow extends BaseBow implements PoweredTool {
 	public CelestigemBow() {
-		super(new Item.Properties().durability(450).fireResistant());
+		super(new Properties().tab(ModSetup.TAB_JUSTDIRETHINGS).durability(450).fireResistant());
 		registerAbility(Ability.POTIONARROW);
 		registerAbility(Ability.SPLASH);
 		registerAbility(Ability.LINGERING);
 		registerAbility(Ability.HOMING);
 	}
 
+	@Override
 	public float getMaxDraw() {
 		return 14;
 	}

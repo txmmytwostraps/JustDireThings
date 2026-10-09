@@ -16,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class ItemEntityMixin {
 
 	@Inject(method = "tick", at = @At("RETURN"))
-	private void justdirethings$afterTick(CallbackInfo ci) {
+	private void onTick(CallbackInfo ci) {
 		EntityEvents.handleFluidDrop((ItemEntity) (Object) this);
 	}
 }
