@@ -4,7 +4,8 @@ import com.direwolf20.justdirethings.common.items.interfaces.AbilityMethods;
 import com.direwolf20.justdirethings.setup.Registration;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
+import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -23,8 +24,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 public class DecoyEntity extends LivingEntity {
-	private static final EntityDataAccessor<Optional<UUID>> PLAYER_UUID = SynchedEntityData.defineId(DecoyEntity.class,
-			EntityDataSerializers.OPTIONAL_UUID);
+	private static final EntityDataAccessor<Optional<UUID>> PLAYER_UUID = SynchedEntityData.defineId(DecoyEntity.class, EntityDataSerializers.OPTIONAL_UUID);
+
+	private boolean beingKilled;
 
 	public DecoyEntity(EntityType<? extends LivingEntity> entityType, Level level) {
 		super(entityType, level);
@@ -35,14 +37,17 @@ public class DecoyEntity extends LivingEntity {
 	}
 
 	public static AttributeSupplier.Builder createAttributes() {
-		return Monster.createMonsterAttributes().add(Attributes.FOLLOW_RANGE, 35.0).add(Attributes.MOVEMENT_SPEED, 0.0)
-				.add(Attributes.ATTACK_DAMAGE, 0.0).add(Attributes.ARMOR, 0.0);
+		return Monster.createMonsterAttributes()
+				.add(Attributes.FOLLOW_RANGE, 35.0)
+				.add(Attributes.MOVEMENT_SPEED, 0.0F)
+				.add(Attributes.ATTACK_DAMAGE, 0.0)
+				.add(Attributes.ARMOR, 0.0);
 	}
 
 	@Override
 	public void tick() {
 		super.tick();
-		if (!level().isClientSide) {
+		if (!level.isClientSide) {
 			if (tickCount % 10 == 0)
 				aggroMobs();
 			if (tickCount >= 200)
@@ -52,16 +57,18 @@ public class DecoyEntity extends LivingEntity {
 
 	public void aggroMobs() {
 		int radius = 10;
-		AABB aabb = new AABB(getX() - radius, getY() - radius, getZ() - radius, getX() + radius, getY() + radius,
-				getZ() + radius);
-		List<Mob> aggroList = new ArrayList<>(
-				level().getEntitiesOfClass(Mob.class, aabb, AbilityMethods::isValidStompEntity));
-		for (Mob mob : aggroList)
+		AABB aabb = new AABB(getX() - radius, getY() - radius, getZ() - radius,
+				getX() + radius, getY() + radius, getZ() + radius);
+
+		List<Mob> aggroList = new ArrayList<>(level.getEntitiesOfClass(Mob.class, aabb, AbilityMethods::isValidStompEntity));
+
+		for (Mob mob : aggroList) {
 			mob.setTarget(this);
+		}
 	}
 
 	public void setSummonerName(String playerName) {
-		this.setCustomName(Component.literal(playerName + "_").append(Component.translatable("justdirethings.decoy")));
+		this.setCustomName(new TextComponent(playerName + "_").append(new TranslatableComponent("justdirethings.decoy")));
 	}
 
 	public Optional<UUID> getOwnerUUID() {
@@ -74,12 +81,20 @@ public class DecoyEntity extends LivingEntity {
 
 	@Override
 	public HumanoidArm getMainArm() {
-		return HumanoidArm.RIGHT;
+		return null;
+	}
+
+	// /kill uses void damage. Only that hit gets through.
+	@Override
+	public void kill() {
+		beingKilled = true;
+		super.kill();
+		beingKilled = false;
 	}
 
 	@Override
 	public boolean isInvulnerableTo(DamageSource damageSource) {
-		return true;
+		return !(beingKilled && damageSource == DamageSource.OUT_OF_WORLD);
 	}
 
 	@Override

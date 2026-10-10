@@ -1,251 +1,277 @@
 package com.direwolf20.justdirethings.common.entities;
 
+import com.direwolf20.justdirethings.setup.Config;
 import com.direwolf20.justdirethings.setup.Registration;
+import com.direwolf20.justdirethings.util.MiscHelpers;
+import com.direwolf20.justdirethings.util.MiscTools;
 import com.direwolf20.justdirethings.util.NBTHelpers;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.syncher.EntityDataAccessor;
-import net.minecraft.network.syncher.EntityDataSerializers;
-import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.projectile.ThrowableItemProjectile;
-import net.minecraft.world.item.Item;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.event.ForgeEventFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class PortalProjectile extends ThrowableItemProjectile {
+import static com.direwolf20.justdirethings.util.MiscHelpers.getPrimaryDirection;
 
-	private static final EntityDataAccessor<Boolean> IS_PRIMARY = SynchedEntityData.defineId(PortalProjectile.class,
-			EntityDataSerializers.BOOLEAN);
-
-	private UUID gunUUID = UUID.randomUUID();
+public class PortalProjectile extends Projectile {
+	private UUID portalGunUUID;
 	private boolean isPrimaryType;
 	private boolean isAdvanced;
 	private NBTHelpers.PortalDestination portalDestination;
-	private int lifespanTicks;
+	private boolean hasSpawnedPortal = false;
+	public PortalProjectile(EntityType<? extends Projectile> entityType, Level world) {
+		super(entityType, world);
+	}
 
-	public PortalProjectile(EntityType<? extends ThrowableItemProjectile> type, Level level) {
-		super(type, level);
+	public PortalProjectile(Level world, Player player, UUID portalGunUUID, boolean isPrimaryType, boolean isAdvanced) {
+		this(Registration.PortalProjectile.get(), world);
+		setOwner(player);
+		setPos(player.getEyePosition());
+		this.portalGunUUID = portalGunUUID;
+		this.isPrimaryType = isPrimaryType;
+		this.isAdvanced = isAdvanced;
+	}
+
+	public PortalProjectile(Level world, Player player, UUID portalGunUUID, boolean isPrimaryType, boolean isAdvanced, NBTHelpers.PortalDestination portalDestination) {
+		this(Registration.PortalProjectile.get(), world);
+		setOwner(player);
+		setPos(player.getEyePosition());
+		this.portalGunUUID = portalGunUUID;
+		this.isPrimaryType = isPrimaryType;
+		this.isAdvanced = isAdvanced;
+		this.portalDestination = portalDestination;
+	}
+
+	@Override
+	public void tick() {
+		super.tick();
+		HitResult hitresult = ProjectileUtil.getHitResult(this, this::canHitEntity);
+		if (hitresult.getType() != HitResult.Type.MISS && !ForgeEventFactory.onProjectileImpact(this, hitresult)) {
+			this.onHit(hitresult);
+		}
+		Vec3 vec3 = this.getDeltaMovement();
+		double d0 = this.getX() + vec3.x;
+		double d1 = this.getY() + vec3.y;
+		double d2 = this.getZ() + vec3.z;
+		this.setPos(d0, d1, d2);
+		if (isAdvanced) {
+			if (tickCount > 5) {
+				BlockPos blockPos = this.blockPosition();
+				if (!level.getBlockState(blockPos).isAir() || !level.getBlockState(blockPos.below()).isAir())
+					blockPos = blockPos.relative(getPrimaryDirection(vec3).getOpposite());
+				Vec3 hitPos = Vec3.atCenterOf(blockPos); // Slightly offset to avoid z-fighting
+				spawnAdvancedPortal(hitPos.x(), hitPos.y(), hitPos.z(), getPrimaryDirection(vec3).getOpposite(), blockPos);
+			}
+		} else {
+			if (tickCount > 200)
+				this.discard();
+		}
+	}
+
+	@Override
+	protected void onHitEntity(EntityHitResult result) {
+		MiscHelpers.redirectFireball(this, result.getEntity());
+	}
+
+	@Override
+	protected void onHitBlock(BlockHitResult result) {
+		Vec3 hitPos = Vec3.atCenterOf(result.getBlockPos()).add(result.getDirection().getStepX() * 0.501, result.getDirection().getStepY() * 0.501, result.getDirection().getStepZ() * 0.501); // Slightly offset to avoid z-fighting
+		if (isAdvanced)
+			spawnAdvancedPortal(hitPos.x(), hitPos.y(), hitPos.z(), result.getDirection(), result.getBlockPos());
+		else
+			spawnPortal(hitPos.x(), hitPos.y(), hitPos.z(), result.getDirection(), result.getBlockPos());
 	}
 
 	@Override
 	protected void defineSynchedData() {
-		super.defineSynchedData();
-		this.entityData.define(IS_PRIMARY, true);
+
 	}
 
-	public boolean isPrimaryType() {
-		return this.entityData.get(IS_PRIMARY);
-	}
-
-	public PortalProjectile(Level level, LivingEntity shooter, UUID gunUUID, boolean isPrimaryType, boolean isAdvanced,
-			NBTHelpers.PortalDestination portalDestination, int lifespanTicks) {
-		super(Registration.PortalProjectile.get(), shooter, level);
-		this.gunUUID = gunUUID;
-		this.isPrimaryType = isPrimaryType;
-		this.entityData.set(IS_PRIMARY, isPrimaryType);
-		this.isAdvanced = isAdvanced;
-		this.portalDestination = portalDestination;
-		this.lifespanTicks = lifespanTicks;
-	}
-
-	@Override
-	protected Item getDefaultItem() {
-		return Registration.PortalGunV2.get();
-	}
-
-	@Override
-	protected void onHitBlock(BlockHitResult hitResult) {
-		if (level().isClientSide)
-			return;
-
-		HitResult.Type type = hitResult.getType();
-		if (type != HitResult.Type.BLOCK)
-			return;
-
-		Direction facing = hitResult.getDirection();
-
-		Vec3 hitLoc = hitResult.getLocation();
-		double px;
-		double py;
-		double pz;
-		Direction.Axis alignment = Direction.Axis.Z;
-
-		if (facing.getAxis() == Direction.Axis.Y) {
-			Vec3 velocity = getDeltaMovement();
-			alignment = Math.abs(velocity.x) > Math.abs(velocity.z) ? Direction.Axis.X : Direction.Axis.Z;
-			// Shift the center by half a block, in the direction of travel, so the
-			// 2-block-long portal spans the hit block plus its neighbor in that
-			// direction, grid-aligned, rather than straddling the hit block alone.
-			if (alignment == Direction.Axis.X) {
-				double dirSign = velocity.x >= 0 ? 0.5 : -0.5;
-				px = hitResult.getBlockPos().getX() + 0.5 + dirSign;
-				pz = hitResult.getBlockPos().getZ() + 0.5;
-			} else {
-				double dirSign = velocity.z >= 0 ? 0.5 : -0.5;
-				px = hitResult.getBlockPos().getX() + 0.5;
-				pz = hitResult.getBlockPos().getZ() + 0.5 + dirSign;
-			}
-			py = hitLoc.y;
-		} else if (facing.getAxis() == Direction.Axis.Z) {
-			px = hitResult.getBlockPos().getX() + 0.5;
-			py = hitResult.getBlockPos().getY();
-			pz = hitLoc.z;
-		} else {
-			px = hitLoc.x;
-			py = hitResult.getBlockPos().getY();
-			pz = hitResult.getBlockPos().getZ() + 0.5;
-		}
-
-		Vec3 portalPos = new Vec3(px, py, pz);
-		if (isAdvanced && portalDestination != null) {
-			spawnAdvancedPortals(portalPos, facing, alignment);
-		} else {
-			spawnPortal((ServerLevel) level(), portalPos, facing, alignment, isPrimaryType);
-			this.discard();
-		}
-	}
-
-	@Override
-	protected void onHitEntity(EntityHitResult hitResult) {
-		this.discard();
-	}
-
-	@Override
-	public void addAdditionalSaveData(CompoundTag compound) {
-		super.addAdditionalSaveData(compound);
-		compound.putLong("GunUUIDMost", gunUUID.getMostSignificantBits());
-		compound.putLong("GunUUIDLeast", gunUUID.getLeastSignificantBits());
-		compound.putBoolean("Primary", isPrimaryType);
-		compound.putBoolean("Advanced", isAdvanced);
-		compound.putInt("LifespanTicks", lifespanTicks);
-		if (portalDestination != null) {
-			compound.put("PortalDestination", portalDestination.toNBT());
-		}
-	}
-
-	@Override
-	public void readAdditionalSaveData(CompoundTag compound) {
-		super.readAdditionalSaveData(compound);
-		if (compound.contains("GunUUIDMost")) {
-			gunUUID = new UUID(compound.getLong("GunUUIDMost"), compound.getLong("GunUUIDLeast"));
-		}
-		isPrimaryType = compound.getBoolean("Primary");
-		this.entityData.set(IS_PRIMARY, isPrimaryType);
-		isAdvanced = compound.getBoolean("Advanced");
-		lifespanTicks = compound.getInt("LifespanTicks");
-		if (compound.contains("PortalDestination")) {
-			portalDestination = NBTHelpers.PortalDestination.fromNBT(compound.getCompound("PortalDestination"));
-		}
-	}
-
-	private void spawnAdvancedPortals(Vec3 sourcePos, Direction sourceFacing, Direction.Axis sourceAlignment) {
-		if (!(level() instanceof ServerLevel sourceLevel)) {
-			this.discard();
-			return;
-		}
-		MinecraftServer server = sourceLevel.getServer();
-		ServerLevel destinationLevel = server.getLevel(portalDestination.dimension());
-		if (destinationLevel == null) {
-			this.discard();
-			return;
-		}
-
-		PortalEntity sourcePortal = new PortalEntity(sourceLevel, sourcePos, sourceFacing, sourceAlignment, gunUUID,
-				isPrimaryType, lifespanTicks);
-		PortalEntity destinationPortal = new PortalEntity(destinationLevel, portalDestination.position(),
-				portalDestination.facing(), gunUUID, !isPrimaryType, lifespanTicks);
-
-		if (overlapsOtherPortal(sourceLevel, sourcePortal, true)
-				|| overlapsOtherPortal(destinationLevel, destinationPortal, true)) {
-			this.discard();
-			return;
-		}
-
-		clearMyPortals(server);
-		sourcePortal.linkPartner(destinationPortal);
-		sourceLevel.addFreshEntity(sourcePortal);
-		destinationLevel.addFreshEntity(destinationPortal);
-		this.discard();
-	}
-
-	private void spawnPortal(ServerLevel serverLevel, Vec3 portalPos, Direction facing, Direction.Axis alignment,
-			boolean primaryType) {
-		PortalEntity portal = new PortalEntity(serverLevel, portalPos, facing, alignment, gunUUID, primaryType,
-				lifespanTicks);
-
-		if (overlapsOtherPortal(serverLevel, portal, false))
-			return;
-
-		clearMatchingPortal(serverLevel.getServer(), primaryType);
-		linkExistingPartnerIfAny(serverLevel.getServer(), portal);
-		serverLevel.addFreshEntity(portal);
-	}
-
-	// The basic gun spawns one portal per shot, so unlike spawnAdvancedPortals it
-	// doesn't have both ends in hand at once - look for the other end (same gun,
-	// opposite slot) placed by an earlier shot and link to it if found.
-	private void linkExistingPartnerIfAny(MinecraftServer server, PortalEntity portal) {
+	protected List<? extends PortalEntity> findMatchingPortal(MinecraftServer server, boolean isPrimaryType) {
+		List<PortalEntity> returnList = new ArrayList<>();
 		for (ServerLevel serverLevel : server.getAllLevels()) {
-			List<? extends PortalEntity> existing = serverLevel.getEntities(Registration.PortalEntity.get(),
-					p -> p.getGunUUID().equals(gunUUID) && p.isPrimaryType() != portal.isPrimaryType());
-			if (!existing.isEmpty()) {
-				portal.linkPartner(existing.get(0));
+			List<? extends PortalEntity> customEntities = serverLevel.getEntities(Registration.PortalEntity.get(), k -> k.getPortalGunUUID().equals(portalGunUUID) && k.getIsPrimary() == isPrimaryType);
+			if (!customEntities.isEmpty())
+				returnList.addAll(customEntities);
+		}
+		return returnList;
+	}
+
+	public void closeMyPortals(MinecraftServer server) {
+		for (ServerLevel serverLevel : server.getAllLevels()) {
+			List<? extends PortalEntity> customEntities = serverLevel.getEntities(Registration.PortalEntity.get(), k -> k.getPortalGunUUID().equals(portalGunUUID));
+
+			for (PortalEntity entity : customEntities) {
+				entity.setDying();
+			}
+		}
+	}
+
+	protected void clearMatchingPortal(MinecraftServer server) {
+		List<? extends PortalEntity> matchingPortals = findMatchingPortal(server, isPrimaryType);
+		for (PortalEntity matchingPortal : matchingPortals) {
+			if (matchingPortal != null)
+				matchingPortal.setDying();
+		}
+	}
+
+	protected void linkPortals(MinecraftServer server, PortalEntity portal) {
+		List<? extends PortalEntity> matchingPortals = findMatchingPortal(server, !isPrimaryType);
+		if (!matchingPortals.isEmpty()) {
+			PortalEntity matchingPortal = matchingPortals.get(0);
+			if (matchingPortal != null) {
+				portal.setLinkedPortal(matchingPortal);
+				matchingPortal.setLinkedPortal(portal);
+			}
+		}
+	}
+
+	protected void linkPortals(PortalEntity source, PortalEntity destination) {
+		source.setLinkedPortal(destination);
+		destination.setLinkedPortal(source);
+	}
+
+	protected void spawnAdvancedPortal(double x, double y, double z, Direction direction, BlockPos hitPos) {
+		if (hasSpawnedPortal) return;
+		Level level = this.level;
+		MinecraftServer server = level.getServer();
+		if (server == null) return;
+		if (getOwner() == null) return;
+		if (!level.isClientSide) {
+			// Fired before the restriction applied
+			if (MiscTools.isRestrictedDimension(level.dimension(), Config.RESTRICT_PORTAL_GUNS) || MiscTools.isRestrictedDimension(portalDestination.globalVec3().dimension(), Config.RESTRICT_PORTAL_GUNS)) {
+				this.discard();
 				return;
 			}
-		}
-	}
-
-	// Blocks placement on top of another existing portal. When excludeAllOwnPortals
-	// is true (the advanced/linked pair path, which clears both ends of this gun's
-	// portals via clearMyPortals before placing), any portal sharing this gunUUID
-	// is
-	// excluded. Otherwise (the basic gun path, which only clears the matching
-	// primary/secondary slot via clearMatchingPortal) only that same slot is
-	// excluded, so the gun's other, still-standing portal is still checked.
-	private static boolean overlapsOtherPortal(ServerLevel level, PortalEntity candidate,
-			boolean excludeAllOwnPortals) {
-		AABB candidateBox = candidate.getPortalAABB().inflate(-0.1);
-		List<? extends PortalEntity> existing = level.getEntities(Registration.PortalEntity.get(), portal -> {
-			boolean sameGun = portal.getGunUUID().equals(candidate.getGunUUID());
-			if (!sameGun)
-				return true;
-			return excludeAllOwnPortals ? false : portal.isPrimaryType() != candidate.isPrimaryType();
-		});
-		for (PortalEntity existingPortal : existing) {
-			if (existingPortal.getPortalAABB().intersects(candidateBox))
-				return true;
-		}
-		return false;
-	}
-
-	private void clearMatchingPortal(MinecraftServer server, boolean primaryType) {
-		for (ServerLevel serverLevel : server.getAllLevels()) {
-			List<? extends PortalEntity> existing = serverLevel.getEntities(Registration.PortalEntity.get(),
-					portal -> portal.getGunUUID().equals(gunUUID) && portal.isPrimaryType() == primaryType);
-			for (PortalEntity portal : existing) {
-				portal.discard();
+			PortalEntity source = new PortalEntity(level, direction, getPortalAlignment(getDeltaMovement()), portalGunUUID, isPrimaryType, true, getOwner().getUUID());
+			if (direction.getAxis() != Direction.Axis.Y) {
+				y = y - 1.5;
+				BlockState belowState = level.getBlockState(hitPos.relative(direction).below());
+				if (!belowState.isAir()) {
+					y = y + 1;
+					BlockState aboveState = level.getBlockState(hitPos.relative(direction).above());
+					if (!aboveState.isAir()) {
+						this.discard();
+						return;
+					}
+				}
+			} else {
+				if (getPortalAlignment(getDeltaMovement()) == Direction.Axis.X)
+					x = x - 0.5;
+				else
+					z = z - 0.5;
 			}
+			source.setPos(x, y, z);
+			source.refreshDimensions();
+			AABB newBoundingBox = source.getBoundingBox();
+			List<PortalEntity> existingPortals = level.getEntitiesOfClass(PortalEntity.class, newBoundingBox.inflate(-0.1));
+
+			ServerLevel boundLevel = server.getLevel(portalDestination.globalVec3().dimension());
+			// Otherwise it flies on, retrying every tick
+			if (boundLevel == null) {
+				this.discard();
+				return;
+			}
+			PortalEntity destination = new PortalEntity(boundLevel, portalDestination.direction(), portalDestination.direction().getAxis(), portalGunUUID, !isPrimaryType, true, getOwner().getUUID());
+			destination.setPos(portalDestination.globalVec3().position());
+			destination.refreshDimensions();
+			AABB destinationBoundingBox = destination.getBoundingBox();
+			List<PortalEntity> existingPortals2 = boundLevel.getEntitiesOfClass(PortalEntity.class, destinationBoundingBox.inflate(-0.1));
+
+			boolean overlaps = existingPortals.stream().anyMatch(existingPortal -> existingPortal.getBoundingBox().intersects(newBoundingBox) && !existingPortal.getPortalGunUUID().equals(source.getPortalGunUUID())) ||
+					existingPortals2.stream().anyMatch(existingPortal2 -> existingPortal2.getBoundingBox().intersects(destinationBoundingBox) && !existingPortal2.getPortalGunUUID().equals(destination.getPortalGunUUID()));
+			if (!overlaps) {
+				closeMyPortals(server);
+				level.addFreshEntity(source);
+				boundLevel.addFreshEntity(destination);
+				linkPortals(source, destination);
+				hasSpawnedPortal = true;
+			}
+			this.discard();
 		}
 	}
 
-	private void clearMyPortals(MinecraftServer server) {
-		for (ServerLevel serverLevel : server.getAllLevels()) {
-			List<? extends PortalEntity> existing = serverLevel.getEntities(Registration.PortalEntity.get(),
-					portal -> portal.getGunUUID().equals(gunUUID));
-			for (PortalEntity portal : existing) {
-				portal.discard();
+	protected void spawnPortal(double x, double y, double z, Direction direction, BlockPos hitPos) {
+		Level level = this.level;
+		MinecraftServer server = level.getServer();
+		if (server == null) return;
+		if (getOwner() == null) return;
+		if (!level.isClientSide) {
+			// Fired before the restriction applied
+			if (MiscTools.isRestrictedDimension(level.dimension(), Config.RESTRICT_PORTAL_GUNS)) {
+				this.discard();
+				return;
 			}
+			PortalEntity portal = new PortalEntity(level, direction, getPortalAlignment(getDeltaMovement()), portalGunUUID, isPrimaryType, false, getOwner().getUUID());
+			if (direction.getAxis() != Direction.Axis.Y) {
+				y = y - 1.5;
+				BlockState belowState = level.getBlockState(hitPos.relative(direction).below());
+				if (!belowState.isAir()) {
+					y = y + 1;
+					BlockState aboveState = level.getBlockState(hitPos.relative(direction).above());
+					if (!aboveState.isAir()) {
+						this.discard();
+						return;
+					}
+				}
+			} else {
+				if (getPortalAlignment(getDeltaMovement()) == Direction.Axis.X)
+					x = x - 0.5;
+				else
+					z = z - 0.5;
+			}
+			portal.setPos(x, y, z);
+			portal.refreshDimensions();
+			AABB newBoundingBox = portal.getBoundingBox();
+			List<PortalEntity> existingPortals = level.getEntitiesOfClass(PortalEntity.class, newBoundingBox.inflate(-0.1));
+
+			boolean overlaps = existingPortals.stream().anyMatch(existingPortal -> existingPortal.getBoundingBox().intersects(newBoundingBox));
+			if (!overlaps) {
+				clearMatchingPortal(server);
+				level.addFreshEntity(portal);
+				linkPortals(server, portal);
+			}
+			this.discard();
 		}
+	}
+
+	@Override
+	protected void readAdditionalSaveData(CompoundTag compound) {
+		if (compound.hasUUID("portalGunUUID"))
+			portalGunUUID = compound.getUUID("portalGunUUID");
+		if (compound.contains("portalDestination"))
+			portalDestination = NBTHelpers.PortalDestination.fromNBT(compound.getCompound("portalDestination"));
+		isPrimaryType = compound.getBoolean("isPrimaryType");
+	}
+
+	@Override
+	protected void addAdditionalSaveData(CompoundTag compound) {
+		compound.putBoolean("isPrimaryType", isPrimaryType);
+		if (portalGunUUID != null)
+			compound.putUUID("portalGunUUID", portalGunUUID);
+		if (portalDestination != null)
+			compound.put("portalDestination", NBTHelpers.PortalDestination.toNBT(portalDestination));
+	}
+
+	private static Direction.Axis getPortalAlignment(Vec3 velocity) {
+		double absX = Math.abs(velocity.x);
+		double absZ = Math.abs(velocity.z);
+		return absX > absZ ? Direction.Axis.X : Direction.Axis.Z;
 	}
 }

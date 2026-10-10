@@ -1,107 +1,99 @@
 package com.direwolf20.justdirethings.common.items;
 
-import com.direwolf20.justdirethings.common.entities.PortalProjectile;
 import com.direwolf20.justdirethings.common.entities.PortalEntity;
+import com.direwolf20.justdirethings.common.entities.PortalProjectile;
+import com.direwolf20.justdirethings.common.items.interfaces.BasePoweredItem;
 import com.direwolf20.justdirethings.common.items.interfaces.PoweredItem;
 import com.direwolf20.justdirethings.setup.Config;
+import com.direwolf20.justdirethings.setup.ModSetup;
+import com.direwolf20.justdirethings.setup.Registration;
+import com.direwolf20.justdirethings.util.MiscTools;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.level.Level;
-import net.minecraft.server.level.ServerLevel;
 
-import static com.direwolf20.justdirethings.util.TooltipHelpers.appendFEText;
-
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.UUID;
 
 public class PortalGun extends BasePoweredItem implements PoweredItem {
-
-	private static final String UUID_MOST = "GunUUIDMost";
-	private static final String UUID_LEAST = "GunUUIDLeast";
+	public static final String PORTALGUN_UUID = "portalgun_uuid";
 
 	public PortalGun() {
-		super(new Properties().stacksTo(1));
+		super(new Properties()
+				.tab(ModSetup.TAB_JUSTDIRETHINGS)
+				.stacksTo(1));
 	}
 
 	@Override
 	public int getMaxEnergy() {
-		return Config.PORTAL_GUN_ORIGINAL_MAX_FE.get();
-	}
-
-	public static UUID getOrCreateGunUUID(ItemStack stack) {
-		CompoundTag tag = stack.getOrCreateTag();
-		if (tag.contains(UUID_MOST)) {
-			return new UUID(tag.getLong(UUID_MOST), tag.getLong(UUID_LEAST));
-		}
-		UUID uuid = UUID.randomUUID();
-		tag.putLong(UUID_MOST, uuid.getMostSignificantBits());
-		tag.putLong(UUID_LEAST, uuid.getLeastSignificantBits());
-		return uuid;
+		return Config.PORTAL_GUN_V1_RF_CAPACITY.get();
 	}
 
 	@Override
 	public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-		ItemStack stack = player.getItemInHand(hand);
-
-		if (level.isClientSide)
-			return InteractionResultHolder.pass(stack);
-
-		if (player.isShiftKeyDown()) {
-			closeMyPortals((ServerLevel) level, getOrCreateGunUUID(stack));
-			return InteractionResultHolder.success(stack);
+		ItemStack itemStack = player.getItemInHand(hand);
+		if (!level.isClientSide) {
+			if (!player.isShiftKeyDown())
+				spawnProjectile(level, player, itemStack, false);
+			else
+				closeMyPortals((ServerLevel) level, itemStack, player);
 		}
-
-		return firePortal(level, player, stack, false);
+		return InteractionResultHolder.fail(itemStack);
 	}
 
-	// Shared shoot logic for right-click use and left-click packet path.
-	public static InteractionResultHolder<ItemStack> firePortal(Level level, Player player, ItemStack stack,
-			boolean isPrimaryType) {
-		if (level.isClientSide)
-			return InteractionResultHolder.pass(stack);
+	public static void closeMyPortals(ServerLevel level, ItemStack itemStack, Player player) {
+		UUID portalGunUUID = getUUID(itemStack);
+		MinecraftServer server = level.getServer();
+		for (ServerLevel serverLevel : server.getAllLevels()) {
+			List<? extends PortalEntity> customEntities = serverLevel.getEntities(Registration.PortalEntity.get(), k -> k.getOwner() == player.getUUID() || k.getPortalGunUUID().equals(portalGunUUID));
 
-		if (!PoweredItem.hasEnoughEnergy(stack, Config.PORTAL_GUN_ORIGINAL_FE_COST.get())) {
-			player.displayClientMessage(Component.translatable("justdirethings.lowenergy"), true);
-			return InteractionResultHolder.fail(stack);
-		}
-
-		UUID gunUUID = getOrCreateGunUUID(stack);
-		int lifespan = Config.PORTAL_GUN_ORIGINAL_LIFESPAN.get();
-		PortalProjectile projectile = new PortalProjectile(level, player, gunUUID, isPrimaryType, false, null,
-				lifespan);
-		projectile.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, 1.5F, 0.0F);
-		level.addFreshEntity(projectile);
-
-		PoweredItem.consumeEnergy(stack, Config.PORTAL_GUN_ORIGINAL_FE_COST.get());
-
-		return InteractionResultHolder.success(stack);
-	}
-
-	public static InteractionResultHolder<ItemStack> firePortal(Level level, Player player, ItemStack stack) {
-		return firePortal(level, player, stack, false);
-	}
-
-	private static void closeMyPortals(ServerLevel level, UUID gunUUID) {
-		for (ServerLevel serverLevel : level.getServer().getAllLevels()) {
-			for (net.minecraft.world.entity.Entity entity : serverLevel.getAllEntities()) {
-				if (entity instanceof PortalEntity portal && portal.getGunUUID().equals(gunUUID)) {
-					portal.discard();
-				}
+			for (PortalEntity entity : customEntities) {
+				entity.setDying();
 			}
 		}
 	}
 
-	@Override
-	public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
-		super.appendHoverText(stack, level, tooltip, flag);
-		if (level == null)
+	public static void spawnProjectile(Level level, Player player, ItemStack itemStack, boolean isPrimaryType) {
+		if (MiscTools.isRestrictedDimension(level.dimension(), Config.RESTRICT_PORTAL_GUNS)) return;
+		if (!PoweredItem.consumeEnergy(itemStack, Config.PORTAL_GUN_V1_RF_COST.get())) {
+			player.displayClientMessage(new TranslatableComponent("justdirethings.lowenergy"), true);
+			player.playNotifySound(SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 1.0F, 1.0F);
 			return;
-		appendFEText(stack, tooltip);
+		}
+		PortalProjectile projectile = new PortalProjectile(level, player, getUUID(itemStack), isPrimaryType, false);
+		projectile.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, 1F, 1.0F);
+		level.addFreshEntity(projectile);
+	}
+
+	@Override
+	public UseAnim getUseAnimation(ItemStack stack) {
+		return UseAnim.NONE;
+	}
+
+	@Override
+	public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
+		return false;
+	}
+
+	public static UUID setUUID(ItemStack itemStack) {
+		UUID uuid = UUID.randomUUID();
+		itemStack.getOrCreateTag().putUUID(PORTALGUN_UUID, uuid);
+		return uuid;
+	}
+
+	public static UUID getUUID(ItemStack itemStack) {
+		CompoundTag tag = itemStack.getTag();
+		if (tag == null || !tag.hasUUID(PORTALGUN_UUID))
+			return setUUID(itemStack);
+		return tag.getUUID(PORTALGUN_UUID);
 	}
 }

@@ -2,51 +2,36 @@ package com.direwolf20.justdirethings.common.items;
 
 import com.direwolf20.justdirethings.common.blocks.resources.CoalBlock_T1;
 import com.direwolf20.justdirethings.common.capabilities.EnergyStorageItemStackNoReceive;
-import net.minecraft.world.level.block.Blocks;
+import com.direwolf20.justdirethings.common.capabilities.ItemStackItemHandler;
 import com.direwolf20.justdirethings.common.containers.PocketGeneratorContainer;
+import com.direwolf20.justdirethings.common.curios.CuriosIntegration;
 import com.direwolf20.justdirethings.common.items.interfaces.PoweredItem;
 import com.direwolf20.justdirethings.common.items.interfaces.ToggleableItem;
 import com.direwolf20.justdirethings.common.items.resources.Coal_T1;
 import com.direwolf20.justdirethings.setup.Config;
+import com.direwolf20.justdirethings.setup.ModSetup;
 import com.direwolf20.justdirethings.util.NBTHelpers;
-import net.minecraftforge.network.NetworkHooks;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.client.Minecraft;
-import net.minecraftforge.network.NetworkHooks;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.network.NetworkHooks;
+import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
-import net.minecraftforge.network.NetworkHooks;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
-import net.minecraftforge.network.NetworkHooks;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResultHolder;
-import net.minecraftforge.network.NetworkHooks;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleMenuProvider;
-import net.minecraftforge.network.NetworkHooks;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.network.NetworkHooks;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.network.NetworkHooks;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.*;
-import net.minecraftforge.network.NetworkHooks;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.crafting.RecipeType;
-import net.minecraftforge.network.NetworkHooks;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.common.ForgeHooks;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.energy.CapabilityEnergy;
 import net.minecraftforge.energy.IEnergyStorage;
-import net.minecraftforge.items.ItemStackHandler;
+import net.minecraftforge.fml.ModList;
+import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
@@ -56,55 +41,60 @@ public class PocketGenerator extends Item implements PoweredItem, ToggleableItem
 	public static final String COUNTER = "counter";
 	public static final String MAXBURN = "maxburn";
 	public static final String FUELMULTIPLIER = "fuelmultiplier";
+	public static final String FUEL_INVENTORY = "FuelInventory";
 
 	public PocketGenerator() {
-		super(new Properties().stacksTo(1));
+		super(new Properties()
+				.tab(ModSetup.TAB_JUSTDIRETHINGS)
+				.stacksTo(1));
 	}
 
 	@Override
 	public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
 		ItemStack itemstack = player.getItemInHand(hand);
-		if (level.isClientSide())
-			return new InteractionResultHolder<>(InteractionResult.PASS, itemstack);
+		if (level.isClientSide()) return new InteractionResultHolder<>(InteractionResult.SUCCESS, itemstack);
 
 		if (!player.isShiftKeyDown()) {
-			NetworkHooks.openScreen((ServerPlayer) player,
-					new SimpleMenuProvider((windowId, playerInventory,
-							playerEntity) -> new PocketGeneratorContainer(windowId, playerInventory, player, itemstack),
-							Component.translatable("")),
-					(buf -> {
-						buf.writeItem(itemstack);
-					}));
+			NetworkHooks.openGui((ServerPlayer) player, new SimpleMenuProvider(
+					(windowId, playerInventory, playerEntity) -> new PocketGeneratorContainer(windowId, playerInventory, player, itemstack), new TranslatableComponent("")), (buf -> {
+				buf.writeItem(itemstack);
+			}));
 		}
-		return new InteractionResultHolder<>(InteractionResult.PASS, itemstack);
+		return new InteractionResultHolder<>(InteractionResult.SUCCESS, itemstack);
 	}
 
 	@Override
-	public void inventoryTick(@NotNull ItemStack itemStack, @NotNull Level world, @NotNull Entity entity, int itemSlot,
-			boolean isSelected) {
-		if (world.isClientSide)
-			return;
-		if (entity instanceof Player player && itemStack.getItem() instanceof ToggleableItem toggleableItem
-				&& toggleableItem.getEnabled(itemStack)) {
-			IEnergyStorage energyStorage = itemStack.getCapability(ForgeCapabilities.ENERGY).orElse(null);
-			if (energyStorage == null)
-				return;
-			tryBurn(energyStorage, itemStack);
-			if (energyStorage.getEnergyStored() >= (getFEPerTick() / 10)) { // If we have 1/10th the max transfer speed,
-																			// go ahead and let it rip
-				for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
-					ItemStack slotStack = player.getInventory().getItem(i);
-					if (player.isUsingItem() && player.getUseItem() == slotStack)
-						continue;
-					IEnergyStorage slotEnergy = slotStack.getCapability(ForgeCapabilities.ENERGY).orElse(null);
-					if (slotEnergy != null) {
-						int acceptedEnergy = slotEnergy.receiveEnergy(getFEPerTick(), true);
-						if (acceptedEnergy > 0) {
-							int extractedEnergy = energyStorage.extractEnergy(acceptedEnergy, false);
-							slotEnergy.receiveEnergy(extractedEnergy, false);
+	public void inventoryTick(@NotNull ItemStack itemStack, @NotNull Level world, @NotNull Entity entity, int itemSlot, boolean isSelected) {
+		if (world.isClientSide) return;
+		if (entity instanceof Player player && itemStack.getItem() instanceof ToggleableItem toggleableItem && toggleableItem.getEnabled(itemStack)) {
+			IEnergyStorage energyStorage = itemStack.getCapability(CapabilityEnergy.ENERGY).orElse(null);
+			if (energyStorage == null) return;
+			if (energyStorage instanceof EnergyStorageItemStackNoReceive energyStorageItemStackNoReceive) {
+				tryBurn(energyStorageItemStackNoReceive, itemStack);
+				if (energyStorage.getEnergyStored() >= (getFEPerTick() / 10)) { //If we have 1/10th the max transfer speed, go ahead and let it rip
+					for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+						ItemStack slotStack = player.getInventory().getItem(i);
+						transferEnergy(slotStack, energyStorage);
+					}
+					IItemHandler curios = ModList.get().isLoaded("curios") ? CuriosIntegration.getEquippedCurios(player) : null;
+					if (curios != null) {
+						for (int i = 0; i < curios.getSlots(); i++) {
+							ItemStack slotStack = curios.getStackInSlot(i);
+							transferEnergy(slotStack, energyStorage);
 						}
 					}
 				}
+			}
+		}
+	}
+
+	private void transferEnergy(ItemStack slotStack, IEnergyStorage energyStorage) {
+		IEnergyStorage slotEnergy = slotStack.getCapability(CapabilityEnergy.ENERGY).orElse(null);
+		if (slotEnergy != null) {
+			int acceptedEnergy = slotEnergy.receiveEnergy(getFEPerTick(), true);
+			if (acceptedEnergy > 0) {
+				int extractedEnergy = energyStorage.extractEnergy(acceptedEnergy, false);
+				slotEnergy.receiveEnergy(extractedEnergy, false);
 			}
 		}
 	}
@@ -113,8 +103,8 @@ public class PocketGenerator extends Item implements PoweredItem, ToggleableItem
 		return (getFePerFuelTick() * getBurnSpeedMultiplier(itemStack));
 	}
 
-	public void tryBurn(IEnergyStorage energyStorage, ItemStack itemStack) {
-		boolean canInsertEnergy = forceReceiveEnergy(energyStorage, fePerTick(itemStack), true) > 0;
+	public void tryBurn(EnergyStorageItemStackNoReceive energyStorage, ItemStack itemStack) {
+		boolean canInsertEnergy = energyStorage.forceReceiveEnergy(fePerTick(itemStack), true) > 0;
 		if (NBTHelpers.getIntValue(itemStack, COUNTER) > 0 && canInsertEnergy) {
 			burn(energyStorage, itemStack);
 		} else if (canInsertEnergy) {
@@ -123,14 +113,8 @@ public class PocketGenerator extends Item implements PoweredItem, ToggleableItem
 		}
 	}
 
-	private int forceReceiveEnergy(IEnergyStorage energyStorage, int maxReceive, boolean simulate) {
-		if (energyStorage instanceof EnergyStorageItemStackNoReceive noReceive)
-			return noReceive.forceReceiveEnergy(maxReceive, simulate);
-		return energyStorage.receiveEnergy(maxReceive, simulate);
-	}
-
-	private void burn(IEnergyStorage energyStorage, ItemStack itemStack) {
-		forceReceiveEnergy(energyStorage, fePerTick(itemStack), false);
+	private void burn(EnergyStorageItemStackNoReceive energyStorage, ItemStack itemStack) {
+		energyStorage.forceReceiveEnergy(fePerTick(itemStack), false);
 		int counter = NBTHelpers.getIntValue(itemStack, COUNTER);
 		counter--;
 		NBTHelpers.setIntValue(itemStack, COUNTER, counter);
@@ -141,37 +125,26 @@ public class PocketGenerator extends Item implements PoweredItem, ToggleableItem
 	}
 
 	private boolean initBurn(ItemStack itemStack) {
-		// Read handler from NBT instead of getData()
-		ItemStackHandler handler = new ItemStackHandler(1);
-		if (itemStack.hasTag() && itemStack.getTag().contains("FuelInventory")) {
-			handler.deserializeNBT(itemStack.getTag().getCompound("FuelInventory"));
-		}
-
+		ItemStackItemHandler handler = new ItemStackItemHandler(itemStack, FUEL_INVENTORY, 1);
 		ItemStack fuelStack = handler.getStackInSlot(0);
 
 		int burnTime = ForgeHooks.getBurnTime(fuelStack, RecipeType.SMELTING);
 		if (burnTime > 0) {
 			if (fuelStack.getItem() instanceof Coal_T1 direCoal) {
 				setFuelMultiplier(itemStack, direCoal.getBurnSpeedMultiplier());
-			} else if (fuelStack.getItem() instanceof BlockItem blockItem
-					&& blockItem.getBlock() instanceof CoalBlock_T1 coalBlock) {
+			} else if (fuelStack.getItem() instanceof BlockItem blockItem && blockItem.getBlock() instanceof CoalBlock_T1 coalBlock) {
 				setFuelMultiplier(itemStack, coalBlock.getBurnSpeedMultiplier());
-			} else if (fuelStack.getItem() instanceof BlockItem blockItem
-					&& blockItem.getBlock() == Blocks.COAL_BLOCK) {
-				setFuelMultiplier(itemStack, 9);
 			} else if (fuelStack.getItem() instanceof FuelCanister) {
 				setFuelMultiplier(itemStack, FuelCanister.getBurnSpeedMultiplier(fuelStack));
 			} else {
 				setFuelMultiplier(itemStack, 1);
 			}
-
-			if (fuelStack.hasCraftingRemainingItem())
-				handler.setStackInSlot(0, fuelStack.getCraftingRemainingItem());
-			else
+			if (fuelStack.hasContainerItem())
+				handler.setStackInSlot(0, fuelStack.getContainerItem());
+			else {
 				fuelStack.shrink(1);
-
-			// Write the modified handler back to NBT
-			itemStack.getOrCreateTag().put("FuelInventory", handler.serializeNBT());
+				handler.setStackInSlot(0, fuelStack);
+			}
 
 			int counter = (int) (Math.floor(burnTime) / getBurnSpeedMultiplier(itemStack));
 			int maxBurn = counter;
@@ -183,13 +156,9 @@ public class PocketGenerator extends Item implements PoweredItem, ToggleableItem
 	}
 
 	@Override
-	public void appendHoverText(ItemStack stack, @javax.annotation.Nullable Level level, List<Component> tooltip,
-			TooltipFlag flagIn) {
+	public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flagIn) {
 		super.appendHoverText(stack, level, tooltip, flagIn);
-
-		Minecraft mc = Minecraft.getInstance();
-
-		if (level == null || mc.player == null) {
+		if (level == null) {
 			return;
 		}
 		appendFEText(stack, tooltip);
@@ -231,9 +200,8 @@ public class PocketGenerator extends Item implements PoweredItem, ToggleableItem
 	}
 
 	public int getFuelMultiplier(ItemStack itemStack) {
-		if (itemStack.getOrCreateTag().contains(FUELMULTIPLIER))
-			return itemStack.getOrCreateTag().getInt(FUELMULTIPLIER);
-		return 1;
+		CompoundTag tag = itemStack.getTag();
+		return tag != null && tag.contains(FUELMULTIPLIER) ? tag.getInt(FUELMULTIPLIER) : 1;
 	}
 
 	@Override

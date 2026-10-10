@@ -1,18 +1,17 @@
 package com.direwolf20.justdirethings.common.items;
 
 import com.direwolf20.justdirethings.common.items.interfaces.*;
+import com.direwolf20.justdirethings.setup.ModSetup;
 
 public class EclipsegateWand extends BaseToggleableTool implements PoweredItem, LeftClickableTool {
 	public EclipsegateWand() {
-		super(new Properties().defaultDurability(200).fireResistant());
-		registerAbility(Ability.AIRBURST, new AbilityParams(1, 10, 1, 1));
+		super(new Properties()
+				.tab(ModSetup.TAB_JUSTDIRETHINGS)
+				.durability(200)
+				.fireResistant());
+		registerAbility(Ability.AIRBURST, new AbilityParams(1, 8, 1, 8));
 		registerAbility(Ability.VOIDSHIFT, new AbilityParams(1, 30, 1, 30));
-		registerAbility(Ability.ECLIPSEGATE);
-	}
-
-	@Override
-	public boolean showBarWhenFull() {
-		return true;
+		registerAbility(Ability.ECLIPSEGATE, new AbilityParams(1, 20, 1, 20));
 	}
 
 	@Override

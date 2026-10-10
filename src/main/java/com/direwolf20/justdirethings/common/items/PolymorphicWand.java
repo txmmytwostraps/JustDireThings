@@ -2,14 +2,15 @@ package com.direwolf20.justdirethings.common.items;
 
 import com.direwolf20.justdirethings.common.items.interfaces.*;
 import com.direwolf20.justdirethings.setup.Config;
+import com.direwolf20.justdirethings.setup.ModSetup;
 import com.direwolf20.justdirethings.util.MagicHelpers;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
@@ -18,16 +19,19 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.fluids.capability.CapabilityFluidHandler;
 import net.minecraftforge.fluids.capability.IFluidHandlerItem;
+import org.jetbrains.annotations.Nullable;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
 
 public class PolymorphicWand extends BaseToggleableTool implements LeftClickableTool, FluidContainingItem {
 	public PolymorphicWand() {
-		super(new Properties().fireResistant().durability(200));
+		super(new Properties()
+				.tab(ModSetup.TAB_JUSTDIRETHINGS)
+				.fireResistant()
+				.durability(200));
 		registerAbility(Ability.LAVAREPAIR);
 		registerAbility(Ability.POLYMORPH_RANDOM);
 	}
@@ -41,31 +45,23 @@ public class PolymorphicWand extends BaseToggleableTool implements LeftClickable
 	public InteractionResult useOn(UseOnContext pContext) {
 		ItemStack itemStack = pContext.getItemInHand();
 		Player player = pContext.getPlayer();
-		if (player == null || itemStack.isEmpty())
-			return InteractionResult.FAIL;
-		BlockHitResult blockhitresult = getPlayerPOVHitResult(player.level(), player, ClipContext.Fluid.SOURCE_ONLY);
+		if (player == null || itemStack.isEmpty()) return InteractionResult.FAIL;
+		BlockHitResult blockhitresult = getPlayerPOVHitResult(player.level, player, ClipContext.Fluid.SOURCE_ONLY);
 		if (blockhitresult.getType() == HitResult.Type.BLOCK) {
-			if (FluidContainingItem.pickupFluid(player.level(), player, itemStack, blockhitresult))
+			if (FluidContainingItem.pickupFluid(player.level, player, itemStack, blockhitresult))
 				return InteractionResult.SUCCESS;
 		}
 		return super.useOn(pContext);
 	}
 
 	@Override
-	public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity target,
-			InteractionHand hand) {
-		return InteractionResult.PASS;
-	}
-
-	@Override
 	public boolean onLeftClickEntity(ItemStack stack, Player player, Entity entity) {
-		Level level = player.level();
-		if (level.isClientSide)
-			return true;
+		Level level = player.level;
+		if (level.isClientSide) return true;
 		ItemStack itemStack = player.getMainHandItem();
 		Set<Ability> abilities = LeftClickableTool.getLeftClickList(itemStack);
 		if (itemStack.getItem() instanceof ToggleableTool toggleableTool && !abilities.isEmpty()) {
-			toggleableTool.useAbility(player.level(), player, InteractionHand.MAIN_HAND, false);
+			toggleableTool.useAbility(player.level, player, InteractionHand.MAIN_HAND, false);
 		}
 		return true;
 	}
@@ -82,33 +78,16 @@ public class PolymorphicWand extends BaseToggleableTool implements LeftClickable
 	}
 
 	@Override
-	public boolean isBarVisible(ItemStack stack) {
-		return isFluidBarVisible(stack);
-	}
-
-	@Override
-	public int getBarWidth(ItemStack stack) {
-		return getFluidBarWidth(stack);
-	}
-
-	@Override
-	public int getBarColor(ItemStack stack) {
-		return getFluidBarColor(stack);
-	}
-
-	@Override
 	public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flagIn) {
 		super.appendHoverText(stack, level, tooltip, flagIn);
-		if (level == null)
+		if (level == null) {
 			return;
-		IFluidHandlerItem fluidHandler = stack.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM, null).orElse(null);
-		if (fluidHandler == null)
+		}
+		IFluidHandlerItem fluidHandler = stack.getCapability(CapabilityFluidHandler.FLUID_HANDLER_ITEM_CAPABILITY).orElse(null);
+		if (fluidHandler == null) {
 			return;
-		tooltip.add(
-				Component
-						.translatable("justdirethings.polymorphicfluidamt",
-								MagicHelpers.formatted(fluidHandler.getFluidInTank(0).getAmount()),
-								MagicHelpers.formatted(fluidHandler.getTankCapacity(0)))
-						.withStyle(ChatFormatting.GREEN));
+		}
+		tooltip.add(new TranslatableComponent("justdirethings.polymorphicfluidamt", MagicHelpers.formatted(fluidHandler.getFluidInTank(0).getAmount()), MagicHelpers.formatted(fluidHandler.getTankCapacity(0))).withStyle(ChatFormatting.GREEN));
 	}
+
 }
