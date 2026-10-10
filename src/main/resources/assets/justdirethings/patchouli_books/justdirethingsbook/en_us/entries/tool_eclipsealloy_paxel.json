@@ -2,11 +2,11 @@
   "name": "Eclipse Alloy Paxel",
   "sortnum": 26,
   "category": "justdirethings:tools",
-  "icon": "justdirethings:eclipsealloy_paxel",
+  "icon": "justdirethings:eclipsealloy_paxel{Energy:500000}",
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "The Eclipse Alloy Paxel represents the pinnacle of tool integration, combining the functionality of a pickaxe, axe, and shovel into a single formidable tool. $(br2)Craft it either by combining an Eclipse Alloy Pickaxe, Axe, and Shovel in a smithing table, or upgrade a $(l:justdirethings:tool_celestigem_paxel)Celestigem Paxel$(/l) using the smithing table. Both methods preserve any installed upgrades."
+      "text": "The Eclipse Alloy Paxel represents the pinnacle of tool integration, combining the functionality of a pickaxe, axe, and shovel into a single formidable tool. $(br2)Craft it either by combining an Eclipse Alloy Pickaxe, Axe, and Shovel in a $(l:justdirethings:mach_dire_smithing_table)Dire Smithing Table$(/l), or upgrade a $(l:justdirethings:tool_celestigem_paxel)Celestigem Paxel$(/l) using the Dire Smithing Table. Both methods preserve any installed upgrades."
     }
   ]
 }

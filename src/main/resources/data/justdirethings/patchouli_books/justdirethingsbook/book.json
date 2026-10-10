@@ -2,8 +2,7 @@
   "name": "Just Dires Guide",
   "landing_text": "Just Dire Things - Explained!",
   "version": 1,
-  "creative_tab": "justdirethings:justdirethings",
+  "creative_tab": "justdirethings",
   "getCreatorModId": "justdirethings",
-  "use_resource_pack": "true",
-  "recipe": "justdirethings:justdirethingsbook"
+  "use_resource_pack": "true"
 }

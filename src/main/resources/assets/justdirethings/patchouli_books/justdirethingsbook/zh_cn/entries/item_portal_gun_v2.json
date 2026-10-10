@@ -2,7 +2,7 @@
   "name": "高级传送枪",
   "sortnum": 11,
   "category": "justdirethings:items",
-  "icon": "justdirethings:portal_gun_v2",
+  "icon": "justdirethings:portalgun_v2{Energy:1000000}",
   "pages": [
     {
       "type": "patchouli:text",
@@ -15,7 +15,7 @@
     {
       "type": "patchouli:crafting",
       "title": "高级传送枪的配方",
-      "recipe": "justdirethings:portal_gun_v2"
+      "recipe": "justdirethings:portalgun_v2"
     }
   ]
 }

@@ -2,7 +2,7 @@
   "name": "苍穹晶锹",
   "sortnum": 15,
   "category": "justdirethings:tools",
-  "icon": "justdirethings:celestigem_shovel",
+  "icon": "justdirethings:celestigem_shovel{Energy:10000}",
   "pages": [
     {
       "type": "patchouli:text",

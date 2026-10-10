@@ -2,7 +2,7 @@
   "name": "Celestigem Pickaxe",
   "sortnum": 14,
   "category": "justdirethings:tools",
-  "icon": "justdirethings:celestigem_pickaxe",
+  "icon": "justdirethings:celestigem_pickaxe{Energy:10000}",
   "pages": [
     {
       "type": "patchouli:text",

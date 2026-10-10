@@ -2,7 +2,7 @@
   "name": "Eclipse Alloy Axe",
   "sortnum": 23,
   "category": "justdirethings:tools",
-  "icon": "justdirethings:eclipsealloy_axe",
+  "icon": "justdirethings:eclipsealloy_axe{Energy:500000}",
   "pages": [
     {
       "type": "patchouli:text",

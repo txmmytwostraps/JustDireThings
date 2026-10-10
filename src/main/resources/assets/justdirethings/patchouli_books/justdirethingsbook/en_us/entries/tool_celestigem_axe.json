@@ -2,7 +2,7 @@
   "name": "Celestigem Axe",
   "sortnum": 16,
   "category": "justdirethings:tools",
-  "icon": "justdirethings:celestigem_axe",
+  "icon": "justdirethings:celestigem_axe{Energy:10000}",
   "pages": [
     {
       "type": "patchouli:text",

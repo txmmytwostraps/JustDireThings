@@ -2,7 +2,7 @@
   "name": "蚀空合金弓",
   "sortnum": 25,
   "category": "justdirethings:tools",
-  "icon": "justdirethings:bow_eclipsealloy",
+  "icon": "justdirethings:bow_eclipsealloy{Energy:500000}",
   "pages": [
     {
       "type": "patchouli:text",

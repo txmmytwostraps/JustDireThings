@@ -2,7 +2,7 @@
   "name": "物品栏存储器",
   "sortnum": 2,
   "category": "justdirethings:machines",
-  "icon": "justdirethings:inventoryholder",
+  "icon": "justdirethings:inventory_holder",
   "pages": [
     {
       "type": "patchouli:text",
@@ -39,7 +39,7 @@
     {
       "type": "patchouli:crafting",
       "title": "物品栏存储器",
-      "recipe": "justdirethings:inventoryholder"
+      "recipe": "justdirethings:inventory_holder"
     }
   ]
 }

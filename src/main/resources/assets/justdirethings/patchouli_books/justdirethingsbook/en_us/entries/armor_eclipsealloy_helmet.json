@@ -2,7 +2,7 @@
   "name": "Eclipse Alloy Helmet",
   "sortnum": 20,
   "category": "justdirethings:armor",
-  "icon": "justdirethings:eclipsealloy_helmet",
+  "icon": "justdirethings:eclipsealloy_helmet{Energy:500000}",
   "pages": [
     {
       "type": "patchouli:text",

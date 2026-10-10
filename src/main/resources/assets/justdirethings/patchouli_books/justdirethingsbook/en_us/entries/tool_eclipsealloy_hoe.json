@@ -2,7 +2,7 @@
   "name": "Eclipse Alloy Hoe",
   "sortnum": 24,
   "category": "justdirethings:tools",
-  "icon": "justdirethings:eclipsealloy_hoe",
+  "icon": "justdirethings:eclipsealloy_hoe{Energy:500000}",
   "pages": [
     {
       "type": "patchouli:text",

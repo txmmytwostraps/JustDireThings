@@ -2,7 +2,7 @@
   "name": "Time Wand",
   "sortnum": 7,
   "category": "justdirethings:items",
-  "icon": "justdirethings:time_wand",
+  "icon": "justdirethings:time_wand{Energy:100000}",
   "pages": [
     {
       "type": "patchouli:text",

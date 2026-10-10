@@ -2,7 +2,7 @@
   "name": "苍穹晶护腿",
   "sortnum": 11,
   "category": "justdirethings:armor",
-  "icon": "justdirethings:celestigem_leggings",
+  "icon": "justdirethings:celestigem_leggings{Energy:10000}",
   "pages": [
     {
       "type": "patchouli:text",

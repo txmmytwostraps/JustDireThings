@@ -2,7 +2,7 @@
   "name": "Eclipse Alloy Boots",
   "sortnum": 23,
   "category": "justdirethings:armor",
-  "icon": "justdirethings:eclipsealloy_boots",
+  "icon": "justdirethings:eclipsealloy_boots{Energy:500000}",
   "pages": [
     {
       "type": "patchouli:text",

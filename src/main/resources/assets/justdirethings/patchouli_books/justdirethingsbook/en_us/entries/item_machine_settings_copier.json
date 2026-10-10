@@ -2,7 +2,7 @@
   "name": "Machine Settings Copier",
   "sortnum": 9,
   "category": "justdirethings:items",
-  "icon": "justdirethings:machine_settings_copier",
+  "icon": "justdirethings:machinesettingscopier",
   "pages": [
     {
       "type": "patchouli:text",
@@ -11,7 +11,7 @@
     {
       "type": "patchouli:crafting",
       "title": "Machine Settings Copier Crafting",
-      "recipe": "justdirethings:machine_settings_copier"
+      "recipe": "justdirethings:machinesettingscopier"
     }
   ]
 }

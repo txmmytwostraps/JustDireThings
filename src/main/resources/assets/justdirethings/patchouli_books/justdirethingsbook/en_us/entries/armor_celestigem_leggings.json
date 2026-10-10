@@ -2,7 +2,7 @@
   "name": "Celestigem Leggings",
   "sortnum": 11,
   "category": "justdirethings:armor",
-  "icon": "justdirethings:celestigem_leggings",
+  "icon": "justdirethings:celestigem_leggings{Energy:10000}",
   "pages": [
     {
       "type": "patchouli:text",

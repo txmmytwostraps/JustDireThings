@@ -2,7 +2,7 @@
   "name": "Eclipse Alloy Leggings",
   "sortnum": 22,
   "category": "justdirethings:armor",
-  "icon": "justdirethings:eclipsealloy_leggings",
+  "icon": "justdirethings:eclipsealloy_leggings{Energy:500000}",
   "pages": [
     {
       "type": "patchouli:text",

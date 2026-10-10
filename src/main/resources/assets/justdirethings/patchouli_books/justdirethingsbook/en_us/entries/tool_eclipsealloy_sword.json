@@ -2,7 +2,7 @@
   "name": "Eclipse Alloy Sword",
   "sortnum": 20,
   "category": "justdirethings:tools",
-  "icon": "justdirethings:eclipsealloy_sword",
+  "icon": "justdirethings:eclipsealloy_sword{Energy:500000}",
   "pages": [
     {
       "type": "patchouli:text",

@@ -2,7 +2,7 @@
   "name": "高级多态化形手杖",
   "sortnum": 22,
   "category": "justdirethings:items",
-  "icon": "justdirethings:polymorphic_wand",
+  "icon": "justdirethings:polymorphic_wand_v2",
   "pages": [
     {
       "type": "patchouli:text",
@@ -15,7 +15,7 @@
     {
       "type": "patchouli:crafting",
       "title": "高级多态化形手杖",
-      "recipe": "justdirethings:polymorphic_wand"
+      "recipe": "justdirethings:polymorphic_wand_v2"
     }
   ]
 }

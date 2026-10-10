@@ -2,7 +2,7 @@
   "name": "蚀空合金护腿",
   "sortnum": 22,
   "category": "justdirethings:armor",
-  "icon": "justdirethings:eclipsealloy_leggings",
+  "icon": "justdirethings:eclipsealloy_leggings{Energy:500000}",
   "pages": [
     {
       "type": "patchouli:text",

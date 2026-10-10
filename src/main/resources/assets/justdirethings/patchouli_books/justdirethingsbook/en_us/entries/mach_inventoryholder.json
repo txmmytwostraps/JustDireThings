@@ -2,7 +2,7 @@
   "name": "Inventory Holder",
   "sortnum": 2,
   "category": "justdirethings:machines",
-  "icon": "justdirethings:inventoryholder",
+  "icon": "justdirethings:inventory_holder",
   "pages": [
     {
       "type": "patchouli:text",
@@ -22,7 +22,11 @@
     },
     {
       "type": "patchouli:text",
-      "text": "On the top left, there are buttons to control how pipes, hoppers, etc can interact with this machine.$(br2)When Filtered Items Only is enabled, it will only allow you to pipe into slots with a matching filter, and 'Compare Stack sizes' works as above for insert.$(br2)When extracting, slots with a filter applied will be ignored, and Compare Stack Sizes determines if extracting will try to match the filter's stack size."
+      "text": "On the top left, there are buttons to control how pipes, hoppers, etc can interact with this machine.$(br2)When Filtered Items Only is enabled, it will only allow you to pipe into slots with a matching filter, and 'Compare Stack sizes' works as above for insert."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "When extracting, slots with a filter applied will be ignored, and Compare Stack Sizes determines if extracting will try to match the filter's stack size."
     },
     {
       "type": "patchouli:text",
@@ -39,7 +43,7 @@
     {
       "type": "patchouli:crafting",
       "title": "Inventory Holder",
-      "recipe": "justdirethings:inventoryholder"
+      "recipe": "justdirethings:inventory_holder"
     }
   ]
 }

@@ -2,7 +2,7 @@
   "name": "苍穹晶镐尖斧",
   "sortnum": 19,
   "category": "justdirethings:tools",
-  "icon": "justdirethings:celestigem_paxel",
+  "icon": "justdirethings:celestigem_paxel{Energy:10000}",
   "pages": [
     {
       "type": "patchouli:text",

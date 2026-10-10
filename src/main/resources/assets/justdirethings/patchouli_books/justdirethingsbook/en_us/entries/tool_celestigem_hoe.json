@@ -2,7 +2,7 @@
   "name": "Celestigem Hoe",
   "sortnum": 17,
   "category": "justdirethings:tools",
-  "icon": "justdirethings:celestigem_hoe",
+  "icon": "justdirethings:celestigem_hoe{Energy:10000}",
   "pages": [
     {
       "type": "patchouli:text",

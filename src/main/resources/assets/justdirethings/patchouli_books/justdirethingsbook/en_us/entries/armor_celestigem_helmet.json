@@ -2,7 +2,7 @@
   "name": "Celestigem Helmet",
   "sortnum": 9,
   "category": "justdirethings:armor",
-  "icon": "justdirethings:celestigem_helmet",
+  "icon": "justdirethings:celestigem_helmet{Energy:10000}",
   "pages": [
     {
       "type": "patchouli:text",

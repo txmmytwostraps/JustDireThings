@@ -2,7 +2,7 @@
   "name": "蚀空合金锄",
   "sortnum": 24,
   "category": "justdirethings:tools",
-  "icon": "justdirethings:eclipsealloy_hoe",
+  "icon": "justdirethings:eclipsealloy_hoe{Energy:500000}",
   "pages": [
     {
       "type": "patchouli:text",

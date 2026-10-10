@@ -2,7 +2,7 @@
   "name": "Voidshift Wand",
   "sortnum": 6,
   "category": "justdirethings:items",
-  "icon": "justdirethings:voidshift_wand",
+  "icon": "justdirethings:voidshift_wand{Energy:10000}",
   "pages": [
     {
       "type": "patchouli:text",

@@ -2,7 +2,7 @@
   "name": "苍穹晶靴子",
   "sortnum": 12,
   "category": "justdirethings:armor",
-  "icon": "justdirethings:celestigem_boots",
+  "icon": "justdirethings:celestigem_boots{Energy:10000}",
   "pages": [
     {
       "type": "patchouli:text",

@@ -2,7 +2,7 @@
   "name": "Eclipsegate Wand",
   "sortnum": 7,
   "category": "justdirethings:items",
-  "icon": "justdirethings:eclipsegate_wand",
+  "icon": "justdirethings:eclipsegate_wand{Energy:100000}",
   "pages": [
     {
       "type": "patchouli:text",

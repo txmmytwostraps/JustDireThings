@@ -2,7 +2,7 @@
   "name": "蚀空合金镐尖斧",
   "sortnum": 26,
   "category": "justdirethings:tools",
-  "icon": "justdirethings:eclipsealloy_paxel",
+  "icon": "justdirethings:eclipsealloy_paxel{Energy:500000}",
   "pages": [
     {
       "type": "patchouli:text",

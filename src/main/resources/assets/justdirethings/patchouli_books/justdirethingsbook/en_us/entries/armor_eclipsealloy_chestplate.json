@@ -2,7 +2,7 @@
   "name": "Eclipse Alloy Chestplate",
   "sortnum": 21,
   "category": "justdirethings:armor",
-  "icon": "justdirethings:eclipsealloy_chestplate",
+  "icon": "justdirethings:eclipsealloy_chestplate{Energy:500000}",
   "pages": [
     {
       "type": "patchouli:text",

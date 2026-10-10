@@ -2,7 +2,7 @@
   "name": "机器设置复制器",
   "sortnum": 9,
   "category": "justdirethings:items",
-  "icon": "justdirethings:machine_settings_copier",
+  "icon": "justdirethings:machinesettingscopier",
   "pages": [
     {
       "type": "patchouli:text",
@@ -11,7 +11,7 @@
     {
       "type": "patchouli:crafting",
       "title": "机器设置复制器的配方",
-      "recipe": "justdirethings:machine_settings_copier"
+      "recipe": "justdirethings:machinesettingscopier"
     }
   ]
 }

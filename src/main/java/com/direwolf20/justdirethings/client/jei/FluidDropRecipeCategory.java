@@ -4,7 +4,7 @@ import com.direwolf20.justdirethings.JustDireThings;
 import com.direwolf20.justdirethings.datagen.recipes.FluidDropRecipe;
 import com.direwolf20.justdirethings.setup.Registration;
 import com.mojang.blaze3d.systems.RenderSystem;
-import mezz.jei.api.forge.ForgeTypes;
+import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.builder.IRecipeSlotBuilder;
 import mezz.jei.api.gui.drawable.IDrawable;
@@ -15,18 +15,15 @@ import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.FluidState;
-import net.minecraftforge.fluids.FluidStack;
 
-@SuppressWarnings("removal")
 public class FluidDropRecipeCategory implements IRecipeCategory<FluidDropRecipe> {
-
-	public static final RecipeType<FluidDropRecipe> TYPE = RecipeType.create(JustDireThings.MODID, "fluid_drop_recipe",
-			FluidDropRecipe.class);
+	public static final RecipeType<FluidDropRecipe> TYPE = RecipeType.create(JustDireThings.MODID, "fluiddroprecipe", FluidDropRecipe.class);
 
 	public static final int width = 120;
 	public static final int height = 40;
@@ -39,13 +36,25 @@ public class FluidDropRecipeCategory implements IRecipeCategory<FluidDropRecipe>
 	public FluidDropRecipeCategory(IGuiHelper guiHelper) {
 		background = guiHelper.createBlankDrawable(width, height);
 		icon = guiHelper.createDrawableItemStack(new ItemStack(Registration.PolymorphicCatalyst.get()));
-		localizedName = Component.translatable("justdirethings.fluiddroprecipe.title");
-		arrow = guiHelper.getRecipeArrow();
+		localizedName = new TranslatableComponent("justdirethings.fluiddroprecipe.title");
+		this.arrow = JEIIntegration.createRecipeArrow(guiHelper);
 	}
 
 	@Override
 	public RecipeType<FluidDropRecipe> getRecipeType() {
 		return TYPE;
+	}
+
+	@SuppressWarnings("removal")
+	@Override
+	public ResourceLocation getUid() {
+		return getRecipeType().getUid();
+	}
+
+	@SuppressWarnings("removal")
+	@Override
+	public Class<? extends FluidDropRecipe> getRecipeClass() {
+		return getRecipeType().getRecipeClass();
 	}
 
 	@Override
@@ -64,31 +73,31 @@ public class FluidDropRecipeCategory implements IRecipeCategory<FluidDropRecipe>
 	}
 
 	@Override
-	public void draw(FluidDropRecipe recipe, IRecipeSlotsView slotsView, GuiGraphics gui, double mouseX,
-			double mouseY) {
+	public void draw(FluidDropRecipe recipe, IRecipeSlotsView slotsView, PoseStack poseStack, double mouseX, double mouseY) {
 		RenderSystem.enableBlend();
-		arrow.draw(gui, 34, 20);
+		arrow.draw(poseStack, 34, 20);
+		background.draw(poseStack, 17, 0);
 		RenderSystem.disableBlend();
 	}
 
 	@Override
 	public void setRecipe(IRecipeLayoutBuilder builder, FluidDropRecipe recipe, IFocusGroup focuses) {
-		builder.addSlot(RecipeIngredientRole.CATALYST, 9, 0).addItemStack(new ItemStack(recipe.getCatalyst()));
-
 		BlockState input = recipe.getInput();
 		IRecipeSlotBuilder inputSlotBuilder = builder.addSlot(RecipeIngredientRole.INPUT, 9, 20);
-		FluidState inputFluidState = input.getFluidState();
-		if (!inputFluidState.isEmpty()) {
-			inputSlotBuilder.addIngredient(ForgeTypes.FLUID_STACK, new FluidStack(inputFluidState.getType(), 1000));
+		if (input.getBlock() instanceof LiquidBlock liquidBlock) {
+			inputSlotBuilder
+					.addFluidStack(liquidBlock.getFluid(), 1000);
 		}
+		builder.addSlot(RecipeIngredientRole.CATALYST, 9, 0)
+				.addItemStack(new ItemStack(recipe.getCatalyst()));
 
 		BlockState output = recipe.getOutput();
-		FluidState outputFluidState = output.getFluidState();
-		if (!outputFluidState.isEmpty()) {
-			builder.addSlot(RecipeIngredientRole.OUTPUT, 68, 20).addIngredient(ForgeTypes.FLUID_STACK,
-					new FluidStack(outputFluidState.getType(), 1000));
+		if (output.getBlock() instanceof LiquidBlock liquidBlock) {
+			builder.addSlot(RecipeIngredientRole.OUTPUT, 68, 20)
+					.addFluidStack(liquidBlock.getFluid(), 1000);
 		} else {
-			builder.addSlot(RecipeIngredientRole.OUTPUT, 68, 20).addItemStack(new ItemStack(output.getBlock()));
+			builder.addSlot(RecipeIngredientRole.OUTPUT, 68, 20)
+					.addItemStack(new ItemStack(output.getBlock()));
 		}
 	}
 }

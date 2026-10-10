@@ -3,6 +3,8 @@ package com.direwolf20.justdirethings.client.jei;
 import com.direwolf20.justdirethings.JustDireThings;
 import com.direwolf20.justdirethings.setup.Registration;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.PoseStack;
+import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.drawable.IDrawableAnimated;
@@ -13,38 +15,47 @@ import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
-@SuppressWarnings("removal")
-public class OreToResourceRecipeCategory implements IRecipeCategory<OreToResourceRecipe> {
-	public static final RecipeType<OreToResourceRecipe> TYPE = RecipeType.create(JustDireThings.MODID,
-			"ore_to_resource", OreToResourceRecipe.class);
-
+public class OreToResourceCategory implements IRecipeCategory<OreToResourceRecipe> {
 	private final IDrawable background;
 	private final IDrawable icon;
 	private final IDrawable pickaxeIcon;
 	private final IDrawableAnimated animatedArrow;
+	public static final ResourceLocation UID = ResourceLocation.fromNamespaceAndPath(JustDireThings.MODID, "ore_to_resource");
 
-	public OreToResourceRecipeCategory(IGuiHelper guiHelper) {
+	public OreToResourceCategory(IGuiHelper guiHelper) {
 		this.background = guiHelper.createBlankDrawable(120, 30);
-		this.icon = guiHelper.createDrawableItemStack(new ItemStack(Registration.RawFerricoreOre.get()));
-		IDrawableStatic arrowDrawable = guiHelper.getRecipeArrow();
-		this.animatedArrow = guiHelper.createAnimatedDrawable(arrowDrawable, 40, IDrawableAnimated.StartDirection.LEFT,
-				false);
-		this.pickaxeIcon = guiHelper.createDrawableItemStack(new ItemStack(Items.IRON_PICKAXE));
+		this.icon = guiHelper.createDrawableIngredient(VanillaTypes.ITEM_STACK, new ItemStack(Registration.RawFerricoreOre.get()));
+		IDrawableStatic arrowDrawable = JEIIntegration.createRecipeArrow(guiHelper);
+		this.animatedArrow = guiHelper.createAnimatedDrawable(arrowDrawable, 40, IDrawableAnimated.StartDirection.LEFT, false);
+		this.pickaxeIcon = guiHelper.createDrawableIngredient(VanillaTypes.ITEM_STACK, new ItemStack(Items.IRON_PICKAXE));
 	}
 
 	@Override
 	public RecipeType<OreToResourceRecipe> getRecipeType() {
-		return TYPE;
+		return new RecipeType<>(UID, OreToResourceRecipe.class);
+	}
+
+	@SuppressWarnings("removal")
+	@Override
+	public ResourceLocation getUid() {
+		return getRecipeType().getUid();
+	}
+
+	@SuppressWarnings("removal")
+	@Override
+	public Class<? extends OreToResourceRecipe> getRecipeClass() {
+		return getRecipeType().getRecipeClass();
 	}
 
 	@Override
 	public Component getTitle() {
-		return Component.translatable("justdirethings.oretoresource.title");
+		return new TranslatableComponent("justdirethings.oretoresource.title");
 	}
 
 	@Override
@@ -58,12 +69,11 @@ public class OreToResourceRecipeCategory implements IRecipeCategory<OreToResourc
 	}
 
 	@Override
-	public void draw(OreToResourceRecipe recipe, IRecipeSlotsView slotsView, GuiGraphics gui, double mouseX,
-			double mouseY) {
+	public void draw(OreToResourceRecipe recipe, IRecipeSlotsView slotsView, PoseStack poseStack, double mouseX, double mouseY) {
 		RenderSystem.enableBlend();
-		animatedArrow.draw(gui, 46, 10);
-		background.draw(gui, 17, 0);
-		pickaxeIcon.draw(gui, 50, -2);
+		animatedArrow.draw(poseStack, 46, 10);
+		background.draw(poseStack, 17, 0);
+		pickaxeIcon.draw(poseStack, 50, -2);
 		RenderSystem.disableBlend();
 	}
 

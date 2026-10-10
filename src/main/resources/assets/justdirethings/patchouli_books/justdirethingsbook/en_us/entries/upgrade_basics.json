@@ -6,7 +6,7 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Upgrades are installed in $(l:justdirethings:tools)Tools$(/l) or $(l:justdirethings:armor)Armor$(/l) to grant them certain abilities. They can be installed using the Smithing Table, you should be able to look the recipe up with JEI.$(br2)There are several kinds of abilities."
+      "text": "Upgrades are installed in $(l:justdirethings:tools)Tools$(/l) or $(l:justdirethings:armor)Armor$(/l) to grant them certain abilities. They can be installed using the $(l:justdirethings:mach_dire_smithing_table)Dire Smithing Table$(/l), you should be able to look the recipe up with JEI.$(br2)There are several kinds of abilities."
     },
     {
       "type": "patchouli:text",

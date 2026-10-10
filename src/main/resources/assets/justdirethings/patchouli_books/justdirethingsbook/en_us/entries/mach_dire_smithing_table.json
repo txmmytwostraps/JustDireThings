@@ -1,0 +1,25 @@
+{
+  "name": "Dire Smithing Table",
+  "sortnum": 23,
+  "category": "justdirethings:machines",
+  "icon": "justdirethings:dire_smithing_table",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "The Dire Smithing Table puts $(l:justdirethings:upgrades)Upgrades$(/l) on $(l:justdirethings:tools)Tools$(/l) and $(l:justdirethings:armor)Armor$(/l). It also raises them a tier with the upgrade templates and makes Paxels. It does regular smithing too."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Put the items in its slots. Tier upgrades and Paxels use all three. Upgrades and regular smithing leave the template slot empty. When the items match a recipe, the result waits in the table until you take it."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Hoppers and pipes can fill the table from any side, in any order. Each item goes in the slot where it fits a recipe. Items that can't be part of a recipe are refused.$(br2)Only the result can be pulled out."
+    },
+    {
+      "type": "patchouli:crafting",
+      "title": "Dire Smithing Table",
+      "recipe": "justdirethings:dire_smithing_table"
+    }
+  ]
+}
