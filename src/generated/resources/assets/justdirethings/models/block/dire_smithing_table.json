@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "down": "justdirethings:block/dire_smithing_table_bottom",
+    "up": "justdirethings:block/ferricore_block",
+    "north": "justdirethings:block/dire_smithing_table_front",
+    "south": "justdirethings:block/dire_smithing_table_front",
+    "east": "justdirethings:block/dire_smithing_table_side",
+    "west": "justdirethings:block/dire_smithing_table_side",
+    "particle": "justdirethings:block/dire_smithing_table_front"
+  }
+}

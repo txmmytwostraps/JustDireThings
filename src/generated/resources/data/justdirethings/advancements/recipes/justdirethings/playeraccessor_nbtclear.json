@@ -1,0 +1,34 @@
+{
+  "parent": "minecraft:recipes/root",
+  "rewards": {
+    "recipes": [
+      "justdirethings:playeraccessor_nbtclear"
+    ]
+  },
+  "criteria": {
+    "has_playeraccessor": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "justdirethings:playeraccessor"
+            ]
+          }
+        ]
+      }
+    },
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": {
+        "recipe": "justdirethings:playeraccessor_nbtclear"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_playeraccessor",
+      "has_the_recipe"
+    ]
+  ]
+}

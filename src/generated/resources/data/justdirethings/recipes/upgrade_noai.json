@@ -1,0 +1,72 @@
+{
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "justdirethings:use_sculk_recipes"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "pattern": [
+          "aea",
+          "fbf",
+          "aea"
+        ],
+        "key": {
+          "b": {
+            "item": "justdirethings:upgrade_blank"
+          },
+          "f": {
+            "item": "justdirethings:time_crystal"
+          },
+          "e": {
+            "item": "minecraft:end_rod"
+          },
+          "a": {
+            "item": "minecraft:sculk_sensor"
+          }
+        },
+        "result": {
+          "item": "justdirethings:upgrade_noai"
+        }
+      }
+    },
+    {
+      "conditions": [
+        {
+          "value": {
+            "type": "justdirethings:use_sculk_recipes"
+          },
+          "type": "forge:not"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "pattern": [
+          "aea",
+          "fbf",
+          "aea"
+        ],
+        "key": {
+          "b": {
+            "item": "justdirethings:upgrade_blank"
+          },
+          "f": {
+            "item": "justdirethings:time_crystal"
+          },
+          "e": {
+            "item": "minecraft:end_rod"
+          },
+          "a": {
+            "item": "minecraft:observer"
+          }
+        },
+        "result": {
+          "item": "justdirethings:upgrade_noai"
+        }
+      }
+    }
+  ]
+}

@@ -4,10 +4,8 @@
       "model": "justdirethings:block/paradoxmachine",
       "x": 180
     },
-    "facing=east": {
-      "model": "justdirethings:block/paradoxmachine",
-      "x": 90,
-      "y": 90
+    "facing=up": {
+      "model": "justdirethings:block/paradoxmachine"
     },
     "facing=north": {
       "model": "justdirethings:block/paradoxmachine",
@@ -18,13 +16,15 @@
       "x": 90,
       "y": 180
     },
-    "facing=up": {
-      "model": "justdirethings:block/paradoxmachine"
-    },
     "facing=west": {
       "model": "justdirethings:block/paradoxmachine",
       "x": 90,
       "y": 270
+    },
+    "facing=east": {
+      "model": "justdirethings:block/paradoxmachine",
+      "x": 90,
+      "y": 90
     }
   }
 }

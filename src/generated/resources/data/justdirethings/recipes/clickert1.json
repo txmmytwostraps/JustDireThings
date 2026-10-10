@@ -1,31 +1,29 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "misc",
   "group": "justdirethings",
-  "key": {
-    "d": {
-      "item": "minecraft:ender_eye"
-    },
-    "f": {
-      "item": "justdirethings:ferricore_ingot"
-    },
-    "l": {
-      "item": "minecraft:lapis_lazuli"
-    },
-    "o": {
-      "item": "minecraft:dispenser"
-    },
-    "r": {
-      "item": "minecraft:redstone"
-    }
-  },
   "pattern": [
     "fdf",
     "lol",
     "frf"
   ],
+  "key": {
+    "o": {
+      "item": "minecraft:dispenser"
+    },
+    "f": {
+      "item": "justdirethings:ferricore_ingot"
+    },
+    "d": {
+      "item": "minecraft:ender_eye"
+    },
+    "l": {
+      "item": "minecraft:lapis_lazuli"
+    },
+    "r": {
+      "item": "minecraft:redstone"
+    }
+  },
   "result": {
     "item": "justdirethings:clickert1"
-  },
-  "show_notification": true
+  }
 }

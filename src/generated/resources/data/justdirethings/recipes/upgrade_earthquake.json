@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "aea",
+    "fbf",
+    "aea"
+  ],
+  "key": {
+    "b": {
+      "item": "justdirethings:upgrade_blank"
+    },
+    "f": {
+      "item": "minecraft:sticky_piston"
+    },
+    "e": {
+      "item": "minecraft:fermented_spider_eye"
+    },
+    "a": {
+      "item": "minecraft:soul_sand"
+    }
+  },
+  "result": {
+    "item": "justdirethings:upgrade_earthquake"
+  }
+}

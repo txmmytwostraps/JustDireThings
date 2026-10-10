@@ -1,0 +1,15 @@
+{
+  "type": "justdirethings:tier_upgrade",
+  "template": {
+    "item": "justdirethings:template_celestigem"
+  },
+  "base": {
+    "item": "justdirethings:blazegold_shovel"
+  },
+  "addition": {
+    "item": "justdirethings:celestigem"
+  },
+  "result": {
+    "item": "justdirethings:celestigem_shovel"
+  }
+}

@@ -1,22 +1,20 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "misc",
   "group": "justdirethings",
-  "key": {
-    "b": {
-      "item": "justdirethings:blazegold_ingot"
-    },
-    "i": {
-      "item": "justdirethings:ferricore_ingot"
-    }
-  },
   "pattern": [
     "  b",
     " i ",
     "i  "
   ],
+  "key": {
+    "i": {
+      "item": "justdirethings:ferricore_ingot"
+    },
+    "b": {
+      "item": "justdirethings:blazegold_ingot"
+    }
+  },
   "result": {
     "item": "justdirethings:blazejet_wand"
-  },
-  "show_notification": true
+  }
 }

@@ -1,6 +1,7 @@
 {
+  "replace": false,
   "values": [
-    "justdirethings:paradox_entity",
-    "justdirethings:time_wand_entity"
+    "justdirethings:time_wand_entity",
+    "justdirethings:paradox_entity"
   ]
 }

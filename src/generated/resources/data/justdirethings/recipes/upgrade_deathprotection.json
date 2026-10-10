@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "tet",
+    "fbf",
+    "tet"
+  ],
+  "key": {
+    "b": {
+      "item": "justdirethings:upgrade_blank"
+    },
+    "f": {
+      "item": "minecraft:totem_of_undying"
+    },
+    "e": {
+      "item": "minecraft:emerald"
+    },
+    "t": {
+      "item": "justdirethings:time_crystal"
+    }
+  },
+  "result": {
+    "item": "justdirethings:upgrade_deathprotection"
+  }
+}

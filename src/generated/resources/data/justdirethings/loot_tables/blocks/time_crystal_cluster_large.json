@@ -2,7 +2,14 @@
   "type": "minecraft:block",
   "pools": [
     {
+      "rolls": 1.0,
       "bonus_rolls": 0.0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "justdirethings:time_crystal_cluster_large"
+        }
+      ],
       "conditions": [
         {
           "condition": "minecraft:match_tool",
@@ -17,15 +24,7 @@
             ]
           }
         }
-      ],
-      "entries": [
-        {
-          "type": "minecraft:item",
-          "name": "justdirethings:time_crystal_cluster_large"
-        }
-      ],
-      "rolls": 1.0
+      ]
     }
-  ],
-  "random_sequence": "justdirethings:blocks/time_crystal_cluster_large"
+  ]
 }

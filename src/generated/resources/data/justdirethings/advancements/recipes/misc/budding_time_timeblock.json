@@ -1,0 +1,34 @@
+{
+  "parent": "minecraft:recipes/root",
+  "rewards": {
+    "recipes": [
+      "justdirethings:budding_time_timeblock"
+    ]
+  },
+  "criteria": {
+    "has_goo_block_t4": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "justdirethings:gooblock_tier4"
+            ]
+          }
+        ]
+      }
+    },
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": {
+        "recipe": "justdirethings:budding_time_timeblock"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_goo_block_t4",
+      "has_the_recipe"
+    ]
+  ]
+}

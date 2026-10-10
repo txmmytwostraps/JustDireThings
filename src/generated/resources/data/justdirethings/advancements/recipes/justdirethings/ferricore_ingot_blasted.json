@@ -1,0 +1,34 @@
+{
+  "parent": "minecraft:recipes/root",
+  "rewards": {
+    "recipes": [
+      "justdirethings:ferricore_ingot_blasted"
+    ]
+  },
+  "criteria": {
+    "has_ferricore_raw": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "justdirethings:raw_ferricore"
+            ]
+          }
+        ]
+      }
+    },
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": {
+        "recipe": "justdirethings:ferricore_ingot_blasted"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_ferricore_raw",
+      "has_the_recipe"
+    ]
+  ]
+}

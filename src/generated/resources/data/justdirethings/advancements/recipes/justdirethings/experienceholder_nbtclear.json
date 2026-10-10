@@ -1,0 +1,34 @@
+{
+  "parent": "minecraft:recipes/root",
+  "rewards": {
+    "recipes": [
+      "justdirethings:experienceholder_nbtclear"
+    ]
+  },
+  "criteria": {
+    "has_experienceholder": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "justdirethings:experienceholder"
+            ]
+          }
+        ]
+      }
+    },
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": {
+        "recipe": "justdirethings:experienceholder_nbtclear"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_experienceholder",
+      "has_the_recipe"
+    ]
+  ]
+}

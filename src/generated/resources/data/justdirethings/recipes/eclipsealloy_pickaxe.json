@@ -1,7 +1,11 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "misc",
   "group": "justdirethings",
+  "pattern": [
+    "fff",
+    " s ",
+    " s "
+  ],
   "key": {
     "f": {
       "item": "justdirethings:eclipsealloy_ingot"
@@ -10,13 +14,7 @@
       "item": "minecraft:stick"
     }
   },
-  "pattern": [
-    "fff",
-    " s ",
-    " s "
-  ],
   "result": {
     "item": "justdirethings:eclipsealloy_pickaxe"
-  },
-  "show_notification": true
+  }
 }

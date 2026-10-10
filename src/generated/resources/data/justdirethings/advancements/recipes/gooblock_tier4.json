@@ -1,0 +1,89 @@
+{
+  "advancements": [
+    {
+      "conditions": [
+        {
+          "type": "justdirethings:use_sculk_recipes"
+        }
+      ],
+      "advancement": {
+        "parent": "minecraft:recipes/root",
+        "rewards": {
+          "recipes": [
+            "justdirethings:gooblock_tier4"
+          ]
+        },
+        "criteria": {
+          "has_goo_block3": {
+            "trigger": "minecraft:inventory_changed",
+            "conditions": {
+              "items": [
+                {
+                  "items": [
+                    "justdirethings:gooblock_tier3"
+                  ]
+                }
+              ]
+            }
+          },
+          "has_the_recipe": {
+            "trigger": "minecraft:recipe_unlocked",
+            "conditions": {
+              "recipe": "justdirethings:gooblock_tier4"
+            }
+          }
+        },
+        "requirements": [
+          [
+            "has_goo_block3",
+            "has_the_recipe"
+          ]
+        ]
+      }
+    },
+    {
+      "conditions": [
+        {
+          "value": {
+            "type": "justdirethings:use_sculk_recipes"
+          },
+          "type": "forge:not"
+        }
+      ],
+      "advancement": {
+        "parent": "minecraft:recipes/root",
+        "rewards": {
+          "recipes": [
+            "justdirethings:gooblock_tier4"
+          ]
+        },
+        "criteria": {
+          "has_goo_block3": {
+            "trigger": "minecraft:inventory_changed",
+            "conditions": {
+              "items": [
+                {
+                  "items": [
+                    "justdirethings:gooblock_tier3"
+                  ]
+                }
+              ]
+            }
+          },
+          "has_the_recipe": {
+            "trigger": "minecraft:recipe_unlocked",
+            "conditions": {
+              "recipe": "justdirethings:gooblock_tier4"
+            }
+          }
+        },
+        "requirements": [
+          [
+            "has_goo_block3",
+            "has_the_recipe"
+          ]
+        ]
+      }
+    }
+  ]
+}

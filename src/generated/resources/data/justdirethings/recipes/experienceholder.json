@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "justdirethings",
+  "pattern": [
+    " d ",
+    "heh",
+    "fff"
+  ],
+  "key": {
+    "e": {
+      "item": "minecraft:ender_pearl"
+    },
+    "f": {
+      "item": "justdirethings:blazegold_ingot"
+    },
+    "d": {
+      "item": "minecraft:emerald"
+    },
+    "h": {
+      "item": "minecraft:book"
+    }
+  },
+  "result": {
+    "item": "justdirethings:experienceholder"
+  }
+}

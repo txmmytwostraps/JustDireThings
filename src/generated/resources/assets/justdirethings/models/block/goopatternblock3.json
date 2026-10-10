@@ -1,10 +1,9 @@
 {
   "parent": "minecraft:block/orientable_with_bottom",
-  "render_type": "minecraft:cutout",
   "textures": {
-    "bottom": "justdirethings:block/goopatterns/goorender_full",
-    "front": "justdirethings:block/goopatterns/goorender_side3",
     "side": "justdirethings:block/goopatterns/goorender_side3",
+    "front": "justdirethings:block/goopatterns/goorender_side3",
+    "bottom": "justdirethings:block/goopatterns/goorender_full",
     "top": "justdirethings:block/goopatterns/goorender_blank"
   }
 }

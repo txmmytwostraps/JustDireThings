@@ -1,0 +1,34 @@
+{
+  "parent": "minecraft:recipes/root",
+  "rewards": {
+    "recipes": [
+      "justdirethings:celestigem_paxel-hammer"
+    ]
+  },
+  "criteria": {
+    "has_upgrade_base": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "justdirethings:upgrade_blank"
+            ]
+          }
+        ]
+      }
+    },
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": {
+        "recipe": "justdirethings:celestigem_paxel-hammer"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_upgrade_base",
+      "has_the_recipe"
+    ]
+  ]
+}

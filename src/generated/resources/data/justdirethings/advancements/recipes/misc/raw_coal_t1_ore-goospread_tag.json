@@ -1,0 +1,34 @@
+{
+  "parent": "minecraft:recipes/root",
+  "rewards": {
+    "recipes": [
+      "justdirethings:raw_coal_t1_ore-goospread_tag"
+    ]
+  },
+  "criteria": {
+    "has_goo_block_t1": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "justdirethings:gooblock_tier1"
+            ]
+          }
+        ]
+      }
+    },
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": {
+        "recipe": "justdirethings:raw_coal_t1_ore-goospread_tag"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_goo_block_t1",
+      "has_the_recipe"
+    ]
+  ]
+}

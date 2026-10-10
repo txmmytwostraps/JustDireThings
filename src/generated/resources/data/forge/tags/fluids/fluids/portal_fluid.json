@@ -1,6 +1,7 @@
 {
+  "replace": false,
   "values": [
-    "justdirethings:portal_fluid",
+    "justdirethings:portal_fluid_source",
     "justdirethings:portal_fluid_flowing"
   ]
 }

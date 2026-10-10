@@ -1,4 +1,5 @@
 {
+  "replace": false,
   "values": [
     "justdirethings:unstable_portal_fluid_bucket"
   ]

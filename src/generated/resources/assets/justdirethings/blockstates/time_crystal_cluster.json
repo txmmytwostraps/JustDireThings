@@ -4,25 +4,10 @@
       "model": "justdirethings:block/time_crystal_cluster",
       "x": 180
     },
-    "facing=down,waterlogged=true": {
-      "model": "justdirethings:block/time_crystal_cluster",
-      "x": 180
-    },
-    "facing=east,waterlogged=false": {
-      "model": "justdirethings:block/time_crystal_cluster",
-      "x": 90,
-      "y": 90
-    },
-    "facing=east,waterlogged=true": {
-      "model": "justdirethings:block/time_crystal_cluster",
-      "x": 90,
-      "y": 90
+    "facing=up,waterlogged=false": {
+      "model": "justdirethings:block/time_crystal_cluster"
     },
     "facing=north,waterlogged=false": {
-      "model": "justdirethings:block/time_crystal_cluster",
-      "x": 90
-    },
-    "facing=north,waterlogged=true": {
       "model": "justdirethings:block/time_crystal_cluster",
       "x": 90
     },
@@ -31,26 +16,41 @@
       "x": 90,
       "y": 180
     },
-    "facing=south,waterlogged=true": {
-      "model": "justdirethings:block/time_crystal_cluster",
-      "x": 90,
-      "y": 180
-    },
-    "facing=up,waterlogged=false": {
-      "model": "justdirethings:block/time_crystal_cluster"
-    },
-    "facing=up,waterlogged=true": {
-      "model": "justdirethings:block/time_crystal_cluster"
-    },
     "facing=west,waterlogged=false": {
       "model": "justdirethings:block/time_crystal_cluster",
       "x": 90,
       "y": 270
     },
+    "facing=east,waterlogged=false": {
+      "model": "justdirethings:block/time_crystal_cluster",
+      "x": 90,
+      "y": 90
+    },
+    "facing=down,waterlogged=true": {
+      "model": "justdirethings:block/time_crystal_cluster",
+      "x": 180
+    },
+    "facing=up,waterlogged=true": {
+      "model": "justdirethings:block/time_crystal_cluster"
+    },
+    "facing=north,waterlogged=true": {
+      "model": "justdirethings:block/time_crystal_cluster",
+      "x": 90
+    },
+    "facing=south,waterlogged=true": {
+      "model": "justdirethings:block/time_crystal_cluster",
+      "x": 90,
+      "y": 180
+    },
     "facing=west,waterlogged=true": {
       "model": "justdirethings:block/time_crystal_cluster",
       "x": 90,
       "y": 270
+    },
+    "facing=east,waterlogged=true": {
+      "model": "justdirethings:block/time_crystal_cluster",
+      "x": 90,
+      "y": 90
     }
   }
 }

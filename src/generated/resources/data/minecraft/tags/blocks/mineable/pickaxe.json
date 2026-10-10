@@ -1,4 +1,5 @@
 {
+  "replace": false,
   "values": [
     "justdirethings:ferricore_block",
     "justdirethings:raw_ferricore_ore",
@@ -38,10 +39,11 @@
     "justdirethings:fluidplacert1",
     "justdirethings:fluidplacert2",
     "justdirethings:generatorfluidt1",
-    "justdirethings:inventoryholder",
+    "justdirethings:inventory_holder",
     "justdirethings:paradoxmachine",
     "justdirethings:time_crystal_cluster",
     "justdirethings:time_crystal_block",
-    "justdirethings:charcoal"
+    "justdirethings:charcoal",
+    "justdirethings:dire_smithing_table"
   ]
 }

@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " e ",
+    "fbf",
+    " e "
+  ],
+  "key": {
+    "b": {
+      "item": "justdirethings:upgrade_blank"
+    },
+    "f": {
+      "item": "minecraft:gravel"
+    },
+    "e": {
+      "item": "minecraft:sand"
+    }
+  },
+  "result": {
+    "item": "justdirethings:upgrade_skysweeper"
+  }
+}

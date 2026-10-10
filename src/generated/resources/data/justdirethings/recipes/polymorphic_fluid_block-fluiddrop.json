@@ -1,0 +1,17 @@
+{
+  "type": "justdirethings:fluiddrop",
+  "id": "justdirethings:polymorphic_fluid",
+  "input": {
+    "Properties": {
+      "level": "0"
+    },
+    "Name": "minecraft:water"
+  },
+  "output": {
+    "Properties": {
+      "level": "0"
+    },
+    "Name": "justdirethings:polymorphic_fluid_block"
+  },
+  "catalyst": "justdirethings:polymorphic_catalyst"
+}

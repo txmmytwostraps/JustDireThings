@@ -1,19 +1,17 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "building",
   "group": "justdirethings",
-  "key": {
-    "#": {
-      "item": "justdirethings:ferricore_ingot"
-    }
-  },
   "pattern": [
     "###",
     "###",
     "###"
   ],
+  "key": {
+    "#": {
+      "item": "justdirethings:ferricore_ingot"
+    }
+  },
   "result": {
     "item": "justdirethings:ferricore_block"
-  },
-  "show_notification": true
+  }
 }

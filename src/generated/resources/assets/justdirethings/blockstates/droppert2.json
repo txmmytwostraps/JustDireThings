@@ -4,10 +4,8 @@
       "model": "justdirethings:block/droppert2",
       "x": 180
     },
-    "facing=east": {
-      "model": "justdirethings:block/droppert2",
-      "x": 90,
-      "y": 90
+    "facing=up": {
+      "model": "justdirethings:block/droppert2"
     },
     "facing=north": {
       "model": "justdirethings:block/droppert2",
@@ -18,13 +16,15 @@
       "x": 90,
       "y": 180
     },
-    "facing=up": {
-      "model": "justdirethings:block/droppert2"
-    },
     "facing=west": {
       "model": "justdirethings:block/droppert2",
       "x": 90,
       "y": 270
+    },
+    "facing=east": {
+      "model": "justdirethings:block/droppert2",
+      "x": 90,
+      "y": 90
     }
   }
 }

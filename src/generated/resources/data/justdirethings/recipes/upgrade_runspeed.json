@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " e ",
+    "fbf",
+    " e "
+  ],
+  "key": {
+    "b": {
+      "item": "justdirethings:upgrade_blank"
+    },
+    "f": {
+      "item": "minecraft:sugar"
+    },
+    "e": {
+      "item": "minecraft:potato"
+    }
+  },
+  "result": {
+    "item": "justdirethings:upgrade_runspeed"
+  }
+}

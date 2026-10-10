@@ -4,13 +4,22 @@
       "model": "justdirethings:block/blockbreakert1",
       "x": 180
     },
-    "active=false,facing=east": {
-      "model": "justdirethings:block/blockbreakert1",
-      "x": 90,
-      "y": 90
+    "active=true,facing=down": {
+      "model": "justdirethings:block/blockbreakert1_active",
+      "x": 180
+    },
+    "active=false,facing=up": {
+      "model": "justdirethings:block/blockbreakert1"
+    },
+    "active=true,facing=up": {
+      "model": "justdirethings:block/blockbreakert1_active"
     },
     "active=false,facing=north": {
       "model": "justdirethings:block/blockbreakert1",
+      "x": 90
+    },
+    "active=true,facing=north": {
+      "model": "justdirethings:block/blockbreakert1_active",
       "x": 90
     },
     "active=false,facing=south": {
@@ -18,39 +27,30 @@
       "x": 90,
       "y": 180
     },
-    "active=false,facing=up": {
-      "model": "justdirethings:block/blockbreakert1"
+    "active=true,facing=south": {
+      "model": "justdirethings:block/blockbreakert1_active",
+      "x": 90,
+      "y": 180
     },
     "active=false,facing=west": {
       "model": "justdirethings:block/blockbreakert1",
       "x": 90,
       "y": 270
     },
-    "active=true,facing=down": {
+    "active=true,facing=west": {
       "model": "justdirethings:block/blockbreakert1_active",
-      "x": 180
+      "x": 90,
+      "y": 270
+    },
+    "active=false,facing=east": {
+      "model": "justdirethings:block/blockbreakert1",
+      "x": 90,
+      "y": 90
     },
     "active=true,facing=east": {
       "model": "justdirethings:block/blockbreakert1_active",
       "x": 90,
       "y": 90
-    },
-    "active=true,facing=north": {
-      "model": "justdirethings:block/blockbreakert1_active",
-      "x": 90
-    },
-    "active=true,facing=south": {
-      "model": "justdirethings:block/blockbreakert1_active",
-      "x": 90,
-      "y": 180
-    },
-    "active=true,facing=up": {
-      "model": "justdirethings:block/blockbreakert1_active"
-    },
-    "active=true,facing=west": {
-      "model": "justdirethings:block/blockbreakert1_active",
-      "x": 90,
-      "y": 270
     }
   }
 }

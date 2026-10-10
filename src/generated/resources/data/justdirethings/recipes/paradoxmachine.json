@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "justdirethings",
+  "pattern": [
+    "fdf",
+    "dod",
+    "frf"
+  ],
+  "key": {
+    "o": {
+      "item": "justdirethings:time_crystal_block"
+    },
+    "f": {
+      "item": "justdirethings:eclipsealloy_ingot"
+    },
+    "d": {
+      "item": "justdirethings:time_crystal"
+    },
+    "r": {
+      "item": "justdirethings:time_fluid_bucket"
+    }
+  },
+  "result": {
+    "item": "justdirethings:paradoxmachine"
+  }
+}

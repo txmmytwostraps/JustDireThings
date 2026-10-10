@@ -1,0 +1,34 @@
+{
+  "parent": "minecraft:recipes/root",
+  "rewards": {
+    "recipes": [
+      "justdirethings:bow_celestigem-templateupgrade"
+    ]
+  },
+  "criteria": {
+    "has_template_celestigem": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "justdirethings:template_celestigem"
+            ]
+          }
+        ]
+      }
+    },
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": {
+        "recipe": "justdirethings:bow_celestigem-templateupgrade"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_template_celestigem",
+      "has_the_recipe"
+    ]
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "parent": "minecraft:recipes/root",
+  "rewards": {
+    "recipes": [
+      "justdirethings:fluidplacert1_nbtclear"
+    ]
+  },
+  "criteria": {
+    "has_fluidplacert1": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "justdirethings:fluidplacert1"
+            ]
+          }
+        ]
+      }
+    },
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": {
+        "recipe": "justdirethings:fluidplacert1_nbtclear"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_fluidplacert1",
+      "has_the_recipe"
+    ]
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "justdirethings:use_sculk_recipes"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "pattern": [
+          "aea",
+          "fbf",
+          "aea"
+        ],
+        "key": {
+          "b": {
+            "item": "justdirethings:upgrade_blank"
+          },
+          "f": {
+            "tag": "justdirethings:sculk_shrieker"
+          },
+          "e": {
+            "item": "minecraft:sculk_sensor"
+          },
+          "a": {
+            "item": "minecraft:end_rod"
+          }
+        },
+        "result": {
+          "item": "justdirethings:upgrade_glowing"
+        }
+      }
+    },
+    {
+      "conditions": [
+        {
+          "value": {
+            "type": "justdirethings:use_sculk_recipes"
+          },
+          "type": "forge:not"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "pattern": [
+          "aea",
+          "fbf",
+          "aea"
+        ],
+        "key": {
+          "b": {
+            "item": "justdirethings:upgrade_blank"
+          },
+          "f": {
+            "item": "minecraft:dragon_breath"
+          },
+          "e": {
+            "item": "minecraft:observer"
+          },
+          "a": {
+            "item": "minecraft:end_rod"
+          }
+        },
+        "result": {
+          "item": "justdirethings:upgrade_glowing"
+        }
+      }
+    }
+  ]
+}

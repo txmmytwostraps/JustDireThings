@@ -1,28 +1,26 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "misc",
   "group": "justdirethings",
-  "key": {
-    "c": {
-      "item": "minecraft:clay_ball"
-    },
-    "d": {
-      "item": "minecraft:dirt"
-    },
-    "f": {
-      "item": "minecraft:rotten_flesh"
-    },
-    "s": {
-      "item": "minecraft:sugar"
-    }
-  },
   "pattern": [
     "csc",
     "fdf",
     "csc"
   ],
+  "key": {
+    "d": {
+      "item": "minecraft:dirt"
+    },
+    "c": {
+      "item": "minecraft:clay_ball"
+    },
+    "s": {
+      "item": "minecraft:sugar"
+    },
+    "f": {
+      "item": "minecraft:rotten_flesh"
+    }
+  },
   "result": {
     "item": "justdirethings:gooblock_tier1"
-  },
-  "show_notification": true
+  }
 }

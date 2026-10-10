@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:blasting",
+  "ingredient": {
+    "item": "justdirethings:raw_blazegold"
+  },
+  "result": "justdirethings:blazegold_ingot",
+  "experience": 1.0,
+  "cookingtime": 100
+}

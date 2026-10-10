@@ -1,5 +1,7 @@
 {
+  "replace": false,
   "values": [
-    "justdirethings:time_crystal_cluster"
+    "justdirethings:time_crystal_cluster",
+    "minecraft:amethyst_cluster"
   ]
 }

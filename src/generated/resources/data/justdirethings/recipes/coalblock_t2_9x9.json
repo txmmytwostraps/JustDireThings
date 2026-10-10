@@ -1,6 +1,5 @@
 {
   "type": "minecraft:crafting_shapeless",
-  "category": "misc",
   "group": "justdirethings",
   "ingredients": [
     {
@@ -8,7 +7,7 @@
     }
   ],
   "result": {
-    "count": 9,
-    "item": "justdirethings:coal_t2"
+    "item": "justdirethings:coal_t2",
+    "count": 9
   }
 }

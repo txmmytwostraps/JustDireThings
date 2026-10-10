@@ -1,6 +1,7 @@
 {
+  "replace": false,
   "values": [
-    "justdirethings:polymorphic_fluid",
+    "justdirethings:polymorphic_fluid_source",
     "justdirethings:polymorphic_fluid_flowing"
   ]
 }

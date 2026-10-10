@@ -1,0 +1,34 @@
+{
+  "parent": "minecraft:recipes/root",
+  "rewards": {
+    "recipes": [
+      "justdirethings:bow_celestigem"
+    ]
+  },
+  "criteria": {
+    "has_celestigem": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "justdirethings:celestigem"
+            ]
+          }
+        ]
+      }
+    },
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": {
+        "recipe": "justdirethings:bow_celestigem"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_celestigem",
+      "has_the_recipe"
+    ]
+  ]
+}

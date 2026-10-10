@@ -1,19 +1,17 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "building",
   "group": "justdirethings",
-  "key": {
-    "#": {
-      "item": "justdirethings:eclipsealloy_ingot"
-    }
-  },
   "pattern": [
     "###",
     "###",
     "###"
   ],
+  "key": {
+    "#": {
+      "item": "justdirethings:eclipsealloy_ingot"
+    }
+  },
   "result": {
     "item": "justdirethings:eclipsealloy_block"
-  },
-  "show_notification": true
+  }
 }

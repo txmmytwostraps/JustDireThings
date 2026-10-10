@@ -1,13 +1,17 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "misc",
   "group": "justdirethings",
+  "pattern": [
+    "brb",
+    "wgw",
+    "brb"
+  ],
   "key": {
-    "b": {
-      "item": "minecraft:ender_pearl"
-    },
     "g": {
       "item": "justdirethings:gooblock_tier2"
+    },
+    "b": {
+      "item": "minecraft:ender_pearl"
     },
     "r": {
       "item": "minecraft:end_stone"
@@ -16,13 +20,7 @@
       "item": "minecraft:dragon_breath"
     }
   },
-  "pattern": [
-    "brb",
-    "wgw",
-    "brb"
-  ],
   "result": {
     "item": "justdirethings:gooblock_tier3"
-  },
-  "show_notification": true
+  }
 }

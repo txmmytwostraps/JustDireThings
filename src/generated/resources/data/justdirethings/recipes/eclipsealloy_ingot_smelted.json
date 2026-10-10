@@ -1,10 +1,9 @@
 {
   "type": "minecraft:smelting",
-  "category": "misc",
-  "cookingtime": 200,
-  "experience": 1.0,
   "ingredient": {
     "item": "justdirethings:raw_eclipsealloy"
   },
-  "result": "justdirethings:eclipsealloy_ingot"
+  "result": "justdirethings:eclipsealloy_ingot",
+  "experience": 1.0,
+  "cookingtime": 200
 }

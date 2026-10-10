@@ -1,0 +1,89 @@
+{
+  "advancements": [
+    {
+      "conditions": [
+        {
+          "type": "justdirethings:use_sculk_recipes"
+        }
+      ],
+      "advancement": {
+        "parent": "minecraft:recipes/root",
+        "rewards": {
+          "recipes": [
+            "justdirethings:upgrade_orexray"
+          ]
+        },
+        "criteria": {
+          "has_upgrade_base": {
+            "trigger": "minecraft:inventory_changed",
+            "conditions": {
+              "items": [
+                {
+                  "items": [
+                    "justdirethings:upgrade_blank"
+                  ]
+                }
+              ]
+            }
+          },
+          "has_the_recipe": {
+            "trigger": "minecraft:recipe_unlocked",
+            "conditions": {
+              "recipe": "justdirethings:upgrade_orexray"
+            }
+          }
+        },
+        "requirements": [
+          [
+            "has_upgrade_base",
+            "has_the_recipe"
+          ]
+        ]
+      }
+    },
+    {
+      "conditions": [
+        {
+          "value": {
+            "type": "justdirethings:use_sculk_recipes"
+          },
+          "type": "forge:not"
+        }
+      ],
+      "advancement": {
+        "parent": "minecraft:recipes/root",
+        "rewards": {
+          "recipes": [
+            "justdirethings:upgrade_orexray"
+          ]
+        },
+        "criteria": {
+          "has_upgrade_base": {
+            "trigger": "minecraft:inventory_changed",
+            "conditions": {
+              "items": [
+                {
+                  "items": [
+                    "justdirethings:upgrade_blank"
+                  ]
+                }
+              ]
+            }
+          },
+          "has_the_recipe": {
+            "trigger": "minecraft:recipe_unlocked",
+            "conditions": {
+              "recipe": "justdirethings:upgrade_orexray"
+            }
+          }
+        },
+        "requirements": [
+          [
+            "has_upgrade_base",
+            "has_the_recipe"
+          ]
+        ]
+      }
+    }
+  ]
+}

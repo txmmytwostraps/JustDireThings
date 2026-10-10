@@ -1,0 +1,29 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "justdirethings",
+  "pattern": [
+    "fdf",
+    "lol",
+    "frf"
+  ],
+  "key": {
+    "o": {
+      "item": "minecraft:dispenser"
+    },
+    "f": {
+      "item": "justdirethings:ferricore_ingot"
+    },
+    "d": {
+      "item": "minecraft:bucket"
+    },
+    "l": {
+      "item": "minecraft:lapis_lazuli"
+    },
+    "r": {
+      "item": "minecraft:redstone"
+    }
+  },
+  "result": {
+    "item": "justdirethings:fluidcollectort1"
+  }
+}

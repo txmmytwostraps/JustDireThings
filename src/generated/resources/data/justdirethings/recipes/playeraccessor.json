@@ -1,31 +1,29 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "misc",
   "group": "justdirethings",
-  "key": {
-    "d": {
-      "item": "minecraft:ender_eye"
-    },
-    "f": {
-      "item": "justdirethings:blazegold_ingot"
-    },
-    "l": {
-      "item": "minecraft:ender_pearl"
-    },
-    "o": {
-      "item": "minecraft:dispenser"
-    },
-    "r": {
-      "item": "minecraft:lapis_lazuli"
-    }
-  },
   "pattern": [
     "fdf",
     "lol",
     "frf"
   ],
+  "key": {
+    "o": {
+      "item": "minecraft:dispenser"
+    },
+    "f": {
+      "item": "justdirethings:blazegold_ingot"
+    },
+    "d": {
+      "item": "minecraft:ender_eye"
+    },
+    "l": {
+      "item": "minecraft:ender_pearl"
+    },
+    "r": {
+      "item": "minecraft:lapis_lazuli"
+    }
+  },
   "result": {
     "item": "justdirethings:playeraccessor"
-  },
-  "show_notification": true
+  }
 }

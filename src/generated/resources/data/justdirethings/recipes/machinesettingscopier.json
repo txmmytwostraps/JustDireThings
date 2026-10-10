@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "justdirethings",
+  "pattern": [
+    "  c",
+    " p ",
+    "f  "
+  ],
+  "key": {
+    "f": {
+      "item": "justdirethings:ferricore_ingot"
+    },
+    "p": {
+      "item": "minecraft:paper"
+    },
+    "c": {
+      "item": "justdirethings:coal_t1"
+    }
+  },
+  "result": {
+    "item": "justdirethings:machinesettingscopier"
+  }
+}

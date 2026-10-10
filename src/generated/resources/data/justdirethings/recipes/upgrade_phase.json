@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "aea",
+    "fbf",
+    "aea"
+  ],
+  "key": {
+    "b": {
+      "item": "justdirethings:upgrade_blank"
+    },
+    "f": {
+      "item": "minecraft:dragon_breath"
+    },
+    "e": {
+      "item": "minecraft:phantom_membrane"
+    },
+    "a": {
+      "item": "minecraft:shulker_shell"
+    }
+  },
+  "result": {
+    "item": "justdirethings:upgrade_phase"
+  }
+}

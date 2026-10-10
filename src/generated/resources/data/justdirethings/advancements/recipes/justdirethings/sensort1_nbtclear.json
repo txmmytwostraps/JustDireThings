@@ -1,0 +1,34 @@
+{
+  "parent": "minecraft:recipes/root",
+  "rewards": {
+    "recipes": [
+      "justdirethings:sensort1_nbtclear"
+    ]
+  },
+  "criteria": {
+    "has_sensort1": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "justdirethings:sensort1"
+            ]
+          }
+        ]
+      }
+    },
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": {
+        "recipe": "justdirethings:sensort1_nbtclear"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_sensort1",
+      "has_the_recipe"
+    ]
+  ]
+}

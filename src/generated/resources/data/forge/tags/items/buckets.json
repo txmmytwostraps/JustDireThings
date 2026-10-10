@@ -1,4 +1,5 @@
 {
+  "replace": false,
   "values": [
     "#forge:buckets/refined_t2_fuel",
     "#forge:buckets/refined_t3_fuel",

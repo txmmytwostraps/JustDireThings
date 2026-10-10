@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "aea",
+    "fbf",
+    "aea"
+  ],
+  "key": {
+    "b": {
+      "item": "justdirethings:upgrade_blank"
+    },
+    "f": {
+      "item": "minecraft:fermented_spider_eye"
+    },
+    "e": {
+      "item": "minecraft:poisonous_potato"
+    },
+    "a": {
+      "item": "minecraft:ender_eye"
+    }
+  },
+  "result": {
+    "item": "justdirethings:upgrade_stupefy"
+  }
+}

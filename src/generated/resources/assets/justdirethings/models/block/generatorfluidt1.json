@@ -1,8 +1,0 @@
-{
-  "parent": "minecraft:block/cube_bottom_top",
-  "textures": {
-    "bottom": "justdirethings:block/generatorfluidt1_bottom",
-    "side": "justdirethings:block/generatorfluidt1_side",
-    "top": "justdirethings:block/generatorfluidt1_top"
-  }
-}

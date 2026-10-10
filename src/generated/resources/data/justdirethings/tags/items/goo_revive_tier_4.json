@@ -1,6 +1,13 @@
 {
+  "replace": false,
   "values": [
-    "minecraft:sculk",
-    "minecraft:sculk_catalyst"
+    {
+      "id": "wildbackport:sculk",
+      "required": false
+    },
+    {
+      "id": "wildbackport:sculk_catalyst",
+      "required": false
+    }
   ]
 }

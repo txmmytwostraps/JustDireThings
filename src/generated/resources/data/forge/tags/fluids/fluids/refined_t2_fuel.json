@@ -1,4 +1,5 @@
 {
+  "replace": false,
   "values": [
     "justdirethings:refined_t2_fluid_source",
     "justdirethings:refined_t2_fluid_flowing"

@@ -1,6 +1,7 @@
 {
+  "replace": false,
   "values": [
-    "justdirethings:time_fluid",
+    "justdirethings:time_fluid_source",
     "justdirethings:time_fluid_flowing"
   ]
 }

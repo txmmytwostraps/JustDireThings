@@ -1,0 +1,15 @@
+{
+  "type": "justdirethings:tier_upgrade",
+  "template": {
+    "item": "justdirethings:template_eclipsealloy"
+  },
+  "base": {
+    "item": "justdirethings:celestigem_sword"
+  },
+  "addition": {
+    "item": "justdirethings:eclipsealloy_ingot"
+  },
+  "result": {
+    "item": "justdirethings:eclipsealloy_sword"
+  }
+}

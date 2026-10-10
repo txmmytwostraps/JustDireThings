@@ -1,19 +1,17 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "building",
   "group": "justdirethings",
-  "key": {
-    "#": {
-      "item": "justdirethings:blazegold_ingot"
-    }
-  },
   "pattern": [
     "###",
     "###",
     "###"
   ],
+  "key": {
+    "#": {
+      "item": "justdirethings:blazegold_ingot"
+    }
+  },
   "result": {
     "item": "justdirethings:blazegold_block"
-  },
-  "show_notification": true
+  }
 }

@@ -1,28 +1,74 @@
 {
-  "type": "minecraft:crafting_shaped",
-  "category": "misc",
-  "group": "justdirethings",
-  "key": {
-    "b": {
-      "item": "minecraft:sculk"
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "justdirethings:use_sculk_recipes"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "group": "justdirethings",
+        "pattern": [
+          "brb",
+          "wgw",
+          "brb"
+        ],
+        "key": {
+          "g": {
+            "item": "justdirethings:gooblock_tier3"
+          },
+          "b": {
+            "tag": "justdirethings:sculk"
+          },
+          "r": {
+            "tag": "justdirethings:sculk_shrieker"
+          },
+          "w": {
+            "tag": "justdirethings:echo_shard"
+          }
+        },
+        "result": {
+          "item": "justdirethings:gooblock_tier4"
+        }
+      }
     },
-    "g": {
-      "item": "justdirethings:gooblock_tier3"
-    },
-    "r": {
-      "item": "minecraft:sculk_shrieker"
-    },
-    "w": {
-      "item": "minecraft:echo_shard"
+    {
+      "conditions": [
+        {
+          "value": {
+            "type": "justdirethings:use_sculk_recipes"
+          },
+          "type": "forge:not"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "group": "justdirethings",
+        "pattern": [
+          "brb",
+          "wgw",
+          "brb"
+        ],
+        "key": {
+          "g": {
+            "item": "justdirethings:gooblock_tier3"
+          },
+          "b": {
+            "item": "minecraft:obsidian"
+          },
+          "r": {
+            "item": "minecraft:dragon_breath"
+          },
+          "w": {
+            "item": "minecraft:popped_chorus_fruit"
+          }
+        },
+        "result": {
+          "item": "justdirethings:gooblock_tier4"
+        }
+      }
     }
-  },
-  "pattern": [
-    "brb",
-    "wgw",
-    "brb"
-  ],
-  "result": {
-    "item": "justdirethings:gooblock_tier4"
-  },
-  "show_notification": true
+  ]
 }

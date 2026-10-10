@@ -1,28 +1,26 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "misc",
   "group": "justdirethings",
-  "key": {
-    "d": {
-      "item": "minecraft:ender_eye"
-    },
-    "f": {
-      "item": "justdirethings:celestigem"
-    },
-    "o": {
-      "item": "justdirethings:droppert1"
-    },
-    "r": {
-      "item": "minecraft:redstone"
-    }
-  },
   "pattern": [
     "fdf",
     "dod",
     "frf"
   ],
+  "key": {
+    "o": {
+      "item": "justdirethings:droppert1"
+    },
+    "f": {
+      "item": "justdirethings:celestigem"
+    },
+    "d": {
+      "item": "minecraft:ender_eye"
+    },
+    "r": {
+      "item": "minecraft:redstone"
+    }
+  },
   "result": {
     "item": "justdirethings:droppert2"
-  },
-  "show_notification": true
+  }
 }

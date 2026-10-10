@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "aea",
+    "fbf",
+    "aea"
+  ],
+  "key": {
+    "b": {
+      "item": "justdirethings:upgrade_blank"
+    },
+    "f": {
+      "item": "minecraft:netherite_pickaxe"
+    },
+    "e": {
+      "item": "minecraft:nether_star"
+    },
+    "a": {
+      "item": "justdirethings:time_crystal"
+    }
+  },
+  "result": {
+    "item": "justdirethings:upgrade_instabreak"
+  }
+}

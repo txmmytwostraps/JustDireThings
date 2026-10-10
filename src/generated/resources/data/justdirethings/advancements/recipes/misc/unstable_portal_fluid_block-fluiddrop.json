@@ -1,0 +1,34 @@
+{
+  "parent": "minecraft:recipes/root",
+  "rewards": {
+    "recipes": [
+      "justdirethings:unstable_portal_fluid_block-fluiddrop"
+    ]
+  },
+  "criteria": {
+    "has_portal_catalyst": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "justdirethings:portal_fluid_catalyst"
+            ]
+          }
+        ]
+      }
+    },
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": {
+        "recipe": "justdirethings:unstable_portal_fluid_block-fluiddrop"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_portal_catalyst",
+      "has_the_recipe"
+    ]
+  ]
+}

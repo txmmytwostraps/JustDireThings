@@ -1,7 +1,11 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "misc",
   "group": "justdirethings",
+  "pattern": [
+    " f ",
+    " s ",
+    " s "
+  ],
   "key": {
     "f": {
       "item": "justdirethings:blazegold_ingot"
@@ -10,13 +14,7 @@
       "item": "minecraft:stick"
     }
   },
-  "pattern": [
-    " f ",
-    " s ",
-    " s "
-  ],
   "result": {
     "item": "justdirethings:blazegold_shovel"
-  },
-  "show_notification": true
+  }
 }

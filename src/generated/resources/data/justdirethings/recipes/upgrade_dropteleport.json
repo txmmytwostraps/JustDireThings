@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "aea",
+    "fbf",
+    "aea"
+  ],
+  "key": {
+    "b": {
+      "item": "justdirethings:upgrade_blank"
+    },
+    "f": {
+      "item": "minecraft:amethyst_shard"
+    },
+    "e": {
+      "item": "minecraft:ender_chest"
+    },
+    "a": {
+      "item": "minecraft:ender_pearl"
+    }
+  },
+  "result": {
+    "item": "justdirethings:upgrade_dropteleport"
+  }
+}
