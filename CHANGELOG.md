@@ -1,36 +1,32 @@
-# Changelog
+## [1.0.0]
 
-## 1.1.9
-- Fluid drop crafting (dropping items into fluids) now runs only for ticking item entities instead of scanning every entity each tick, reducing server overhead with many loose items.
-- Fluids produced by fluid drop crafting now vaporize where they should (e.g. water in the Nether).
+Unofficial Forge 1.18.2 port of Just Dire Things. Based on An0mz's 1.20.1 backport and Direwolf20's 1.21.1 version 1.5.7, plus his later changes on the 1.21.1 branch up to August 8, 2026.
 
-## 1.1.8
-- Fixed Just Dire Things fluids not being recognized as liquids, so AE2 Annihilation Planes (and other mods that check for liquids) can now pick them up. Pistons now also break these fluids like vanilla water instead of pushing them.
+### Added
 
-## 1.1.7
-- Clickers no longer get their per-click cost multiplied by tick-accelerator mods, fixing a major source of server lag when Clickers are boosted. Controlled by the new `clicker_limit_tick_acceleration` config option (default `true`); set it to `false` to let tick accelerators fully speed up Clickers again.
+- Dire Smithing Table. The 1.18.2 smithing table only has two slots, so tier upgrades, ability upgrades and Paxels are made here.
+- The Dire Smithing Table also does regular smithing when the template slot is empty.
+- Hoppers and pipes can fill it from any side.
+- JEI page and guidebook entry for it.
+- Dimension restrictions for the Vault Hunters vault dimensions. Each feature has its own switch in `restricted_dimensions` in the server config.
+- On by default: Block Breakers, Placers, Swappers, Clickers, the Paradox Machine, Portal Guns, the Time Wand, Phase and the Creature Catcher.
+- Off by default: Fluid Placers, Void Shift and Eclipse Gate.
+- `use_sculk_recipes` in the common config. Turn it on to use Wild Backport's sculk items. Off by default.
 
-## 1.1.6
-- Fixed pocket generator not generating power
+### Changed
 
-## 1.1.5
-- Hammer upgrade on hoes can now be used correctly
+- Config values always apply. This covers tool break limits, the minimum machine speed, the Player Accessor check time and the Advanced Polymorphic Wand's energy cost.
 
-## 1.1.4
-- Added the Hammer upgrade to Blazegold, Celestigem, and Eclipse Alloy Hoes, letting them till a 3x3/5x5/7x7 area at once.
+### Fixed (compared to 1.21.1)
 
-## 1.1.3
-- Fixed a crash when running alongside Immersive Portals (mixin priority conflict on `Entity#canEnterPose`).
+- The Item Collector follows its rotation.
+- Number keys and drags on filter slots no longer lose items.
+- Shift-clicking glass bottles into a Potion Canister no longer deletes them.
+- The Advanced Portal Gun no longer fires at a favorite in a missing dimension.
 
-## 1.1.2
-- Added tagged goo spreading recipes, with JEI support.
-- Added Dropper T1/T2 pickup delay setting.
-- Added a proper hide/show render toggle button.
-- Goo now spawns dead when placed; feed it to activate.
-- Reworked Potion Canister screen with an animated fluid bar.
-- Phase now lets you see through walls instead of the block-inside overlay, and grants brief night vision while active.
-- Fixed portal linking across dimensions and unloaded chunks.
-- Fixed Pocket Generators accepting external charging.
-- Fixed Fluid Canister not vaporizing fluids that should vaporize on placement.
-- Fixed Unstable Portal Fluid being convertible to an infinite source block.
-- Re-synced ja_jp, pt_br, ru_ru, uk_ua, zh_cn translations.
+### Notes
+
+- Config changes need a restart.
+- Set `use_sculk_recipes` the same on the client and the server. Forge does not sync it.
+- Needs Forge 40.3.6 or newer. JEI, Patchouli, Curios and Wild Backport are optional.
+- Everything from 1.21.1 is here except armor trims. 1.18.2 doesn't have them.
